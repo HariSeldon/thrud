@@ -1,0 +1,13 @@
+*.m4
+*.guess
+*.sub
+autoconf/ltmain.sh
+autoconf/install-sh
+autoconf/autom4te.cache/
+autoconf/LICENSE.TXT
+autoconf/ExportMap.map
+autoconf/AutoRegen.sh
+autoconf/mkinstalldirs
+autoconf/m4/
+configure
+*.swp
