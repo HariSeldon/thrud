@@ -20,6 +20,5 @@ $CLANG -x cl \
 $OPT -instnamer \
      -mem2reg \
      -inline -inline-threshold=10000 \
-     -O3 -o - |
-$LLVM_DIS -o -
-#     -load /home/s1158370/root/lib/feature_extraction.so -opencl-instcount -count-kernel-name ${KERNEL_NAME} 2> /dev/null
+     -O3 \
+     -load /home/s1158370/root/lib/feature_extraction.so -opencl-instcount -count-kernel-name ${KERNEL_NAME} 

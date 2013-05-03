@@ -8,8 +8,10 @@ LEVEL=../..
 #
 # Give the name of a library.  This will build a dynamic version.
 #
-LIBRARYNAME=feature_extraction
+LIBRARYNAME = feature_extraction
 LOADABLE_MODULE = 1
+
+USEDLIBS = thrudSupport.a
 
 #
 # Include Makefile.common so we know what to do.
