@@ -2,6 +2,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 #include <set>
+#include <stack>
 #include <vector>
 
 using namespace llvm;
@@ -31,3 +32,4 @@ typedef std::pair<int, int> IntPair;
 typedef std::vector<PHINode*> PHIVector;
 typedef std::pair<BranchInst*, BasicBlock*> Border;
 typedef std::vector<Border> BorderVector;
+typedef std::stack<BasicBlock*> BlockStack;
