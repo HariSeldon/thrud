@@ -1488,6 +1488,9 @@ dnl Configure project makefiles
 dnl List every Makefile that exists within your source tree
 AC_CONFIG_MAKEFILE(Makefile)
 AC_CONFIG_MAKEFILE(lib/Makefile)
+AC_CONFIG_MAKEFILE(lib/ThreadCoarsening/Makefile)
+AC_CONFIG_MAKEFILE(lib/Support/Makefile)
+AC_CONFIG_MAKEFILE(lib/DivergenceAnalysis/Makefile)
 
 dnl This must be last
 AC_OUTPUT
