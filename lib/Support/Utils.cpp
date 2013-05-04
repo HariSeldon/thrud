@@ -64,15 +64,16 @@ void ApplyMap(Instruction *Inst, const Map &map) {
 //------------------------------------------------------------------------------
 void ApplyMapToPhiBlocks(PHINode *Phi, Map &map) {
 // FIXME:
-//  for (unsigned int index = 0; index < Phi->getNumIncomingValues(); ++index) {
-//    BasicBlock *OldBlock = Phi->getIncomingBlock(index);
-//    Map::const_iterator It = map.find(OldBlock);
-//
-//    if(It != map.end()) {
-//      BasicBlock *NewBlock = cast<BasicBlock>(It->second);
-//      Phi->setIncomingBlock(index, NewBlock);
-//    }
-//  }
+  for (unsigned int index = 0; index < Phi->getNumIncomingValues(); ++index) {
+    BasicBlock *OldBlock = Phi->getIncomingBlock(index);
+    Map::const_iterator It = map.find(OldBlock);
+
+    if(It != map.end()) {
+      // I am not proud of this.
+      BasicBlock *NewBlock = const_cast<BasicBlock*>(cast<BasicBlock>(It->second));
+      Phi->setIncomingBlock(index, NewBlock);
+    }
+  }
 }
 
 //------------------------------------------------------------------------------

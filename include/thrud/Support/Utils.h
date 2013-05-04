@@ -25,7 +25,7 @@ bool IsKernel(const Function *F);
 // Apply the given map to the given instruction.
 void ApplyMap(Instruction *Inst, const Map &map);
 void ApplyMap(BasicBlock *BB, const Map &map);
-void ApplyMapToPHIs(BasicBlock *BB, const Map &map);
+void ApplyMapToPHIs(BasicBlock *BB, Map &map);
 void ApplyMapToPhiBlocks(PHINode *Phi, const Map &map);
 // Prints to stderr the given map. For debug only.
 void printMap (const Map &map);

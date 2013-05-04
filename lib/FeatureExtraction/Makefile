@@ -13,6 +13,8 @@ LOADABLE_MODULE = 1
 
 USEDLIBS = thrudSupport.a
 
+LLVMLIBS = LLVMSupport.a
+
 #
 # Include Makefile.common so we know what to do.
 #
