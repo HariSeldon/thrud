@@ -1268,3 +1268,12 @@ bool isMathName(std::string fName) {
                 || (fName.find("floor") != std::string::npos));
   return begin && value;
 }
+
+//------------------------------------------------------------------------------
+void safeIncrement(std::map<std::string, unsigned int> &map, std::string key) {
+  std::map<std::string, unsigned int>::iterator iter = map.find(key);  
+  if(iter == map.end())
+    map[key] = 1;
+  else
+    map[key] += 1;
+}

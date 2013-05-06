@@ -21,6 +21,8 @@ using namespace llvm;
 // OpenCL management.
 bool IsKernel(const Function *F);
 
+void safeIncrement(std::map<std::string, unsigned int> &inputMap, std::string key);
+
 // Map management.
 // Apply the given map to the given instruction.
 void ApplyMap(Instruction *Inst, const Map &map);

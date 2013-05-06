@@ -20,7 +20,7 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
 #define HANDLE_INST(N, OPCODE, CLASS)                     \
     void OpenCLFeatureExtractor::visit##OPCODE(CLASS &) { \
       collector.instTypes[#OPCODE] += 1;                  \
-      collector.insts += 1;                               \
+      collector.instTypes["insts"] += 1;                  \
     }
 #include "llvm/IR/Instruction.def"
 
@@ -31,10 +31,15 @@ void OpenCLFeatureExtractor::visitInstruction(Instruction &inst) {
 
 void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) { 
   BasicBlock *block = (BasicBlock *) &basicBlock;
-  collector.blocks += 1;
+  collector.instTypes["blocks"] += 1;
   collector.computeILP(block);
   collector.computeMLP(block, DT, PDT);
-  collector.computeInstsBlock(basicBlock);
+  collector.countInstsBlock(basicBlock);
+  collector.countConstants(basicBlock);
+  collector.countBarriers(basicBlock);
+  collector.countMathFunctions(basicBlock);
+  collector.countOutgoingEdges(basicBlock);
+  collector.countIncomingEdges(basicBlock);
 }
 
 void OpenCLFeatureExtractor::visitFunction(Function &function) { 

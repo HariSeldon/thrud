@@ -42,41 +42,30 @@ class FeatureCollector {
 
     // Map block with number of incoming edges.
     std::map<std::string, unsigned int> blockIncoming;
-    void computeIncomingEdges(BasicBlock &block);
+    void countIncomingEdges(const BasicBlock &block);
 
     // Map block with number of outgoing edges.
     std::map<std::string, unsigned int> blockOutgoing;
-    void computeOutgoingEdges(BasicBlock &block);
+    void countOutgoingEdges(const BasicBlock &block);
 
     // Number of instructions per block.
     //std::map<std::string, unsigned int> blockInsts;
     std::vector<unsigned int> blockInsts;
-    void computeInstsBlock(BasicBlock &block);
+    void countInstsBlock(const BasicBlock &block);
 
-    // Number of instructions (of all types).
-    unsigned int insts; 
+    void countEdges(const Function &function);
+    void countBranches(const Function &function);
 
-    // Number of basic blocks.
-    unsigned int blocks;
-
-    // Number of edges in the control flow graph.
-    unsigned int edges;
-    // Number of critical edges in the control flow graph.
-    unsigned int critialEdges;
-    void countEdges(Function &function);
-
-    // Number of conditional branches in the method.
-    unsigned int condBranches;
-    // Number of unconditional branches in the method.
-    unsigned int uncondBranches;
-    void countBranches(Function &function);
+    // Function calls.
+    void countBarriers(const BasicBlock &block);
+    void countMathFunctions(const BasicBlock &block);
 
     // Phis.
     // Map phi name with arg number.
     std::map<std::string, unsigned int> phiArgs; 
     // Map block with phi. 
     std::map<std::string, std::vector<std::string> > blockPhis; 
-    void countPhis(BasicBlock &block);
+    void countPhis(const BasicBlock &block);
    
     // Average of arguments for a phi-node.
     // Number of basic blocks with no phi nodes.
@@ -88,17 +77,9 @@ class FeatureCollector {
     // is in the interval [1, 5].
 
     // Constants.
-    // Number of integer constant zero.
-    unsigned int zeros; 
-    // Number of 32-bit integer constants.
-    unsigned int fourB;
-    // Number of integer constant one.
-    unsigned int ones;
-    // Number of 64-bit integer constants.
-    unsigned int eightB;
-    // Number of FP constants.
-    unsigned int fp;
-    void countConstants(BasicBlock &block);
+    void countConstants(const BasicBlock &block);
+    // Local memory usage.
+    void countLocalMemoryUsage(const BasicBlock &block);
 
     //// Number of unary operations in the method.
     //unsigned int
