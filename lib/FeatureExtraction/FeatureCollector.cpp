@@ -33,6 +33,9 @@ using yaml::SequenceTraits;
 using yaml::IO;
 using yaml::Output;
 
+namespace llvm {
+namespace yaml {
+
 template <>
 struct MappingTraits<FeatureCollector> {
   static void mapping(IO &io, FeatureCollector &collector) {
@@ -129,6 +132,8 @@ struct SequenceTraits <std::vector<std::pair<float, float> > > {
   static const bool flow = true;
 };
 
+}}
+
 //------------------------------------------------------------------------------
 FeatureCollector::FeatureCollector() { 
   // Instruction-specific counters.   
@@ -153,8 +158,8 @@ void FeatureCollector::computeMLP(BasicBlock *block, DominatorTree *DT,
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countIncomingEdges(const BasicBlock &block) {
-  BasicBlock *tmpBlock = (BasicBlock *)&block;
-  pred_iterator first = pred_begin(tmpBlock), last = pred_end(tmpBlock);
+  const BasicBlock *tmpBlock = (const BasicBlock *)&block;
+  const_pred_iterator first = pred_begin(tmpBlock), last = pred_end(tmpBlock);
   blockIncoming[block.getName()] = std::distance(first, last); 
 }
 
@@ -298,6 +303,12 @@ void FeatureCollector::countLocalMemoryUsage(const BasicBlock &block) {
         safeIncrement(instTypes, "localStores"); 
     }
   }
+}
+
+//------------------------------------------------------------------------------
+void FeatureCollector::countDivInsts(const Function& function, 
+                                     MultiDimDivAnalysis *mdda) {
+  // TODO.
 }
 
 //------------------------------------------------------------------------------

@@ -1,5 +1,8 @@
 #include "thrud/FeatureExtraction/FeatureExtraction.h"
 
+#include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
+#include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+
 char OpenCLFeatureExtractor::ID = 0;
 static RegisterPass<OpenCLFeatureExtractor> X(
        "opencl-instcount", "Collect opencl features");
@@ -10,10 +13,18 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
 
   PDT = &getAnalysis<PostDominatorTree>();
   DT = &getAnalysis<DominatorTree>();
+  MDDA = &getAnalysis<MultiDimDivAnalysis>();
 
   visit(F);
   collector.dump();
   return false;
+}
+
+void OpenCLFeatureExtractor::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<MultiDimDivAnalysis>();
+  AU.addRequired<PostDominatorTree>();
+  AU.addRequired<DominatorTree>();
+  AU.setPreservesAll();
 }
 
 // Count all instruction types.
@@ -40,9 +51,11 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countMathFunctions(basicBlock);
   collector.countOutgoingEdges(basicBlock);
   collector.countIncomingEdges(basicBlock);
+  collector.countLocalMemoryUsage(basicBlock);
 }
 
 void OpenCLFeatureExtractor::visitFunction(Function &function) { 
   collector.countBranches(function);
   collector.countEdges(function);
+  collector.countDivInsts(function, MDDA);
 }

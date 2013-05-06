@@ -45,9 +45,8 @@ STATISTIC(NumReplicated, "Number of replicated instructions");
 cl::opt<int>
 CoarseningFactor("coarsening-factor", cl::init(2), cl::Hidden,
                  cl::desc("The coarsening factor"));
-cl::opt<int>
-CoarseningDirection("coarsening-direction", cl::init(-1), cl::Hidden,
-                    cl::desc("The coarsening direction"));
+
+extern cl::opt<int> CoarseningDirection;
 
 cl::opt<int>
 Stride("coarsening-stride", cl::init(1), cl::Hidden,

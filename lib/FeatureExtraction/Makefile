@@ -15,6 +15,8 @@ USEDLIBS = thrudSupport.a
 
 LLVMLIBS = LLVMSupport.a
 
+LIBS += -ldivergence_analysis
+
 #
 # Include Makefile.common so we know what to do.
 #
