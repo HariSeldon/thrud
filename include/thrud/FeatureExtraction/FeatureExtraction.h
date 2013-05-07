@@ -19,6 +19,9 @@ namespace llvm {
   class Function;
 }
 
+class SingleDimDivAnalysis;
+class MultiDimDivAnalysis;
+
 cl::opt<std::string>
 kernelName("count-kernel-name", cl::init(""), cl::Hidden,
   cl::desc("Name of the kernel to analyze"));
@@ -44,14 +47,11 @@ namespace {
     OpenCLFeatureExtractor() : FunctionPass(ID) { }
 
     virtual bool runOnFunction(Function &F);
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-      AU.setPreservesAll();
-      AU.addRequired<PostDominatorTree>();
-      AU.addRequired<DominatorTree>();
-    }
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const;
     virtual void print(raw_ostream &out, const Module *module) const {}
 
   private:
+    MultiDimDivAnalysis *MDDA;
     FeatureCollector collector;
     PostDominatorTree *PDT;
     DominatorTree *DT;

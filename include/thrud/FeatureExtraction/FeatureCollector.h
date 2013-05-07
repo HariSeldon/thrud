@@ -1,6 +1,8 @@
 #ifndef FEATURE_COLLECTOR_H
 #define FEATURE_COLLECTOR_H
 
+#include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
+
 // Try to remove these two.
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -80,6 +82,8 @@ class FeatureCollector {
     void countConstants(const BasicBlock &block);
     // Local memory usage.
     void countLocalMemoryUsage(const BasicBlock &block);
+    // Divergent instructions.
+    void countDivInsts(const Function &function, MultiDimDivAnalysis *mdda);
 
     //// Number of unary operations in the method.
     //unsigned int

@@ -49,6 +49,7 @@ struct MappingTraits<FeatureCollector> {
 
     // Dump Phi nodes.
     std::vector<unsigned int> args;
+
     for (std::map<std::string, std::vector<std::string> >::iterator
       iter = collector.blockPhis.begin(), end = collector.blockPhis.end(); 
       iter != end; ++iter) {
@@ -141,8 +142,22 @@ FeatureCollector::FeatureCollector() {
     instTypes[#OPCODE] = 0;
   #include "llvm/IR/Instruction.def"
   
+  // Initialize all counters.
   instTypes["insts"] = 0;
   instTypes["blocks"] = 0;
+  instTypes["edges"] = 0; 
+  instTypes["criticalEdges"] = 0;
+  instTypes["condBranches"] = 0;
+  instTypes["uncondBranches"] = 0;
+  instTypes["fourB"] = 0;
+  instTypes["eightB"] = 0;
+  instTypes["fps"] = 0;
+  instTypes["localLoads"] = 0;
+  instTypes["localStores"] = 0;
+  instTypes["mathFunctions"] = 0;
+  instTypes["barriers"] = 0;
+//  instTypes["divRegions"] = 
+//  instTypes["divInsts"] = 
 }
 
 //------------------------------------------------------------------------------
@@ -308,7 +323,8 @@ void FeatureCollector::countLocalMemoryUsage(const BasicBlock &block) {
 //------------------------------------------------------------------------------
 void FeatureCollector::countDivInsts(const Function& function, 
                                      MultiDimDivAnalysis *mdda) {
-  // TODO.
+//  instTypes["divRegions"] = mdda->getDivergentRegions().size();
+//  instTypes["divInsts"] = mdda->getToRep().size();
 }
 
 //------------------------------------------------------------------------------

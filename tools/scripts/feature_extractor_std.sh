@@ -16,10 +16,10 @@ $CLANG -x cl \
        -include ${OCLDEF} \
        -O0 \
        ${INPUT_FILE} \
-       -S -emit-llvm -fno-builtin -o - |  
+       -S -emit-llvm -fno-builtin -o - |
 $OPT -instnamer \
      -mem2reg \
      -inline -inline-threshold=10000 \
      -O3 \
-     -load /home/s1158370/root/lib/feature_extraction.so -opencl-instcount -count-kernel-name ${KERNEL_NAME} \
+     -load /home/s1158370/root/lib/divergence_analysis.so -load /home/s1158370/root/lib/feature_extraction.so -opencl-instcount -count-kernel-name ${KERNEL_NAME} \
      -o /dev/null

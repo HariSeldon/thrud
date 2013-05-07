@@ -13,6 +13,7 @@ using namespace llvm;
 namespace llvm {
   class CmpInst;
   class ScalarEvolution;
+  class LoopInfo;
 }
 
 class MultiDimDivAnalysis : public FunctionPass {
@@ -36,6 +37,8 @@ public:
   void AnalyzeRegion(DivergentRegion *Region);
   Value *GetTIdOperand(CmpInst* Cmp);
 
+  InstVector getToRep() const ;
+
 private:
   DivergentRegion::BoundCheck AnalyzeCmp(CmpInst *Cmp);
 
@@ -44,11 +47,17 @@ private:
   InstVector TIdInsts;
   InstVector Sizes;
   InstVector GroupIds;
+  InstVector ToRep;
 
   BranchVector Branches;
   BranchVector TIdBranches;
   RegionVector Regions;
   ValueVector Inputs;
+
+  PostDominatorTree *PDT;
+  DominatorTree *DT;
+  ScalarEvolution *SE;
+  LoopInfo *LI;
 };
 
 #endif

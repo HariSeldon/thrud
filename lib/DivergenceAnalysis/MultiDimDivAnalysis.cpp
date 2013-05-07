@@ -31,13 +31,6 @@
 
 using namespace llvm;
 
-STATISTIC(NumRegions, "Number of divergent regions");
-STATISTIC(NumDataRegions, "Number of data dependent regions");
-STATISTIC(NumLBRegions, "Number of regions checking for LB");
-STATISTIC(NumUBRegions, "Number of regions checking for UB");
-STATISTIC(NumEQRegions, "Number of regions checking for EQ");
-STATISTIC(UnknownRegions, "Number of unknown regions");
-
 MultiDimDivAnalysis::MultiDimDivAnalysis() : FunctionPass(ID) {}
 
 //------------------------------------------------------------------------------
@@ -57,10 +50,10 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
   if (!IsKernel(Func))
     return false;
 
-  PostDominatorTree *PDT = &getAnalysis<PostDominatorTree>();
-  DominatorTree *DT = &getAnalysis<DominatorTree>();
-  ScalarEvolution *SE = &getAnalysis<ScalarEvolution>();
-  LoopInfo *LI = &getAnalysis<LoopInfo>();
+  PDT = &getAnalysis<PostDominatorTree>();
+  DT = &getAnalysis<DominatorTree>();
+  SE = &getAnalysis<ScalarEvolution>();
+  LI = &getAnalysis<LoopInfo>();
 
   AllTIds = FindThreadIds(Func);
   Sizes = FindSpaceSizes(Func);
@@ -73,45 +66,20 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
   Branches = FindBranches(F);
   ValueVector AllTIdsV = ToValueVector(AllTIds);
   TIdBranches = GetThreadDepBranches(Branches, AllTIdsV);
+
   Regions = GetDivergentRegions(TIdBranches, DT, PDT, LI);
 
-  NumRegions = Regions.size();
-  NumDataRegions = 0;
-  NumLBRegions = 0;
-  NumUBRegions = 0;
-  NumEQRegions = 0;
-  UnknownRegions = 0;
+  llvm::errs() << "Regions: " << Regions.size() << "\n";
 
-  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); 
-       I != E; ++I) {
-    DivergentRegion *R = *I;
-    R->Analyze(SE, LI, AllTIdsV, Inputs);
-    DivergentRegion::BoundCheck BC = R->getCondition();
-    switch(BC) {
-      case DivergentRegion::DATA: {
-        NumDataRegions++;
-        break;
-      }
-      case DivergentRegion::LB: {
-        NumLBRegions++;
-        break;
-      }
-      case DivergentRegion::UB: {
-        NumUBRegions++;
-        break;
-      }
-      case DivergentRegion::EQ: {
-        NumEQRegions++;
-        break;
-      }
-      default:
-        UnknownRegions++;
-    }
-  }
+  // Get instructions to replicate.
+  InstVector DoNotReplicate;
+  DoNotReplicate.reserve(AllTIds.size() + Sizes.size() + GroupIds.size());
+  DoNotReplicate.insert(DoNotReplicate.end(), Sizes.begin(), Sizes.end());
+  DoNotReplicate.insert(DoNotReplicate.end(), AllTIds.begin(), AllTIds.end());
+  DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
+  ToRep = GetInstToReplicateOutsideRegions(TIdInsts, AllTIds, Regions, DoNotReplicate);
 
-  errs() << NumRegions << " " << NumDataRegions << " " << UnknownRegions
-         << " " << NumUBRegions << " " << NumEQRegions << " " 
-         << NumLBRegions << "\n";
+  llvm::errs() << "To Rep size: " << ToRep.size() << "\n";
 
   return false;
 }
@@ -134,6 +102,11 @@ InstVector MultiDimDivAnalysis::getSizes() const {
 //------------------------------------------------------------------------------
 bool MultiDimDivAnalysis::IsThreadIdDependent(Instruction *I) const {
   return IsPresent<Instruction>(I, TIdInsts);
+}
+
+//------------------------------------------------------------------------------
+InstVector MultiDimDivAnalysis::getToRep() const {
+  return ToRep;
 }
 
 //------------------------------------------------------------------------------

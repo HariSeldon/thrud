@@ -13,6 +13,7 @@ using namespace llvm;
 namespace llvm {
   class CmpInst;
   class ScalarEvolution;
+  class LoopInfo;
 }
 
 class SingleDimDivAnalysis : public FunctionPass {
@@ -57,6 +58,7 @@ private:
   PostDominatorTree *PDT;
   DominatorTree *DT;
   ScalarEvolution *SE;
+  LoopInfo *LI;
 
 };
 
