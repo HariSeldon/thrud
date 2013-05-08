@@ -64,12 +64,8 @@ struct MappingTraits<FeatureCollector> {
     }
     
     io.mapRequired("phiArgs", args);
-
-    // Dump ILP.
     io.mapRequired("ilpPerBlock", collector.blockILP);
-
-    // Dump MLP.
-    //io.mapRequired("mlpPerBlock", collector.blockMLP);
+    io.mapRequired("mlpPerBlock", collector.blockMLP);
   }
 };
 
@@ -157,8 +153,8 @@ FeatureCollector::FeatureCollector() {
   instTypes["mathFunctions"] = 0;
   instTypes["barriers"] = 0;
   instTypes["args"] = 0;
-//  instTypes["divRegions"] = 
-//  instTypes["divInsts"] = 
+//  instTypes["divRegions"] = 0; 
+//  instTypes["divInsts"] = 0;
 }
 
 //------------------------------------------------------------------------------

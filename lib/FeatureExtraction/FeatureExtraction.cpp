@@ -44,7 +44,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   BasicBlock *block = (BasicBlock *) &basicBlock;
   collector.instTypes["blocks"] += 1;
   collector.computeILP(block);
-  //collector.computeMLP(block, DT, PDT);
+  collector.computeMLP(block, DT, PDT);
   collector.countInstsBlock(basicBlock);
   collector.countConstants(basicBlock);
   collector.countBarriers(basicBlock);
