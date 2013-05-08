@@ -6,6 +6,8 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 //------------------------------------------------------------------------------
 void buildGraph(BasicBlock *block, Graph<Instruction*> &graph) {
   for (BasicBlock::iterator iter = block->begin(), end = block->end(); 
@@ -81,6 +83,6 @@ float getILP(BasicBlock *block) {
     depths[inst] = currentDepth;  
   }   
 
-  float ilp = insts.size() / maxDepth;
+  float ilp = (float) insts.size() / maxDepth;
   return ilp;
 }

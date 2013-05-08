@@ -59,4 +59,5 @@ void OpenCLFeatureExtractor::visitFunction(Function &function) {
   collector.countBranches(function);
   collector.countEdges(function);
   collector.countDivInsts(function, MDDA);
+  collector.countArgs(function);
 }

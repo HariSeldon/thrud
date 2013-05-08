@@ -55,9 +55,6 @@ class FeatureCollector {
     std::vector<unsigned int> blockInsts;
     void countInstsBlock(const BasicBlock &block);
 
-    void countEdges(const Function &function);
-    void countBranches(const Function &function);
-
     // Function calls.
     void countBarriers(const BasicBlock &block);
     void countMathFunctions(const BasicBlock &block);
@@ -84,6 +81,14 @@ class FeatureCollector {
     void countLocalMemoryUsage(const BasicBlock &block);
     // Divergent instructions.
     void countDivInsts(const Function &function, MultiDimDivAnalysis *mdda);
+
+    //===================
+    // Function counters.
+    //===================  
+    void countEdges(const Function &function);
+    void countBranches(const Function &function);
+    void countDivInsts(const Function &function, MultiDimDivAnalysis *mdda);
+    void countArgs(const Function &function);
 
     //// Number of unary operations in the method.
     //unsigned int
