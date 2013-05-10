@@ -59,7 +59,6 @@ private:
   DominatorTree *DT;
   ScalarEvolution *SE;
   LoopInfo *LI;
-
 };
 
 #endif

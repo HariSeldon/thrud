@@ -20,7 +20,7 @@ float getAverage(const std::vector<integerType> &elements) {
     return 0;
 
   integerType sum = std::accumulate(elements.begin(), elements.end(), 0);
-  float average = sum / elements.size();
+  float average = (float)sum / elements.size();
 
   return average;
 }

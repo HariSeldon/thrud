@@ -2,6 +2,7 @@
 
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/MathUtils.h"
+#include "thrud/Support/Utils.h"
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
@@ -12,20 +13,6 @@
 #include "llvm/Analysis/PostDominators.h"
 
 #include <algorithm>
-
-//------------------------------------------------------------------------------
-// Build a vector with all the uses of the given value.
-InstVector findUsers(llvm::Value *value) {
-  InstVector result;
-  for (Value::use_iterator use = value->use_begin(), end = value->use_end(); 
-    use != end; ++use) {
-    if(Instruction *inst = dyn_cast<Instruction>(*use)) {
-      result.push_back(inst); 
-    }  
-  }
-
-  return result;    
-}
 
 //------------------------------------------------------------------------------
 // Filter the vector of uses removing all the instructions that are dominated

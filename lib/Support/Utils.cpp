@@ -3,21 +3,27 @@
 #include "thrud/Support/DivergentRegion.h"
 #include "thrud/Support/RegionBounds.h"
 
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 #include "llvm/ADT/STLExtras.h"
+
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
+
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+
+#include <algorithm> 
 
 // OpenCL function names.
 const char *GetGlobalId = "get_global_id";
@@ -1277,3 +1283,93 @@ void safeIncrement(std::map<std::string, unsigned int> &map, std::string key) {
   else
     map[key] += 1;
 }
+
+//------------------------------------------------------------------------------
+bool isUsedOutsideOfDefiningBlock(const Instruction *I) {
+  if (I->use_empty()) return false;
+  if (isa<PHINode>(I)) return true;
+  const BasicBlock *BB = I->getParent();
+  for (Value::const_use_iterator UI = I->use_begin(), E = I->use_end();
+        UI != E; ++UI) {
+    const User *U = *UI;
+    if (cast<Instruction>(U)->getParent() != BB || isa<PHINode>(U))
+      return true;
+  }
+  return false;
+}
+
+//------------------------------------------------------------------------------
+// Build a vector with all the uses of the given value.
+InstVector findUsers(llvm::Value *value) {
+  InstVector result;
+  for (Value::use_iterator use = value->use_begin(), end = value->use_end();
+    use != end; ++use) {
+    if(Instruction *inst = dyn_cast<Instruction>(*use)) {
+      result.push_back(inst);
+    }
+  }
+
+  return result;
+}
+
+//------------------------------------------------------------------------------
+InstVector filterUsers(llvm::Instruction *used, InstVector& users) {
+  BasicBlock *block = used->getParent();
+  InstVector result;
+  for(InstVector::iterator iter = users.begin(), end = users.end(); 
+    iter != end; ++iter) {
+    Instruction *inst = *iter;
+    if(inst->getParent() == block)
+      result.push_back(inst);
+  }
+  return result;
+}
+
+//------------------------------------------------------------------------------
+// Find the last user of input instruction in its parent block. 
+// Return NULL if no use is found.
+Instruction *findLastUser(Instruction *I) {
+  InstVector users = findUsers(I);
+  users = filterUsers(I, users);
+  Instruction *lastUser = NULL;
+  unsigned int maxDistance = 0;
+
+  BasicBlock::iterator begin(I); 
+  for (InstVector::iterator iter = users.begin(), end = users.end();
+    iter != end; ++iter) {
+    Instruction *inst = *iter;
+    BasicBlock::iterator blockIter(inst);
+    unsigned int currentDist = std::distance(begin, blockIter); 
+    if(currentDist > maxDistance) {
+      maxDistance = currentDist; 
+      lastUser = inst;
+    }
+  }
+
+  return lastUser;
+}
+
+//------------------------------------------------------------------------------
+// Find first user of input instruction in its parent block. 
+// Return NULL if no use is found.
+Instruction *findFirstUser(Instruction *I) {
+  InstVector users = findUsers(I);
+  Instruction *firstUser = NULL;
+  unsigned int minDistance = I->getParent()->size();
+
+  BasicBlock::iterator begin(I); 
+  for (InstVector::iterator iter = users.begin(), end = users.end();
+    iter != end; ++iter) {
+    Instruction *inst = *iter;
+    BasicBlock::iterator blockIter(inst);
+    unsigned int currentDist = std::distance(begin, blockIter); 
+    if(currentDist < minDistance) {
+      minDistance = currentDist; 
+      firstUser = inst;
+    }
+  }
+
+  return firstUser;
+}
+
+

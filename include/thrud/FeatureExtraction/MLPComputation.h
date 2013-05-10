@@ -11,7 +11,6 @@ namespace llvm {
 
 using namespace llvm;
 
-std::pair<float, float> getMLP(BasicBlock *block, DominatorTree *DT, 
-                        PostDominatorTree *PDT);
+float getMLP(BasicBlock *block, DominatorTree *DT, PostDominatorTree *PDT);
 
 #endif

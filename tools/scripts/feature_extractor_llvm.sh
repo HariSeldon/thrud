@@ -11,7 +11,7 @@ COARSENING_DIRECTION=$3
 COARSENING_FACTOR=$4
 COARSENING_STRIDE=$5
 
-OCLDEF=/home/s1158370/src/myclash/axtor_scripts/ocldef.h
+OCLDEF=/home/s1158370/src/thrud/tools/scripts/ocldef_intel.h
 OPTIMIZATION=-O0
 TMP_FILE=/tmp/tc_tmp${RANDOM}.cl
 OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl

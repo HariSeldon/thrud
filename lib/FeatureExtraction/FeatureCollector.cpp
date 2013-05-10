@@ -66,6 +66,8 @@ struct MappingTraits<FeatureCollector> {
     io.mapRequired("phiArgs", args);
     io.mapRequired("ilpPerBlock", collector.blockILP);
     io.mapRequired("mlpPerBlock", collector.blockMLP);
+    io.mapRequired("avgLiveRange", collector.avgLiveRange);
+    io.mapRequired("aliveOut", collector.aliveOutBlocks);
   }
 };
 
@@ -148,6 +150,9 @@ FeatureCollector::FeatureCollector() {
   instTypes["fourB"] = 0;
   instTypes["eightB"] = 0;
   instTypes["fps"] = 0;
+  instTypes["vector2"] = 0;
+  instTypes["vector4"] = 0;
+  instTypes["vectorOperands"] = 0;
   instTypes["localLoads"] = 0;
   instTypes["localStores"] = 0;
   instTypes["mathFunctions"] = 0;
@@ -328,6 +333,45 @@ void FeatureCollector::countDivInsts(const Function &function,
 void FeatureCollector::countArgs(const Function &function) {
   instTypes["args"] = function.arg_size();
 }
+
+//------------------------------------------------------------------------------
+unsigned int computeLiveRange(Instruction *inst) {
+  Instruction *lastUser = findLastUser(inst);
+
+  if(lastUser == NULL)
+    return inst->getParent()->size();
+
+  assert(lastUser->getParent() == inst->getParent() && "Different basic blocks");
+
+  BasicBlock::iterator begin(inst), end(lastUser); 
+
+  return std::distance(begin, end);
+} 
+
+//------------------------------------------------------------------------------
+void FeatureCollector::livenessAnalysis(BasicBlock &block) {
+  unsigned int aliveValues = 0;
+  std::vector<unsigned int> ranges;
+
+  for (BasicBlock::iterator iter = block.begin(), end = block.end(); 
+    iter != end; ++iter) {
+    llvm::Instruction *inst = iter; 
+    if(!inst->hasName())
+      continue;
+    
+    bool isUsedElseWhere = isUsedOutsideOfDefiningBlock(inst);
+    aliveValues += isUsedElseWhere;
+
+    if(!isUsedElseWhere) { 
+      unsigned int liveRange = computeLiveRange(inst); 
+      ranges.push_back(liveRange);
+    }
+  }
+
+  avgLiveRange.push_back(getAverage(ranges)); 
+  aliveOutBlocks.push_back(aliveValues);
+}
+
 
 //------------------------------------------------------------------------------
 void FeatureCollector::dump() {

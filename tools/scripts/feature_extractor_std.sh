@@ -8,7 +8,7 @@ INPUT_FILE=$1
 KERNEL_NAME=$2
 COARSENING_DIRECTION=$3
 
-OCLDEF=/home/s1158370/src/myclash/axtor_scripts/ocldef.h
+OCLDEF=/home/s1158370/src/thrud/tools/scripts/ocldef_intel.h
 OPTIMIZATION=-O3
 
 $CLANG -x cl \
@@ -23,3 +23,5 @@ $OPT -instnamer \
      -O3 \
      -load /home/s1158370/root/lib/divergence_analysis.so -load /home/s1158370/root/lib/feature_extraction.so -opencl-instcount -count-kernel-name ${KERNEL_NAME} \
      -o /dev/null
+
+# unrolling is a test

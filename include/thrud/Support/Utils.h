@@ -233,3 +233,9 @@ bool isMathName(std::string fName);
 bool isLocalMemoryAccess(Instruction *I);
 bool isLocalMemoryStore(Instruction *I);
 bool isLocalMemoryLoad(Instruction *I);
+
+//------------------------------------------------------------------------------
+bool isUsedOutsideOfDefiningBlock(const Instruction *I);
+Instruction *findFirstUser(Instruction *I);
+Instruction *findLastUser(Instruction *I);
+InstVector findUsers(llvm::Value *value);

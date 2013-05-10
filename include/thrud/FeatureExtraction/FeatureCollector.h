@@ -37,8 +37,8 @@ class FeatureCollector {
     void computeILP(BasicBlock *blockblock);
 
     // Map block with estimated MLP: avg and variance.
-    //std::map<std::string, std::pair<float, float> > blockMLP;
-    std::vector<std::pair<float, float> > blockMLP;
+    //std::vector<std::pair<float, float> > blockMLP;
+    std::vector<float> blockMLP;
     void computeMLP(BasicBlock *block, DominatorTree *DT,      
       PostDominatorTree *PDT);
 
@@ -59,28 +59,23 @@ class FeatureCollector {
     void countBarriers(const BasicBlock &block);
     void countMathFunctions(const BasicBlock &block);
 
+    // Liveness ranges.
+    std::vector<unsigned int> aliveOutBlocks;
+    std::vector<float> avgLiveRange;
+    void livenessAnalysis(BasicBlock &block);
+
     // Phis.
     // Map phi name with arg number.
     std::map<std::string, unsigned int> phiArgs; 
     // Map block with phi. 
     std::map<std::string, std::vector<std::string> > blockPhis; 
     void countPhis(const BasicBlock &block);
-   
     // Average of arguments for a phi-node.
-    // Number of basic blocks with no phi nodes.
-    // Number of basic blocks with phi nodes in the interval [0, 3].
-    // Number of basic blocks with more then 3 phi nodes.
-    // Number of basic block where total number of arguments for all phi-nodes 
-    // is in greater then 5.
-    // Number of basic block where total number of arguments for all phi-nodes 
-    // is in the interval [1, 5].
 
     // Constants.
     void countConstants(const BasicBlock &block);
     // Local memory usage.
     void countLocalMemoryUsage(const BasicBlock &block);
-    // Divergent instructions.
-    void countDivInsts(const Function &function, MultiDimDivAnalysis *mdda);
 
     //===================
     // Function counters.

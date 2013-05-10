@@ -53,6 +53,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countIncomingEdges(basicBlock);
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
+  collector.livenessAnalysis(basicBlock);
 }
 
 void OpenCLFeatureExtractor::visitFunction(Function &function) { 
