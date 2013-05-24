@@ -3,10 +3,18 @@
 CLANG=clang
 OPT=opt
 LLVM_DIS=llvm-dis
+LIB_DIV_ANALYSIS=/home/s1158370/root/lib/libDivergenceAnalysis.so
+LIB_FEATURE_EXTRACTION=/home/s1158370/root/lib/libFeatureExtraction.so
 
 INPUT_FILE=$1
 KERNEL_NAME=$2
-COARSENING_DIRECTION=$3
+
+if [ $# -ne 2 ]
+then
+  echo "Must specify input file and kernel name"
+  exit 1;
+fi
+
 
 OCLDEF=/home/s1158370/src/thrud/tools/scripts/ocldef_intel.h
 OPTIMIZATION=-O3
@@ -16,12 +24,11 @@ $CLANG -x cl \
        -include ${OCLDEF} \
        -O0 \
        ${INPUT_FILE} \
-       -S -emit-llvm -fno-builtin -o - |
+       -S -emit-llvm -fno-builtin -o - | 
 $OPT -instnamer \
      -mem2reg \
      -inline -inline-threshold=10000 \
      -O3 \
-     -load /home/s1158370/root/lib/divergence_analysis.so -load /home/s1158370/root/lib/feature_extraction.so -opencl-instcount -count-kernel-name ${KERNEL_NAME} \
+     -load $LIB_DIV_ANALYSIS \
+     -load $LIB_FEATURE_EXTRACTION -opencl-instcount -count-kernel-name $KERNEL_NAME \
      -o /dev/null
-
-# unrolling is a test
