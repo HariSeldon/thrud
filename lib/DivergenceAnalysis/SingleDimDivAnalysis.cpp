@@ -10,30 +10,35 @@
 #define DEBUG_TYPE "single_dim_div_analysis"
 
 #include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+
 #include "thrud/Support/DivergentRegion.h"
 #include "thrud/Support/Utils.h"
+
+#include "llvm/Pass.h"
+
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Pass.h"
+
 #include "llvm/ADT/Statistic.h"
+
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
+
 #include <utility>
 
 using namespace llvm;
 
-cl::opt<int>
-CoarseningDirection("coarsening-direction", cl::init(-1), cl::Hidden,
-                    cl::desc("The coarsening direction"));
+extern cl::opt<int> CoarseningDirection;
 
 SingleDimDivAnalysis::SingleDimDivAnalysis() : FunctionPass(ID) {}
 

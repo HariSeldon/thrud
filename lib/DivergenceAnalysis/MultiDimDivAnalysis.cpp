@@ -10,23 +10,30 @@
 #define DEBUG_TYPE "multi_dim_div_analysis"
 
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
+
 #include "thrud/Support/DivergentRegion.h"
 #include "thrud/Support/Utils.h"
+
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
+
 #include "llvm/Pass.h"
+
 #include "llvm/ADT/Statistic.h"
+
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
+
 #include <utility>
 
 using namespace llvm;
@@ -69,8 +76,6 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
 
   Regions = GetDivergentRegions(TIdBranches, DT, PDT, LI);
 
-  llvm::errs() << "Regions: " << Regions.size() << "\n";
-
   // Get instructions to replicate.
   InstVector DoNotReplicate;
   DoNotReplicate.reserve(AllTIds.size() + Sizes.size() + GroupIds.size());
@@ -78,8 +83,6 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
   DoNotReplicate.insert(DoNotReplicate.end(), AllTIds.begin(), AllTIds.end());
   DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
   ToRep = GetInstToReplicateOutsideRegions(TIdInsts, AllTIds, Regions, DoNotReplicate);
-
-  llvm::errs() << "To Rep size: " << ToRep.size() << "\n";
 
   return false;
 }

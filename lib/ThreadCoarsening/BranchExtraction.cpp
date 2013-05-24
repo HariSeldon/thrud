@@ -44,13 +44,6 @@ using namespace llvm;
 
 STATISTIC(NumExtracted, "Number of extracted branches");
 
-//static cl::opt<int>
-//CoarseningFactor("coarsening-factor", cl::init(2), cl::Hidden,
-//                 cl::desc("The coarsening factor"));
-//static cl::opt<int>
-//CoarseningDirection("coarsening-direction", cl::init(-1), cl::Hidden,
-//                    cl::desc("The coarsening direction"));
-
 extern cl::opt<std::string> KernelName;
 
 BorderVector GetBorders(RegionVector &Rs);
@@ -61,8 +54,6 @@ BranchExtraction::BranchExtraction() : FunctionPass(ID) {}
 
 //------------------------------------------------------------------------------
 bool BranchExtraction::runOnFunction(Function &F) {
-  //errs() << "===== BranchExtraction =====\n";
-
   // Apply the pass to kernels only.
   if (!IsKernel((const Function *)&F))
     return false;

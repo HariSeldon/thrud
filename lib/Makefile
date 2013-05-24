@@ -8,6 +8,8 @@ LEVEL=..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS=Support DivergenceAnalysis ThreadCoarsening FeatureExtraction
+
+DIRS = Support DivergenceAnalysis
+PARALLEL_DIRS = FeatureExtraction ThreadCoarsening
 
 include $(LEVEL)/Makefile.common

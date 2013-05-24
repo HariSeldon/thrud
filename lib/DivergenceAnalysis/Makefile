@@ -9,7 +9,9 @@
 
 LEVEL = ../../
 
-LIBRARYNAME=divergence_analysis
+LIBRARYNAME=libDivergenceAnalysis
 LOADABLE_MODULE = 1
+
+USEDLIBS = thrudSupport.a 
 
 include $(LEVEL)/Makefile.common

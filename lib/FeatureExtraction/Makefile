@@ -8,16 +8,16 @@ LEVEL=../..
 #
 # Give the name of a library.  This will build a dynamic version.
 #
-LIBRARYNAME = feature_extraction
+LIBRARYNAME = libFeatureExtraction
 LOADABLE_MODULE = 1
 
 USEDLIBS = thrudSupport.a
 
 LLVMLIBS = LLVMSupport.a
 
-LIBS += -ldivergence_analysis
-
 #
 # Include Makefile.common so we know what to do.
 #
 include $(LEVEL)/Makefile.common
+
+LIBS += -lDivergenceAnalysis

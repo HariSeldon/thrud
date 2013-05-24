@@ -9,11 +9,11 @@
 
 LEVEL = ../../
 
-LIBRARYNAME = LLVMTC
+LIBRARYNAME = libThreadCoarsening
 LOADABLE_MODULE = 1
 
-USEDLIB = thrudSupport.a
-
-LIBS += -ldivergence_analysis
+USEDLIBS = thrudSupport.a
 
 include $(LEVEL)/Makefile.common
+
+LIBS += -lDivergenceAnalysis
