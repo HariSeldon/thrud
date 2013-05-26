@@ -17,3 +17,7 @@ Stride("coarsening-stride", cl::init(1), cl::Hidden,
 cl::opt<std::string>
 KernelName("kernel-name", cl::init(""), cl::Hidden,
             cl::desc("Name of the kernel to coarsen"));
+
+cl::opt<std::string>
+kernelName("count-kernel-name", cl::init(""), cl::Hidden,
+           cl::desc("Name of the kernel to analyze"));

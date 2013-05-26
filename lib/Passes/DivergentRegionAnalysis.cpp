@@ -52,6 +52,8 @@ void DivergentRegionAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 
 //------------------------------------------------------------------------------
 bool DivergentRegionAnalysis::runOnFunction(Function &F) {
+  errs() << "DivergentRegionAnalysis.\n";
+
   // Apply the pass to kernels only.
   if (!IsKernel((const Function *)&F))
     return false;

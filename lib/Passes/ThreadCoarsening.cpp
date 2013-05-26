@@ -69,7 +69,7 @@ void ThreadCoarsening::getAnalysisUsage(AnalysisUsage &AU) const {
 
 //------------------------------------------------------------------------------
 bool ThreadCoarsening::runOnFunction(Function &F) {
-  //errs() << "===== ThreadCoarsening =====\n";
+  errs() << "===== ThreadCoarsening =====\n";
   // Apply the pass to kernels only.
   if (!IsKernel((const Function *)&F))
     return false;
