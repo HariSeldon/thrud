@@ -54,21 +54,7 @@ bool IsKernel(const Function *F) {
 }
 
 //------------------------------------------------------------------------------
-void ApplyMap(Instruction *Inst, const Map &map) {
-  for (unsigned op = 0, opE = Inst->getNumOperands(); op != opE; ++op) {
-    Value *Op = Inst->getOperand(op);
-
-    Map::const_iterator It = map.find(Op);
-    if (It != map.end())
-      Inst->setOperand(op, It->second);
-  }
-
-  if(PHINode *Phi = dyn_cast<PHINode>(Inst))
-    ApplyMapToPhiBlocks(Phi, map);
-}
-
-//------------------------------------------------------------------------------
-void ApplyMapToPhiBlocks(PHINode *Phi, Map &map) {
+void ApplyMapToPhiBlocks(PHINode *Phi, const Map &map) {
 // FIXME:
   for (unsigned int index = 0; index < Phi->getNumIncomingValues(); ++index) {
     BasicBlock *OldBlock = Phi->getIncomingBlock(index);
@@ -80,6 +66,20 @@ void ApplyMapToPhiBlocks(PHINode *Phi, Map &map) {
       Phi->setIncomingBlock(index, NewBlock);
     }
   }
+}
+
+//------------------------------------------------------------------------------
+void ApplyMap(Instruction *Inst, const Map &map) {
+  for (unsigned op = 0, opE = Inst->getNumOperands(); op != opE; ++op) {
+    Value *Op = Inst->getOperand(op);
+
+    Map::const_iterator It = map.find(Op);
+    if (It != map.end())
+      Inst->setOperand(op, It->second);
+  }
+
+  if(PHINode *Phi = dyn_cast<PHINode>(Inst))
+    ApplyMapToPhiBlocks(Phi, map);
 }
 
 //------------------------------------------------------------------------------
