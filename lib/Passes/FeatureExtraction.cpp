@@ -2,11 +2,9 @@
 
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
 
-//cl::opt<std::string>
-//kernelName("count-kernel-name", cl::init(""), cl::Hidden,
-//               cl::desc("Name of the kernel to analyze"));
-
-extern cl::opt<std::string> kernelName;
+cl::opt<std::string>
+kernelName("count-kernel-name", cl::init(""), cl::Hidden,
+               cl::desc("Name of the kernel to analyze"));
 
 char OpenCLFeatureExtractor::ID = 0;
 static RegisterPass<OpenCLFeatureExtractor> X(

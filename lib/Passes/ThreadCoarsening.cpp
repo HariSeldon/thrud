@@ -52,9 +52,18 @@ STATISTIC(NumDivRegions, "Number of divergent_region");
 STATISTIC(NumReplicated, "Number of replicated instructions");
 
 extern cl::opt<int> CoarseningDirection;
-extern cl::opt<int> CoarseningFactor;
-extern cl::opt<int> Stride;
-extern cl::opt<std::string> KernelName;
+
+cl::opt<int>
+CoarseningFactor("coarsening-factor", cl::init(2), cl::Hidden,
+                 cl::desc("The coarsening factor"));
+
+cl::opt<int>
+Stride("coarsening-stride", cl::init(1), cl::Hidden,
+                    cl::desc("The coarsening stride"));
+
+cl::opt<std::string>
+KernelName("kernel-name", cl::init(""), cl::Hidden,
+           cl::desc("Name of the kernel to coarsen"));
 
 //------------------------------------------------------------------------------
 ThreadCoarsening::ThreadCoarsening() : FunctionPass(ID) {}

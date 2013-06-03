@@ -37,7 +37,9 @@
 
 using namespace llvm;
 
-extern cl::opt<int> CoarseningDirection;
+cl::opt<int>
+CoarseningDirection("coarsening-direction", cl::init(-1), cl::Hidden,
+                    cl::desc("The coarsening direction"));
 
 //------------------------------------------------------------------------------
 DivergentRegionAnalysis::DivergentRegionAnalysis() : FunctionPass(ID) { }
