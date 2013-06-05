@@ -158,8 +158,8 @@ FeatureCollector::FeatureCollector() {
   instTypes["mathFunctions"] = 0;
   instTypes["barriers"] = 0;
   instTypes["args"] = 0;
-//  instTypes["divRegions"] = 0; 
-//  instTypes["divInsts"] = 0;
+  instTypes["divRegions"] = 0; 
+  instTypes["divInsts"] = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -325,8 +325,8 @@ void FeatureCollector::countLocalMemoryUsage(const BasicBlock &block) {
 //------------------------------------------------------------------------------
 void FeatureCollector::countDivInsts(const Function &function, 
                                      MultiDimDivAnalysis *mdda) {
-//  instTypes["divRegions"] = mdda->getDivergentRegions().size();
-//  instTypes["divInsts"] = mdda->getToRep().size();
+  instTypes["divRegions"] = mdda->getDivergentRegions().size();
+  instTypes["divInsts"] = mdda->getToRep().size();
 }
 
 //------------------------------------------------------------------------------
