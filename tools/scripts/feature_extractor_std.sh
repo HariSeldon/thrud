@@ -3,7 +3,8 @@
 CLANG=clang
 OPT=opt
 LLVM_DIS=llvm-dis
-LIB_THRUD=/home/s1158370/root/lib/libThrud.so
+
+LIB_THRUD=$HOME/root/lib/libThrud.so
 
 INPUT_FILE=$1
 KERNEL_NAME=$2
@@ -15,7 +16,7 @@ then
 fi
 
 
-OCLDEF=/home/s1158370/src/thrud/tools/scripts/ocldef_intel.h
+OCLDEF=$HOME/src/thrud/tools/scripts/ocldef_intel.h
 OPTIMIZATION=-O3
 
 $CLANG -x cl \
