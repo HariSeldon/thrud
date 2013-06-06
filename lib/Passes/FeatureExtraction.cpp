@@ -60,6 +60,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
 }
 
 void OpenCLFeatureExtractor::visitFunction(Function &function) { 
+  collector.countDimensions(function);
   collector.countBranches(function);
   collector.countEdges(function);
   collector.countDivInsts(function, MDDA);

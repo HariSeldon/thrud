@@ -80,6 +80,7 @@ class FeatureCollector {
     //===================
     // Function counters.
     //===================  
+    void countDimensions(Function &function);
     void countEdges(const Function &function);
     void countBranches(const Function &function);
     void countDivInsts(const Function &function, MultiDimDivAnalysis *mdda);
