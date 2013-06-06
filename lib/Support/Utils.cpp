@@ -354,6 +354,15 @@ void dumpVector(const std::vector<type*> &toDump) {
   }
 }
 
+// Template specialization for BasicBlock.
+template <> void dumpVector(const BlockVector &toDump) {
+  for (std::vector<BasicBlock*>::const_iterator I = toDump.begin(),
+                                                E = toDump.end();
+                                                I != E; ++I) {
+    llvm::errs() << "  " << (*I)->getName() << "\n";
+  }
+}
+
 template void dumpVector(const std::vector<Instruction*> &toDump);
 template void dumpVector(const std::vector<BranchInst*> &toDump);
 template void dumpVector(const std::vector<DivergentRegion*> &toDump);
@@ -1103,8 +1112,9 @@ InstVector GetInstToReplicate(InstVector &TIdInsts, InstVector &TIds,
   return difference<Instruction>(Tmp, AllTIds);
 }
 
+// Compiler optimizations.
 //------------------------------------------------------------------------------
-InstVector GetInstToReplicateOutsideRegions(
+InstVector GetInstToReplicateOutsideRegionCores(
            InstVector &TIdInsts,
            InstVector &TIds,
            RegionVector &DRs,
@@ -1117,10 +1127,45 @@ InstVector GetInstToReplicateOutsideRegions(
     for (std::vector<DivergentRegion*>::iterator DRI = DRs.begin(),
                                                  DRE = DRs.end();
                                                  DRI != DRE; ++DRI) {
+      if((*DRI)->ContainsInternally(*I))
+        ToRemove.insert(*I);
+    }
+  }
+
+  for (InstSet::iterator I = ToRemove.begin(), E = ToRemove.end();
+       I != E; ++I) {
+    InstsSet.erase(*I);
+  }
+
+  InstVector Result(InstsSet.begin(), InstsSet.end());
+  return Result;
+}
+
+//------------------------------------------------------------------------------
+InstVector GetInstToReplicateOutsideRegions(
+           InstVector &TIdInsts,
+           InstVector &TIds,
+           RegionVector &DRs,
+           InstVector &AllTIds) {
+  InstVector Insts = GetInstToReplicate(TIdInsts, TIds, AllTIds);
+  
+  dumpVector(DRs);
+  dumpVector(Insts);
+
+  InstSet InstsSet(Insts.begin(), Insts.end());
+  InstSet ToRemove;
+
+  for (InstVector::iterator I = Insts.begin(), E = Insts.end(); I != E; ++I) {
+    for (std::vector<DivergentRegion*>::iterator DRI = DRs.begin(),
+                                                 DRE = DRs.end();
+                                                 DRI != DRE; ++DRI) {
       if((*DRI)->Contains(*I))
         ToRemove.insert(*I);
     }
   }
+
+  llvm::errs() << "To remove.\n";
+  dumpSet(ToRemove);
 
   for (InstSet::iterator I = ToRemove.begin(), E = ToRemove.end();
        I != E; ++I) {

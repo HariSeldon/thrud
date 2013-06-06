@@ -34,6 +34,8 @@ public:
   void setCondition(BoundCheck condition);
   BoundCheck getCondition();
 
+  unsigned int size();
+
   bool IsStrict();
 
   // Region filling.
@@ -42,7 +44,9 @@ public:
 
   // Region analysis.
   bool Contains(const Instruction *I);
+  bool ContainsInternally(const Instruction *I);
   bool Contains(const BasicBlock *BB);
+  bool ContainsInternally(const BasicBlock *BB);
 
   void Analyze(ScalarEvolution *SE, LoopInfo *LI,
                ValueVector &TIds, ValueVector &Inputs);

@@ -82,7 +82,7 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
   DoNotReplicate.insert(DoNotReplicate.end(), Sizes.begin(), Sizes.end());
   DoNotReplicate.insert(DoNotReplicate.end(), AllTIds.begin(), AllTIds.end());
   DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
-  ToRep = GetInstToReplicateOutsideRegions(TIdInsts, AllTIds, Regions, DoNotReplicate);
+  ToRep = GetInstToReplicateOutsideRegionCores(TIdInsts, AllTIds, Regions, DoNotReplicate);
 
   return false;
 }

@@ -160,6 +160,7 @@ FeatureCollector::FeatureCollector() {
   instTypes["args"] = 0;
   instTypes["divRegions"] = 0; 
   instTypes["divInsts"] = 0;
+  instTypes["divRegionInsts"] = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -327,6 +328,17 @@ void FeatureCollector::countDivInsts(const Function &function,
                                      MultiDimDivAnalysis *mdda) {
   instTypes["divRegions"] = mdda->getDivergentRegions().size();
   instTypes["divInsts"] = mdda->getToRep().size();
+
+  // Insts in divergent regions.
+  unsigned int divRegionInsts = 0;
+  RegionVector Regions = mdda->getDivergentRegions(); 
+  for (RegionVector::iterator I = Regions.begin(), 
+                              E = Regions.end(); 
+                              I != E; ++I) {
+    divRegionInsts += (*I)->size(); 
+  }
+
+  instTypes["divRegionInsts"] = divRegionInsts;
 }
 
 //------------------------------------------------------------------------------

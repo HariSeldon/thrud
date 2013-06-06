@@ -216,6 +216,11 @@ InstVector GetInstToReplicateOutsideRegions(InstVector &TIdInsts,
                                             RegionVector &DRs,
                                             InstVector &AllTIds);
 
+InstVector GetInstToReplicateOutsideRegionCores(InstVector &TIdInsts,
+                                                InstVector &TIds,
+                                                RegionVector &DRs,
+                                                InstVector &AllTIds);
+
 Value *GetTIdOperand(CmpInst* Cmp, ValueVector &TIds);
 
 //------------------------------------------------------------------------------

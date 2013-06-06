@@ -29,6 +29,7 @@ public:
                 const DominatorTree *DT, const PostDominatorTree *PDT);
   bool Contains(const Instruction *Inst, 
                 const DominatorTree *DT, const PostDominatorTree *PDT);
+
 private:
   BasicBlock* Header;
   BasicBlock* Exiting;

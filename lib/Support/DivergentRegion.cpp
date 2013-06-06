@@ -96,10 +96,34 @@ bool DivergentRegion::Contains(const Instruction *I) {
 }
 
 //------------------------------------------------------------------------------
+bool DivergentRegion::ContainsInternally(const Instruction *I) {
+  const BasicBlock *BB = I->getParent();
+  return ContainsInternally(BB);
+}
+
+//------------------------------------------------------------------------------
 bool DivergentRegion::Contains(const BasicBlock *BB) {
+  BlockVector::iterator Begin = Blocks->begin();
   BlockVector::iterator End = Blocks->end();
-  BlockVector::iterator Result = std::find(Blocks->begin(), End, BB);
+  BlockVector::iterator Result = std::find(Begin, End, BB);
   return Result != End;
+}
+
+//------------------------------------------------------------------------------
+bool DivergentRegion::ContainsInternally(const BasicBlock *BB) {
+  
+  for (BlockVector::iterator I = Blocks->begin(), 
+                             E = Blocks->end();
+                             I != E; ++I) {
+    BasicBlock *block = (*I);
+
+    if(block == Bounds->getHeader() || block == Bounds->getExiting())
+      continue;  
+    
+    if(block == BB)
+      return true; 
+  }
+  return false;
 }
 
 //------------------------------------------------------------------------------
@@ -188,4 +212,22 @@ DivergentRegion::BoundCheck
     return DivergentRegion::UB;
   else
     return DivergentRegion::LB;
+}
+
+//------------------------------------------------------------------------------
+// This could be done using "accumulate".
+unsigned int DivergentRegion::size() {
+  unsigned int result = 0;
+
+  for (BlockVector::iterator I = Blocks->begin(), 
+                             E = Blocks->end(); 
+                             I != E; ++I) {
+    BasicBlock *block = (*I);
+    if(block == Bounds->getHeader() || block == Bounds->getExiting())
+      continue;
+
+    result += block->size();
+  }
+
+  return result;
 }
