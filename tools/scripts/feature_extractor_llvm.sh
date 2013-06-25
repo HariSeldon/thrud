@@ -4,7 +4,13 @@ CLANG=clang
 OPT=opt
 LLVM_DIS=llvm-dis
 AXTOR=axtor
-LIB_THREAD_COARSENING=~/root/lib/libThreadCoarsening.so
+LIB_THRUD=$HOME/root/lib/libThrud.so
+
+if [ $# -ne 5 ]
+then
+  echo "Must specify: input file, kernel name, cd, cf, st"
+exit 1;
+fi
 
 INPUT_FILE=$1
 KERNEL_NAME=$2
@@ -12,7 +18,7 @@ COARSENING_DIRECTION=$3
 COARSENING_FACTOR=$4
 COARSENING_STRIDE=$5
 
-OCLDEF=/home/s1158370/src/thrud/tools/scripts/ocldef_intel.h
+OCLDEF=$HOME/src/thrud/tools/scripts/ocldef_intel.h
 OPTIMIZATION=-O0
 TMP_FILE=/tmp/tc_tmp${RANDOM}.cl
 OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl
@@ -24,9 +30,8 @@ $CLANG -x cl \
        ${INPUT_FILE} \
        -S -emit-llvm -fno-builtin -o - | \
 $OPT -mem2reg \
-     -stats \
      -inline -inline-threshold=10000 \
-     -instnamer -load $LIB_THREAD_COARSENING -be -tc \
+     -instnamer -load ${LIB_THRUD} -be -tc \
      -coarsening-factor ${COARSENING_FACTOR} \
      -coarsening-direction ${COARSENING_DIRECTION} \
      -coarsening-stride ${COARSENING_STRIDE} -o - | \
@@ -38,12 +43,13 @@ rm ${TMP_FILE}
 $CLANG -x cl \
        -target nvptx \
        -include ${OCLDEF} \
-       ${OPTIMIZATION} \
+       -O3 \
        ${OUTPUT_FILE} \
        -S -emit-llvm -fno-builtin -o - | \
-$OPT -mem2reg \
-     -stats \
-     -load $LIB_THREAD_COARSENING -opencl_instcount -count-kernel-name ${KERNEL_NAME} \
-     -o - > /dev/null
+$OPT -instnamer \
+     -mem2reg \
+     -inline -inline-threshold=10000 \
+     -O3 -load ${LIB_THRUD} -opencl-instcount -count-kernel-name ${KERNEL_NAME} \
+     -o /dev/null
 
 rm ${OUTPUT_FILE}

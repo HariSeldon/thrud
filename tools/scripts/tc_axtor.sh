@@ -4,15 +4,22 @@ CLANG=clang
 OPT=opt
 LLVM_DIS=llvm-dis
 AXTOR=axtor
-LIB_THREAD_COARSENING=/home/s1158370/root/lib/libThreadCoarsening.so
+LIB_THRUD=$HOME/root/lib/libThrud.so
 
 INPUT_FILE=$1
-COARSENING_DIRECTION=$2
-COARSENING_FACTOR=$3
-COARSENING_STRIDE=$4
-OUTPUT_FILE=$5
+KERNEL_NAME=$2
+COARSENING_DIRECTION=$3
+COARSENING_FACTOR=$4
+COARSENING_STRIDE=$5
 
-OCLDEF=/home/s1158370/src/thrud/tools/scripts/ocldef_intel.h
+if [ $# -ne 5 ]
+then
+  echo "Must specify: input file, kernel name, cd, cf, st"
+  exit 1;
+fi
+
+
+OCLDEF=$HOME/src/thrud/tools/scripts/ocldef_intel.h
 OPTIMIZATION=-O0
 TMP_FILE=/tmp/tc_tmp${RANDOM}.cl
 
@@ -23,7 +30,7 @@ $CLANG -x cl \
        ${INPUT_FILE} \
        -S -emit-llvm -fno-builtin -o - | \
 $OPT -mem2reg \
-     -instnamer -load $LIB_THREAD_COARSENING -be -tc \
+     -instnamer -load $LIB_THRUD -be -tc \
      -coarsening-factor ${COARSENING_FACTOR} \
      -coarsening-direction ${COARSENING_DIRECTION} \
      -coarsening-stride ${COARSENING_STRIDE} -o - | \
