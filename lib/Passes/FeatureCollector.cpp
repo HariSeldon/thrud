@@ -281,11 +281,15 @@ void FeatureCollector::countConstants(const BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countBarriers(const BasicBlock &block) {
+  block.dump();
+
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
     iter != end; ++iter) {
     const Instruction *inst = iter; 
     if (const CallInst *callInst = dyn_cast<CallInst>(inst)) {
       const Function *function = callInst->getCalledFunction(); 
+      if(function == NULL) 
+        continue;
       if (function->getName() == "barrier") {
         safeIncrement(instTypes, "barriers");
       }
@@ -300,6 +304,8 @@ void FeatureCollector::countMathFunctions(const BasicBlock &block) {
     const Instruction *inst = iter;
     if (const CallInst *callInst = dyn_cast<CallInst>(inst)) {
       const Function *function = callInst->getCalledFunction();
+      if(function == NULL) 
+        continue;
       if (isMathName(function->getName())) {
         safeIncrement(instTypes, "mathFunctions");
       }
