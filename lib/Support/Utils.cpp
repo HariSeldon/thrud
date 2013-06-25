@@ -54,7 +54,7 @@ bool IsKernel(const Function *F) {
 }
 
 //------------------------------------------------------------------------------
-void ApplyMapToPhiBlocks(PHINode *Phi, const Map &map) {
+void ApplyMapToPhiBlocks(PHINode *Phi, Map &map) {
 // FIXME:
   for (unsigned int index = 0; index < Phi->getNumIncomingValues(); ++index) {
     BasicBlock *OldBlock = Phi->getIncomingBlock(index);
@@ -69,7 +69,7 @@ void ApplyMapToPhiBlocks(PHINode *Phi, const Map &map) {
 }
 
 //------------------------------------------------------------------------------
-void ApplyMap(Instruction *Inst, const Map &map) {
+void ApplyMap(Instruction *Inst, Map &map) {
   for (unsigned op = 0, opE = Inst->getNumOperands(); op != opE; ++op) {
     Value *Op = Inst->getOperand(op);
 
@@ -83,13 +83,13 @@ void ApplyMap(Instruction *Inst, const Map &map) {
 }
 
 //------------------------------------------------------------------------------
-void ApplyMapToPHIs(BasicBlock *BB, const Map &map) { 
+void ApplyMapToPHIs(BasicBlock *BB, Map &map) { 
   for (BasicBlock::iterator I = BB->begin(); isa<PHINode>(I); ++I)
     ApplyMap(I, map);
 }
 
 //------------------------------------------------------------------------------
-void ApplyMap(BasicBlock *BB, const Map &map) {
+void ApplyMap(BasicBlock *BB, Map &map) {
   for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
     ApplyMap(I, map);
 }
@@ -373,7 +373,7 @@ template void dumpVector(const std::vector<PHINode*> &toDump);
 // the region.
 // FIXME: I might not need the whole map, but only the live values out of the region.
 RegionBounds CloneRegion(RegionBounds *Bounds, const Twine &suffix,
-                         DominatorTree *DT, Map &map, const Map &ToApply) {
+                         DominatorTree *DT, Map &map, Map &ToApply) {
   RegionBounds NewBounds;
   BlockVector NewBlocks;
 
@@ -1148,10 +1148,6 @@ InstVector GetInstToReplicateOutsideRegions(
            RegionVector &DRs,
            InstVector &AllTIds) {
   InstVector Insts = GetInstToReplicate(TIdInsts, TIds, AllTIds);
-  
-  dumpVector(DRs);
-  dumpVector(Insts);
-
   InstSet InstsSet(Insts.begin(), Insts.end());
   InstSet ToRemove;
 
@@ -1163,9 +1159,6 @@ InstVector GetInstToReplicateOutsideRegions(
         ToRemove.insert(*I);
     }
   }
-
-  llvm::errs() << "To remove.\n";
-  dumpSet(ToRemove);
 
   for (InstSet::iterator I = ToRemove.begin(), E = ToRemove.end();
        I != E; ++I) {

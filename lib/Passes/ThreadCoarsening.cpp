@@ -78,7 +78,6 @@ void ThreadCoarsening::getAnalysisUsage(AnalysisUsage &AU) const {
 
 //------------------------------------------------------------------------------
 bool ThreadCoarsening::runOnFunction(Function &F) {
-  errs() << "===== ThreadCoarsening =====\n";
   // Apply the pass to kernels only.
   if (!IsKernel((const Function *)&F))
     return false;
@@ -285,7 +284,7 @@ void ThreadCoarsening::InsertSizeScale(unsigned int CD, unsigned int CF,
 }
 
 //------------------------------------------------------------------------------
-void ThreadCoarsening::InsertReplicatedInst(InstPairs &IP, const Map &map) {
+void ThreadCoarsening::InsertReplicatedInst(InstPairs &IP, Map &map) {
   for (InstPairs::iterator I = IP.begin(), E = IP.end(); I != E; ++I) {
     Instruction *Old = I->first;
     Instruction *New = I->second;

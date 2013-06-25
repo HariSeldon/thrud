@@ -54,8 +54,6 @@ BranchExtraction::BranchExtraction() : FunctionPass(ID) {}
 
 //------------------------------------------------------------------------------
 bool BranchExtraction::runOnFunction(Function &F) {
-  errs() << "BranchExtraction\n";
-
   // Apply the pass to kernels only.
   if (!IsKernel((const Function *)&F))
     return false;

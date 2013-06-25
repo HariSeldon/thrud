@@ -25,10 +25,10 @@ void safeIncrement(std::map<std::string, unsigned int> &inputMap, std::string ke
 
 // Map management.
 // Apply the given map to the given instruction.
-void ApplyMap(Instruction *Inst, const Map &map);
-void ApplyMap(BasicBlock *BB, const Map &map);
+void ApplyMap(Instruction *Inst, Map &map);
+void ApplyMap(BasicBlock *BB, Map &map);
 void ApplyMapToPHIs(BasicBlock *BB, Map &map);
-void ApplyMapToPhiBlocks(PHINode *Phi, const Map &map);
+void ApplyMapToPhiBlocks(PHINode *Phi, Map &map);
 // Prints to stderr the given map. For debug only.
 void printMap (const Map &map);
 
@@ -109,7 +109,7 @@ std::vector<RegionBounds*> BuildInsertionPoints(RegionVector &Regions);
 // Cloning support.
 void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree* DT);
 RegionBounds CloneRegion(RegionBounds *Bounds, const Twine& suffix,
-                         DominatorTree* DT, Map& map, const Map& ToApply);
+                         DominatorTree* DT, Map& map, Map& ToApply);
 
 // Domination.
 //bool IsTopLevel(const Instruction *I, const PostDominatorTree *PDT);

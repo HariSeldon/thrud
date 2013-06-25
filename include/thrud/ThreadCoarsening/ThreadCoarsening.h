@@ -43,7 +43,7 @@ private:
   InstVector InsertIdOffset(unsigned int CD, unsigned int CF, unsigned int ST,
                             InstVector &InstsTid);
 
-  void InsertReplicatedInst(InstPairs &IP, const Map &map);
+  void InsertReplicatedInst(InstPairs &IP, Map &map);
 
   void PerformDuplication();
 
