@@ -411,6 +411,9 @@ AS_FUNCTION(uint, int);
 AS_FUNCTION(uchar, char);
 AS_FUNCTION(int4, float4);
 AS_FUNCTION(float4, int4);
+AS_FUNCTION(char4, uchar4);
+AS_FUNCTION(uchar4, float4);
+AS_FUNCTION(uchar4, char4);
 
 CONVERT_FUNCTION(float4, int4);
 CONVERT_FUNCTION(float4, uint4);

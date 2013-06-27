@@ -18,7 +18,7 @@ COARSENING_DIRECTION=$3
 COARSENING_FACTOR=$4
 COARSENING_STRIDE=$5
 
-OCLDEF=$HOME/src/thrud/tools/scripts/ocldef_intel.h
+OCLDEF=$HOME/src/thrud/tools/scripts/ocldef.h
 OPTIMIZATION=-O0
 TMP_FILE=/tmp/tc_tmp${RANDOM}.cl
 OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl
@@ -34,9 +34,9 @@ $OPT -mem2reg \
      -instnamer -load ${LIB_THRUD} -be -tc \
      -coarsening-factor ${COARSENING_FACTOR} \
      -coarsening-direction ${COARSENING_DIRECTION} \
-     -coarsening-stride ${COARSENING_STRIDE} -o - | \
+     -coarsening-stride ${COARSENING_STRIDE} -o - |
 ${LLVM_DIS} -o ${TMP_FILE}
-${AXTOR} ${TMP_FILE} -m OCL -o ${OUTPUT_FILE} 
+${AXTOR} ${TMP_FILE} -m OCL -o ${OUTPUT_FILE} &>  /dev/null
 
 rm ${TMP_FILE}
 

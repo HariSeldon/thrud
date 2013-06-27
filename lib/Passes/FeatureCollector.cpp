@@ -281,8 +281,6 @@ void FeatureCollector::countConstants(const BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countBarriers(const BasicBlock &block) {
-  block.dump();
-
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
     iter != end; ++iter) {
     const Instruction *inst = iter; 
