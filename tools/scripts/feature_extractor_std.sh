@@ -28,5 +28,5 @@ $CLANG -x cl \
 $OPT -instnamer \
      -mem2reg \
      -inline -inline-threshold=10000 \
-     -O3 -load $LIB_THRUD -opencl-instcount -count-kernel-name $KERNEL_NAME \
+     -O3 -load $LIB_THRUD -opencl-instcount -count-kernel-name $KERNEL_NAME -coarsening-direction 0 \
      -o /dev/null

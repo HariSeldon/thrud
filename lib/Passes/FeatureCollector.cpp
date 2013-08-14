@@ -17,6 +17,8 @@
 #include "llvm/Analysis/PostDominators.h"
 
 #include "llvm/Support/CFG.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InstIterator.h"
 #include "llvm/Support/YAMLTraits.h"
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -161,6 +163,7 @@ FeatureCollector::FeatureCollector() {
   instTypes["divRegions"] = 0; 
   instTypes["divInsts"] = 0;
   instTypes["divRegionInsts"] = 0;
+  instTypes["uniformLoads"] = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -243,7 +246,6 @@ void FeatureCollector::countPhis(const BasicBlock &block) {
 
     phiArgs[name] = argCount;
     names.push_back(name);
-
   }
 
   blockPhis[block.getName()] = names;
@@ -328,8 +330,9 @@ void FeatureCollector::countLocalMemoryUsage(const BasicBlock &block) {
 }
 
 //------------------------------------------------------------------------------
-void FeatureCollector::countDivInsts(const Function &function, 
-                                     MultiDimDivAnalysis *mdda) {
+void FeatureCollector::countDivInsts(Function &function, 
+                                     MultiDimDivAnalysis *mdda,
+                                     SingleDimDivAnalysis *sdda) {
   instTypes["divRegions"] = mdda->getDivergentRegions().size();
   instTypes["divInsts"] = mdda->getToRep().size();
 
@@ -343,6 +346,20 @@ void FeatureCollector::countDivInsts(const Function &function,
   }
 
   instTypes["divRegionInsts"] = divRegionInsts;
+
+  // Count uniform loads.
+  unsigned int uniformLoads = 0;
+  for (inst_iterator I = inst_begin(function), E = inst_end(function); 
+       I != E; ++I) {
+    Instruction *inst = &*I;
+    if(isa<LoadInst>(inst)) {
+      inst->dump();
+      llvm::errs() << sdda->IsThreadIdDependent(inst) << "\n";
+    }
+    uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
+  }
+
+  instTypes["uniformLoads"] = uniformLoads;
 }
 
 //------------------------------------------------------------------------------

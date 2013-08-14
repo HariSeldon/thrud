@@ -2,6 +2,7 @@
 #define FEATURE_COLLECTOR_H
 
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
+#include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
 
 // Try to remove these two.
 #include "llvm/Analysis/Dominators.h"
@@ -83,7 +84,8 @@ class FeatureCollector {
     void countDimensions(Function &function);
     void countEdges(const Function &function);
     void countBranches(const Function &function);
-    void countDivInsts(const Function &function, MultiDimDivAnalysis *mdda);
+    void countDivInsts(Function &function, MultiDimDivAnalysis *mdda, 
+                       SingleDimDivAnalysis *sdda);
     void countArgs(const Function &function);
 
     //// Number of unary operations in the method.

@@ -52,6 +52,7 @@ namespace {
 
   private:
     MultiDimDivAnalysis *MDDA;
+    SingleDimDivAnalysis *SDDA;
     FeatureCollector collector;
     PostDominatorTree *PDT;
     DominatorTree *DT;

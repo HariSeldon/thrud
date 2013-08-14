@@ -54,8 +54,7 @@ void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 //------------------------------------------------------------------------------
 bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   Function *Func = (Function *) &F;
-
-  // Apply the pass to kernels only.
+ // Apply the pass to kernels only.
   if (!IsKernel(Func))
     return false;
 
@@ -63,6 +62,8 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTree>();
   SE = &getAnalysis<ScalarEvolution>();
   LI = &getAnalysis<LoopInfo>();
+
+  llvm::errs() << "CD: " << CoarseningDirection << "\n";
 
   TIds = FindThreadIds(Func, CoarseningDirection);
 
