@@ -6,173 +6,112 @@ typedef unsigned int size_t;
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-#define INT_FUNCTIONS_ONE_ARG(name) \
-__attribute__((overloadable, pure)) \
-  int16 name (int16); \
-  __attribute__((overloadable, pure)) \
-  int8 name (int8); \
-  __attribute__((overloadable, pure)) \
-  int4 name (int4); \
-  __attribute__((overloadable, pure)) \
-  int3 name (int3); \
-  __attribute__((overloadable, pure)) \
-  int2 name (int2); \
-  __attribute__((overloadable, pure)) \
-  int name (int)
+#define INT_FUNCTIONS_ONE_ARG(name)                                            \
+  __attribute__((overloadable, pure)) int16 name(int16);                       \
+  __attribute__((overloadable, pure)) int8 name(int8);                         \
+  __attribute__((overloadable, pure)) int4 name(int4);                         \
+  __attribute__((overloadable, pure)) int3 name(int3);                         \
+  __attribute__((overloadable, pure)) int2 name(int2);                         \
+  __attribute__((overloadable, pure)) int name(int)
 
-#define FLOAT_FUNCTIONS_ONE_ARG(name) \
-  __attribute__((overloadable, pure)) \
-  float16 name (float16); \
-  __attribute__((overloadable, pure)) \
-  float8 name (float8); \
-  __attribute__((overloadable, pure)) \
-  float4 name (float4); \
-  __attribute__((overloadable, pure)) \
-  float3 name (float3); \
-  __attribute__((overloadable, pure)) \
-  float2 name (float2); \
-  __attribute__((overloadable, pure)) \
-  float name (float); \
-  __attribute__((overloadable, pure)) \
-  double16 name (double16); \
-  __attribute__((overloadable, pure)) \
-  double8 name (double8); \
-  __attribute__((overloadable, pure)) \
-  double4 name (double4); \
-  __attribute__((overloadable, pure)) \
-  double3 name (double3); \
-  __attribute__((overloadable, pure)) \
-  double2 name (double2); \
-  __attribute__((overloadable, pure)) \
-  double name (double)
+#define FLOAT_FUNCTIONS_ONE_ARG(name)                                          \
+  __attribute__((overloadable, pure)) float16 name(float16);                   \
+  __attribute__((overloadable, pure)) float8 name(float8);                     \
+  __attribute__((overloadable, pure)) float4 name(float4);                     \
+  __attribute__((overloadable, pure)) float3 name(float3);                     \
+  __attribute__((overloadable, pure)) float2 name(float2);                     \
+  __attribute__((overloadable, pure)) float name(float);                       \
+  __attribute__((overloadable, pure)) double16 name(double16);                 \
+  __attribute__((overloadable, pure)) double8 name(double8);                   \
+  __attribute__((overloadable, pure)) double4 name(double4);                   \
+  __attribute__((overloadable, pure)) double3 name(double3);                   \
+  __attribute__((overloadable, pure)) double2 name(double2);                   \
+  __attribute__((overloadable, pure)) double name(double)
 
-#define INT_FUNCTIONS_TWO_ARGS(name) \
-  __attribute__((overloadable, pure)) \
-  int16 name (int16, int16); \
-  __attribute__((overloadable, pure)) \
-  int8 name (int8, int8); \
-  __attribute__((overloadable, pure)) \
-  int4 name (int4, int4); \
-  __attribute__((overloadable, pure)) \
-  int3 name (int3, int3); \
-  __attribute__((overloadable, pure)) \
-  int2 name (int2, int2); \
-  __attribute__((overloadable, pure)) \
-  int name (int , int)
+#define INT_FUNCTIONS_TWO_ARGS(name)                                           \
+  __attribute__((overloadable, pure)) int16 name(int16, int16);                \
+  __attribute__((overloadable, pure)) int8 name(int8, int8);                   \
+  __attribute__((overloadable, pure)) int4 name(int4, int4);                   \
+  __attribute__((overloadable, pure)) int3 name(int3, int3);                   \
+  __attribute__((overloadable, pure)) int2 name(int2, int2);                   \
+  __attribute__((overloadable, pure)) int name(int, int)
 
-#define UINT_FUNCTIONS_TWO_ARGS(name) \
-  __attribute__((overloadable, pure)) \
-  uint16 name (uint16, uint16); \
-  __attribute__((overloadable, pure)) \
-  uint8 name (uint8, uint8); \
-  __attribute__((overloadable, pure)) \
-  uint4 name (uint4, uint4); \
-  __attribute__((overloadable, pure)) \
-  uint3 name (uint3, uint3); \
-  __attribute__((overloadable, pure)) \
-  uint2 name (uint2, uint2); \
-  __attribute__((overloadable, pure)) \
-  uint name (uint , uint)
+#define UINT_FUNCTIONS_TWO_ARGS(name)                                          \
+  __attribute__((overloadable, pure)) uint16 name(uint16, uint16);             \
+  __attribute__((overloadable, pure)) uint8 name(uint8, uint8);                \
+  __attribute__((overloadable, pure)) uint4 name(uint4, uint4);                \
+  __attribute__((overloadable, pure)) uint3 name(uint3, uint3);                \
+  __attribute__((overloadable, pure)) uint2 name(uint2, uint2);                \
+  __attribute__((overloadable, pure)) uint name(uint, uint)
 
-#define SHORT_FUNCTIONS_TWO_ARGS(name) \
-    __attribute__((overloadable, pure)) \
-  short16 name (short16, short16); \
-  __attribute__((overloadable, pure)) \
-  short8 name (short8, short8); \
-  __attribute__((overloadable, pure)) \
-  short4 name (short4, short4); \
-  __attribute__((overloadable, pure)) \
-  short3 name (short3, short3); \
-  __attribute__((overloadable, pure)) \
-  short2 name (short2, short2); \
-  __attribute__((overloadable, pure)) \
-  short name (short , short)
+#define SHORT_FUNCTIONS_TWO_ARGS(name)                                         \
+  __attribute__((overloadable, pure)) short16 name(short16, short16);          \
+  __attribute__((overloadable, pure)) short8 name(short8, short8);             \
+  __attribute__((overloadable, pure)) short4 name(short4, short4);             \
+  __attribute__((overloadable, pure)) short3 name(short3, short3);             \
+  __attribute__((overloadable, pure)) short2 name(short2, short2);             \
+  __attribute__((overloadable, pure)) short name(short, short)
 
-#define FLOAT_FUNCTIONS_TWO_ARGS(name) \
-  __attribute__((overloadable, pure)) \
-  float16 name (float16, float16); \
-  __attribute__((overloadable, pure)) \
-  float8 name (float8, float8); \
-  __attribute__((overloadable, pure)) \
-  float4 name (float4, float4); \
-  __attribute__((overloadable, pure)) \
-  float3 name (float3, float3); \
-  __attribute__((overloadable, pure)) \
-  float2 name (float2, float2); \
-  __attribute__((overloadable, pure)) \
-  float name (float , float); \
-  __attribute__((overloadable, pure)) \
-  double16 name (double16, double16); \
-  __attribute__((overloadable, pure)) \
-  double8 name (double8, double8); \
-  __attribute__((overloadable, pure)) \
-  double4 name (double4, double4); \
-  __attribute__((overloadable, pure)) \
-  double3 name (double3, double3); \
-  __attribute__((overloadable, pure)) \
-  double2 name (double2, double2); \
-  __attribute__((overloadable, pure)) \
-  double name (double, double)
+#define FLOAT_FUNCTIONS_TWO_ARGS(name)                                         \
+  __attribute__((overloadable, pure)) float16 name(float16, float16);          \
+  __attribute__((overloadable, pure)) float8 name(float8, float8);             \
+  __attribute__((overloadable, pure)) float4 name(float4, float4);             \
+  __attribute__((overloadable, pure)) float3 name(float3, float3);             \
+  __attribute__((overloadable, pure)) float2 name(float2, float2);             \
+  __attribute__((overloadable, pure)) float name(float, float);                \
+  __attribute__((overloadable, pure)) double16 name(double16, double16);       \
+  __attribute__((overloadable, pure)) double8 name(double8, double8);          \
+  __attribute__((overloadable, pure)) double4 name(double4, double4);          \
+  __attribute__((overloadable, pure)) double3 name(double3, double3);          \
+  __attribute__((overloadable, pure)) double2 name(double2, double2);          \
+  __attribute__((overloadable, pure)) double name(double, double)
 
-#define FLOAT_FUNCTIONS_THREE_ARGS(name) \
-  __attribute__((overloadable, pure)) \
-  float16 name (float16, float16, float16); \
-  __attribute__((overloadable, pure)) \
-  float8 name (float8, float8, float8); \
-  __attribute__((overloadable, pure)) \
-  float4 name (float4, float4, float4); \
-  __attribute__((overloadable, pure)) \
-  float3 name (float3, float3, float3); \
-  __attribute__((overloadable, pure)) \
-  float2 name (float2, float2, float2); \
-  __attribute__((overloadable, pure)) \
-  float name (float , float, float); \
-  __attribute__((overloadable, pure)) \
-  double16 name (double16, double16, double16); \
-  __attribute__((overloadable, pure)) \
-  double8 name (double8, double8, double8); \
-  __attribute__((overloadable, pure)) \
-  double4 name (double4, double4, double4); \
-  __attribute__((overloadable, pure)) \
-  double3 name (double3, double3, double3); \
-  __attribute__((overloadable, pure)) \
-  double2 name (double2, double2, double2); \
-  __attribute__((overloadable, pure)) \
-  double name (double, double, double)
+#define FLOAT_FUNCTIONS_THREE_ARGS(name)                                       \
+  __attribute__((overloadable, pure)) float16 name(float16, float16, float16); \
+  __attribute__((overloadable, pure)) float8 name(float8, float8, float8);     \
+  __attribute__((overloadable, pure)) float4 name(float4, float4, float4);     \
+  __attribute__((overloadable, pure)) float3 name(float3, float3, float3);     \
+  __attribute__((overloadable, pure)) float2 name(float2, float2, float2);     \
+  __attribute__((overloadable, pure)) float name(float, float, float);         \
+  __attribute__((overloadable, pure))                                          \
+      double16 name(double16, double16, double16);                             \
+  __attribute__((overloadable, pure)) double8 name(double8, double8, double8); \
+  __attribute__((overloadable, pure)) double4 name(double4, double4, double4); \
+  __attribute__((overloadable, pure)) double3 name(double3, double3, double3); \
+  __attribute__((overloadable, pure)) double2 name(double2, double2, double2); \
+  __attribute__((overloadable, pure)) double name(double, double, double)
 
-#define FUNCTIONS_TWO_ARGS(name) \
-	FLOAT_FUNCTIONS_TWO_ARGS(name); \
-	INT_FUNCTIONS_TWO_ARGS(name); \
-  SHORT_FUNCTIONS_TWO_ARGS(name); \
+#define FUNCTIONS_TWO_ARGS(name)                                               \
+  FLOAT_FUNCTIONS_TWO_ARGS(name);                                              \
+  INT_FUNCTIONS_TWO_ARGS(name);                                                \
+  SHORT_FUNCTIONS_TWO_ARGS(name);                                              \
   UINT_FUNCTIONS_TWO_ARGS(name)
 
-#define CONVERT_FUNCTION(to, from) \
-  __attribute__((overloadable, pure)) \
-  to convert_##to (from)
+#define CONVERT_FUNCTION(to, from)                                             \
+  __attribute__((overloadable, pure)) to convert_##to(from)
 
-#define AS_FUNCTION(to, from) \
-    __attribute__((overloadable, pure)) \
-  to as_##to (from)
+#define AS_FUNCTION(to, from)                                                  \
+  __attribute__((overloadable, pure)) to as_##to(from)
 
 // These macros are defined in math.h, but because we
 // cannot include it, define them here. Definitions picked-up
 // from GNU math.h.
-#define M_E            2.71828182845904523540f  // e          
-#define M_LOG2E        1.44269504088896340740f  // log_2 e    
-#define M_LOG10E       0.43429448190325182765f  // log_10 e   
-#define M_LN2          0.69314718055994530942f  // log_e 2    
-#define M_LN10         2.30258509299404568402f  // log_e 10   
-#define M_PI           3.14159265358979323846f  // pi         
-#define M_PI_2         1.57079632679489661923f  // pi/2       
-#define M_PI_4         0.78539816339744830962f  // pi/4       
-#define M_1_PI         0.31830988618379067154f  // 1/pi       
-#define M_2_PI         0.63661977236758134308f  // 2/pi       
-#define M_2_SQRTPI     1.12837916709551257390f  // 2/sqrt(pi) 
-#define M_SQRT2        1.41421356237309504880f  // sqrt(2)    
-#define M_SQRT1_2      0.70710678118654752440f  // 1/sqrt(2)
+#define M_E 2.71828182845904523540f        // e
+#define M_LOG2E 1.44269504088896340740f    // log_2 e
+#define M_LOG10E 0.43429448190325182765f   // log_10 e
+#define M_LN2 0.69314718055994530942f      // log_e 2
+#define M_LN10 2.30258509299404568402f     // log_e 10
+#define M_PI 3.14159265358979323846f       // pi
+#define M_PI_2 1.57079632679489661923f     // pi/2
+#define M_PI_4 0.78539816339744830962f     // pi/4
+#define M_1_PI 0.31830988618379067154f     // 1/pi
+#define M_2_PI 0.63661977236758134308f     // 2/pi
+#define M_2_SQRTPI 1.12837916709551257390f // 2/sqrt(pi)
+#define M_SQRT2 1.41421356237309504880f    // sqrt(2)
+#define M_SQRT1_2 0.70710678118654752440f  // 1/sqrt(2)
 
 // Synchronization Macros.
-#define CLK_LOCAL_MEM_FENCE  0
+#define CLK_LOCAL_MEM_FENCE 0
 #define CLK_GLOBAL_MEM_FENCE 1
 
 // Built-in Scalar Data Types.
@@ -245,84 +184,67 @@ size_t get_global_offset(uint dimindx);
 void barrier(cl_mem_fence_flags flag);
 void mem_fence(cl_mem_fence_flags flags);
 
-#define INT_ATOMIC_TWO_32(NAME) \
-__attribute__((overloadable)) \
-	int NAME(volatile __local int* p, int cmp, int val); \
-__attribute__((overloadable)) \
-	int NAME(volatile __global int* p, int cmp, int val); \
-\
-__attribute__((overloadable)) \
-  uint NAME(volatile __local uint* p, uint cmp, uint val); \
-__attribute__((overloadable)) \
-  uint NAME(volatile __global uint* p, uint cmp, uint val);
+#define INT_ATOMIC_TWO_32(NAME)                                                \
+  __attribute__((overloadable)) int NAME(volatile __local int * p, int cmp,    \
+                                         int val);                             \
+  __attribute__((overloadable)) int NAME(volatile __global int * p, int cmp,   \
+                                         int val);                             \
+  __attribute__((overloadable))                                                \
+      uint NAME(volatile __local uint * p, uint cmp, uint val);                \
+  __attribute__((overloadable))                                                \
+      uint NAME(volatile __global uint * p, uint cmp, uint val);
 
-#define INT_ATOMIC_TWO_64(NAME) \
-__attribute__((overloadable)) \
-  long NAME(volatile __local long* p, long cmp, long val); \
-__attribute__((overloadable)) \
-  long NAME(volatile __global long* p, long cmp, long val); \
-\
-  __attribute__((overloadable)) \
-  ulong NAME(volatile __local ulong* p, ulong cmp, ulong val); \
-__attribute__((overloadable)) \
-  ulong NAME(volatile __global ulong* p, ulong cmp, ulong val);
+#define INT_ATOMIC_TWO_64(NAME)                                                \
+  __attribute__((overloadable)) long NAME(volatile __local long * p, long cmp, \
+                                          long val);                           \
+  __attribute__((overloadable)) long NAME(volatile __global long * p,          \
+                                          long cmp, long val);                 \
+                                                                               \
+  __attribute__((overloadable))                                                \
+      ulong NAME(volatile __local ulong * p, ulong cmp, ulong val);            \
+  __attribute__((overloadable))                                                \
+      ulong NAME(volatile __global ulong * p, ulong cmp, ulong val);
 
-#define INT_ATOMIC_ONE_32(NAME) \
-__attribute__((overloadable)) \
-	int NAME(volatile __local int* p, int val); \
-__attribute__((overloadable)) \
-	int NAME(volatile __global int* p, int val); \
-\
-__attribute__((overloadable)) \
-  uint NAME(volatile __local uint* p, uint val); \
-__attribute__((overloadable)) \
-  uint NAME(volatile __global uint* p, uint val);
+#define INT_ATOMIC_ONE_32(NAME)                                                \
+  __attribute__((overloadable)) int NAME(volatile __local int * p, int val);   \
+  __attribute__((overloadable)) int NAME(volatile __global int * p, int val);  \
+  __attribute__((overloadable))                                                \
+      uint NAME(volatile __local uint * p, uint val);                          \
+  __attribute__((overloadable)) uint NAME(volatile __global uint * p, uint val);
 
-#define INT_ATOMIC_ONE_64(NAME) \
-__attribute__((overloadable)) \
-  long NAME(volatile __local long* p, long val); \
-__attribute__((overloadable)) \
-  long NAME(volatile __global long* p, long val); \
-\
-  __attribute__((overloadable)) \
-  ulong NAME(volatile __local ulong* p, ulong val); \
-__attribute__((overloadable)) \
-  ulong NAME(volatile __global ulong* p, ulong val);
+#define INT_ATOMIC_ONE_64(NAME)                                                \
+  __attribute__((overloadable)) long NAME(volatile __local long * p,           \
+                                          long val);                           \
+  __attribute__((overloadable)) long NAME(volatile __global long * p,          \
+                                          long val);                           \
+                                                                               \
+  __attribute__((overloadable))                                                \
+      ulong NAME(volatile __local ulong * p, ulong val);                       \
+  __attribute__((overloadable))                                                \
+      ulong NAME(volatile __global ulong * p, ulong val);
 
-#define INT_ATOMIC_ZERO_32(NAME) \
-__attribute__((overloadable)) \
-	int NAME(volatile __local int* p); \
-__attribute__((overloadable)) \
-	int NAME(volatile __global int* p); \
-\
-__attribute__((overloadable)) \
-  uint NAME(volatile __local uint* p); \
-__attribute__((overloadable)) \
-  uint NAME(volatile __global uint* p);
+#define INT_ATOMIC_ZERO_32(NAME)                                               \
+  __attribute__((overloadable)) int NAME(volatile __local int * p);            \
+  __attribute__((overloadable)) int NAME(volatile __global int * p);           \
+  __attribute__((overloadable)) uint NAME(volatile __local uint * p);          \
+  __attribute__((overloadable)) uint NAME(volatile __global uint * p);
 
-#define INT_ATOMIC_ZERO_64(NAME) \
-__attribute__((overloadable)) \
-	long NAME(volatile __local long* p); \
-__attribute__((overloadable)) \
-	long NAME(volatile __global long* p); \
-\
-__attribute__((overloadable)) \
-  ulong NAME(volatile __local ulong* p); \
-__attribute__((overloadable)) \
-  ulong NAME(volatile __global ulong* p);
+#define INT_ATOMIC_ZERO_64(NAME)                                               \
+  __attribute__((overloadable)) long NAME(volatile __local long * p);          \
+  __attribute__((overloadable)) long NAME(volatile __global long * p);         \
+  __attribute__((overloadable)) ulong NAME(volatile __local ulong * p);        \
+  __attribute__((overloadable)) ulong NAME(volatile __global ulong * p);
 
-// aliases for 32-bit builtins in the atom_* namespace that is actually for 64-bit builtins
-#define INT_ATOMIC_TWO_32_ALIASES(NAME) \
-		INT_ATOMIC_TWO_32(atomic_##NAME) \
-		INT_ATOMIC_TWO_32(atom_##NAME)
+// aliases for 32-bit builtins in the atom_* namespace that is actually for
+// 64-bit builtins
+#define INT_ATOMIC_TWO_32_ALIASES(NAME)                                        \
+  INT_ATOMIC_TWO_32(atomic_##NAME) INT_ATOMIC_TWO_32(atom_##NAME)
 
-#define INT_ATOMIC_ONE_32_ALIASES(NAME) \
-		INT_ATOMIC_ONE_32(atomic_##NAME) \
-		INT_ATOMIC_ONE_32(atom_##NAME)
+#define INT_ATOMIC_ONE_32_ALIASES(NAME)                                        \
+  INT_ATOMIC_ONE_32(atomic_##NAME) INT_ATOMIC_ONE_32(atom_##NAME)
 
-#define INT_ATOMIC_ZERO_32_ALIASES(NAME) \
-		INT_ATOMIC_ZERO_32(atomic_##NAME) \
-		INT_ATOMIC_ZERO_32(atom_##NAME)
+#define INT_ATOMIC_ZERO_32_ALIASES(NAME)                                       \
+  INT_ATOMIC_ZERO_32(atomic_##NAME) INT_ATOMIC_ZERO_32(atom_##NAME)
 
 // Atom(ic) Functions
 INT_ATOMIC_TWO_32_ALIASES(cmpxchg)
@@ -349,16 +271,11 @@ INT_ATOMIC_ONE_64(atom_xor)
 INT_ATOMIC_ZERO_64(atom_inc)
 INT_ATOMIC_ZERO_64(atom_dec)
 
-
-__attribute__((overloadable))
-float atomic_xchg(volatile __global float * p, float val);
-
+__attribute__((overloadable)) float atomic_xchg(volatile __global float *p,
+                                                float val);
 
 //Predicates
-__attribute__((overloadable, pure))
-  int all(int4);
-
-
+__attribute__((overloadable, pure)) int all(int4);
 
 // Math functions.
 // WARNING There are more definitions than needed.
@@ -433,44 +350,28 @@ CONVERT_FUNCTION(int8, double8);
 CONVERT_FUNCTION(long, int);
 CONVERT_FUNCTION(int4, int4);
 
-__attribute__((overloadable, pure))
-  uchar4 convert_uchar4_sat(float4);
+__attribute__((overloadable, pure)) uchar4 convert_uchar4_sat(float4);
 
-__attribute__((overloadable, pure))
-  uint mul24(uint, uint);
-__attribute__((overloadable, pure))
-  int mul24(int, int);
+__attribute__((overloadable, pure)) uint mul24(uint, uint);
+__attribute__((overloadable, pure)) int mul24(int, int);
 
 // Geometrib built-in functions
 
-#define FLOAT_FUNCTION_TWO_ARGS_RED(name) \
-		__attribute__((overloadable, pure)) \
-		  float name(float4, float4); \
-	    __attribute__((overloadable, pure)) \
-		  float name(float3, float3); \
-		__attribute__((overloadable, pure)) \
-		  float name(float2, float2); \
-		__attribute__((overloadable, pure)) \
-		  float name(double4, double4); \
-		__attribute__((overloadable, pure)) \
-		  float name(double3, double3); \
-		__attribute__((overloadable, pure)) \
-		  float name(double2, double2);
+#define FLOAT_FUNCTION_TWO_ARGS_RED(name)                                      \
+  __attribute__((overloadable, pure)) float name(float4, float4);              \
+  __attribute__((overloadable, pure)) float name(float3, float3);              \
+  __attribute__((overloadable, pure)) float name(float2, float2);              \
+  __attribute__((overloadable, pure)) float name(double4, double4);            \
+  __attribute__((overloadable, pure)) float name(double3, double3);            \
+  __attribute__((overloadable, pure)) float name(double2, double2);
 
-#define FLOAT_FUNCTION_ONE_ARG_RED(name) \
-		__attribute__((overloadable, pure)) \
-		  float name(float4); \
-	    __attribute__((overloadable, pure)) \
-		  float name(float3); \
-		__attribute__((overloadable, pure)) \
-		  float name(float2); \
-		__attribute__((overloadable, pure)) \
-		  float name(double4); \
-		__attribute__((overloadable, pure)) \
-		  float name(double3); \
-		__attribute__((overloadable, pure)) \
-		  float name(double2);
-
+#define FLOAT_FUNCTION_ONE_ARG_RED(name)                                       \
+  __attribute__((overloadable, pure)) float name(float4);                      \
+  __attribute__((overloadable, pure)) float name(float3);                      \
+  __attribute__((overloadable, pure)) float name(float2);                      \
+  __attribute__((overloadable, pure)) float name(double4);                     \
+  __attribute__((overloadable, pure)) float name(double3);                     \
+  __attribute__((overloadable, pure)) float name(double2);
 
 FLOAT_FUNCTION_TWO_ARGS_RED(dot)
 FLOAT_FUNCTION_TWO_ARGS_RED(distance)

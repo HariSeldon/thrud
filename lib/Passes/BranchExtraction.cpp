@@ -59,15 +59,14 @@ bool BranchExtraction::runOnFunction(Function &F) {
     return false;
 
   std::string FunctionName = F.getName();
-  if(KernelName != "" && FunctionName != KernelName)
+  if (KernelName != "" && FunctionName != KernelName)
     return false;
-
 
   // Perform analysis.
   LoopInfo *LI = &getAnalysis<LoopInfo>();
   DivergentRegionAnalysis *DRA = &getAnalysis<DivergentRegionAnalysis>();
   RegionVector Rs = DRA->getRegions();
- 
+
   BorderVector Bs = GetBorders(Rs);
 
   unsigned int Size = Bs.size();
@@ -80,13 +79,13 @@ bool BranchExtraction::runOnFunction(Function &F) {
     BasicBlock *Header = B.first->getParent();
     BasicBlock *Exiting = B.second;
     BasicBlock *NewHeader = NULL;
-   
+
     if (!LI->isLoopHeader(Header))
       NewHeader = SplitBlock(Header, Header->getTerminator(), this);
     else {
       NewHeader = Header;
-      Loop* L = LI->getLoopFor(Header);
-      if(L == LI->getLoopFor(Exiting)) {
+      Loop *L = LI->getLoopFor(Header);
+      if (L == LI->getLoopFor(Exiting)) {
         Exiting = L->getExitBlock();
         R->setExiting(Exiting);
       }
@@ -114,27 +113,26 @@ void BranchExtraction::IsolateRegion(DivergentRegion *Region) {
   BlockVector RegionBlocks;
   // FIXME: this can be substituted
   // If the header does not dominates the exiting it means that
-  // there are other incoming edges. 
+  // there are other incoming edges.
   bool HasExtBlock = FindRegionBlocks(Region, RegionBlocks);
-  BasicBlock *Exiting = Region->getExiting(); 
+  BasicBlock *Exiting = Region->getExiting();
 
-  // Split 
-  if(HasExtBlock) {
-    BasicBlock *New = BasicBlock::Create(Exiting->getContext(), 
-                                         Exiting->getName() + Twine(".be_split"),
-                                         Exiting->getParent(), 
-                                         Exiting);
+  // Split
+  if (HasExtBlock) {
+    BasicBlock *New = BasicBlock::Create(
+        Exiting->getContext(), Exiting->getName() + Twine(".be_split"),
+        Exiting->getParent(), Exiting);
     BranchInst::Create(Exiting, New);
     for (BlockVector::iterator I = RegionBlocks.begin(), E = RegionBlocks.end();
          I != E; ++I) {
       TerminatorInst *Term = (*I)->getTerminator();
       for (unsigned int index = 0; index < Term->getNumSuccessors(); ++index) {
-        if(Term->getSuccessor(index) == Exiting)
+        if (Term->getSuccessor(index) == Exiting)
           Term->setSuccessor(index, New);
       }
     }
 
-    // 'New' will contain the phi working on the values from the blocks 
+    // 'New' will contain the phi working on the values from the blocks
     // in the region.
     // 'Exiting' will contain the phi working on the values from the blocks
     // outside and in the region.
@@ -142,30 +140,29 @@ void BranchExtraction::IsolateRegion(DivergentRegion *Region) {
     GetPHIs(Exiting, OldPhis);
 
     PHIVector NewPhis;
-    PHIVector ExitPhis;   
-    
-    for (PHIVector::iterator I = OldPhis.begin(), E = OldPhis.end(); 
-         I != E; ++I) {
+    PHIVector ExitPhis;
+
+    for (PHIVector::iterator I = OldPhis.begin(), E = OldPhis.end(); I != E;
+         ++I) {
       PHINode *Phi = *I;
-      PHINode *NewPhi = PHINode::Create(Phi->getType(), 0, 
-                                        Phi->getName() + Twine(".new_exiting"), 
-                                        New->begin());
-      PHINode *ExitPhi = PHINode::Create(Phi->getType(), 0, 
-                                         Phi->getName() + Twine(".old_exiting"), 
+      PHINode *NewPhi =
+          PHINode::Create(Phi->getType(), 0,
+                          Phi->getName() + Twine(".new_exiting"), New->begin());
+      PHINode *ExitPhi = PHINode::Create(Phi->getType(), 0,
+                                         Phi->getName() + Twine(".old_exiting"),
                                          Exiting->begin());
-      for (unsigned int index = 0; 
-           index < Phi->getNumIncomingValues(); 
+      for (unsigned int index = 0; index < Phi->getNumIncomingValues();
            ++index) {
         BasicBlock *BB = Phi->getIncomingBlock(index);
-        if(IsPresent(BB, RegionBlocks))
-          NewPhi->addIncoming(Phi->getIncomingValue(index), BB); 
+        if (IsPresent(BB, RegionBlocks))
+          NewPhi->addIncoming(Phi->getIncomingValue(index), BB);
         else
           ExitPhi->addIncoming(Phi->getIncomingValue(index), BB);
       }
       NewPhis.push_back(NewPhi);
       ExitPhis.push_back(ExitPhi);
     }
- 
+
     unsigned int PhiNumber = NewPhis.size();
     for (unsigned int PhiIndex = 0; PhiIndex < PhiNumber; ++PhiIndex) {
       // Add the edge coming from the 'New' block to the phi nodes in Exiting.
@@ -174,12 +171,12 @@ void BranchExtraction::IsolateRegion(DivergentRegion *Region) {
       ExitPhi->addIncoming(NewPhi, New);
 
       // Update all the references to the old Phis to the new ones.
-      OldPhis[PhiIndex]->replaceAllUsesWith(ExitPhi); 
+      OldPhis[PhiIndex]->replaceAllUsesWith(ExitPhi);
     }
 
-    // Delete the old phi nodes. 
-    for (PHIVector::iterator I = OldPhis.begin(), E = OldPhis.end(); 
-         I != E; ++I) {
+    // Delete the old phi nodes.
+    for (PHIVector::iterator I = OldPhis.begin(), E = OldPhis.end(); I != E;
+         ++I) {
       PHINode *ToDelete = *I;
       ToDelete->eraseFromParent();
     }
@@ -194,10 +191,10 @@ bool BranchExtraction::FindRegionBlocks(DivergentRegion *Region,
   RegionBlocks.clear();
   BasicBlock *Exiting = Region->getExiting();
   bool HasExtBlock = false;
-  for (pred_iterator PI = pred_begin(Exiting), E = pred_end(Exiting);
-       PI != E; ++PI) {
+  for (pred_iterator PI = pred_begin(Exiting), E = pred_end(Exiting); PI != E;
+       ++PI) {
     BasicBlock *Pred = *PI;
-    if(Region->Contains(Pred))
+    if (Region->Contains(Pred))
       RegionBlocks.push_back(Pred);
     else
       HasExtBlock = true;
@@ -216,9 +213,8 @@ void BranchExtraction::getAnalysisUsage(AnalysisUsage &AU) const {
 
 //------------------------------------------------------------------------------
 char BranchExtraction::ID = 0;
-static RegisterPass<BranchExtraction> X(
-       "be", 
-       "Extract divergent branches from their blocks");
+static RegisterPass<BranchExtraction>
+    X("be", "Extract divergent branches from their blocks");
 
 //------------------------------------------------------------------------------
 BorderVector GetBorders(RegionVector &Rs) {

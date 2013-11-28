@@ -19,7 +19,7 @@
 // by others.
 //InstVector filterUsers(InstVector &insts, DominatorTree *DT) {
 //  InstVector result;
-//  for (InstVector::iterator iter = insts.begin(), end = insts.end(); 
+//  for (InstVector::iterator iter = insts.begin(), end = insts.end();
 //    iter != end; ++iter) {
 //    Instruction *inst = *iter;
 //
@@ -30,67 +30,65 @@
 //
 //      if(inst == inst2)
 //        continue;
-//      
-//      include &= !DT->dominates(inst2, inst);
-//    } 
 //
-//    if(include) 
+//      include &= !DT->dominates(inst2, inst);
+//    }
+//
+//    if(include)
 //      result.push_back(inst);
 //  }
-// 
+//
 //  return result;
 //}
 
 //------------------------------------------------------------------------------
 InstVector filterUsers(InstVector &insts, BasicBlock *block) {
   InstVector result;
-  for (InstVector::iterator iter = insts.begin(), end = insts.end(); 
-    iter != end; ++iter) {
+  for (InstVector::iterator iter = insts.begin(), end = insts.end();
+       iter != end; ++iter) {
     Instruction *inst = *iter;
 
-    if(inst->getParent() == block)
+    if (inst->getParent() == block)
       result.push_back(inst);
   }
- 
+
   return result;
 }
 
 //------------------------------------------------------------------------------
-bool isLoad(const llvm::Instruction &inst) {
-  return isa<LoadInst>(inst);
-}
+bool isLoad(const llvm::Instruction &inst) { return isa<LoadInst>(inst); }
 
 //------------------------------------------------------------------------------
-unsigned int countLoadsBounded(BasicBlock *block, Instruction *def, 
-  Instruction *user) {
+unsigned int countLoadsBounded(BasicBlock *block, Instruction *def,
+                               Instruction *user) {
   BasicBlock::iterator iter(def), end(user);
   ++iter;
-  return std::count_if(iter, end, isLoad); 
+  return std::count_if(iter, end, isLoad);
 }
 
 //------------------------------------------------------------------------------
-unsigned int countLoads(BlockVector blocks, BasicBlock *defBlock, 
-                        BasicBlock *userBlock, Instruction *def, 
+unsigned int countLoads(BlockVector blocks, BasicBlock *defBlock,
+                        BasicBlock *userBlock, Instruction *def,
                         Instruction *user) {
 
-  if(defBlock == userBlock) {
+  if (defBlock == userBlock) {
     return countLoadsBounded(defBlock, def, user);
   }
 
   unsigned int result = 0;
   for (BlockVector::iterator iter = blocks.begin(), end = blocks.end();
-    iter != end; ++iter) {
+       iter != end; ++iter) {
     BasicBlock *block = *iter;
-    if(block == defBlock) {
+    if (block == defBlock) {
       result += countLoadsBounded(block, def, block->end());
-      continue;  
+      continue;
     }
-    if(block == userBlock) {
+    if (block == userBlock) {
       result += countLoadsBounded(block, block->begin(), user);
       continue;
     }
-    
-    result += countLoadsBounded(block, block->begin(), block->end()); 
+
+    result += countLoadsBounded(block, block->begin(), block->end());
   }
   return result;
 }
@@ -109,14 +107,14 @@ BlockVector getRegionBlocks(BasicBlock *defBlock, BasicBlock *userBlock) {
     stack.pop();
 
     // Don't put to the stack the defBlock predecessors.
-    if(block == defBlock)
+    if (block == defBlock)
       continue;
 
-    // Push to the stack the defBlock predecessors. 
-    for (pred_iterator iter = pred_begin(block), end = pred_end(block); 
-      iter != end; ++iter) {
+    // Push to the stack the defBlock predecessors.
+    for (pred_iterator iter = pred_begin(block), end = pred_end(block);
+         iter != end; ++iter) {
       BasicBlock *pred = *iter;
-      stack.push(pred); 
+      stack.push(pred);
     }
   }
 
@@ -127,43 +125,43 @@ BlockVector getRegionBlocks(BasicBlock *defBlock, BasicBlock *userBlock) {
 unsigned int computeDistance(Instruction *def, Instruction *user) {
   BasicBlock *defBlock = def->getParent();
   BasicBlock *userBlock = user->getParent();
-  
+
   // Manage the special case in which the user is a phi-node.
-  if(PHINode *phi = dyn_cast<PHINode>(user)) {
+  if (PHINode *phi = dyn_cast<PHINode>(user)) {
     for (unsigned int index = 0; index < phi->getNumIncomingValues(); ++index) {
-      if(def == phi->getIncomingValue(index)) {
+      if (def == phi->getIncomingValue(index)) {
         userBlock = phi->getIncomingBlock(index);
         BlockVector blocks = getRegionBlocks(defBlock, userBlock);
         return countLoads(blocks, defBlock, userBlock, def, userBlock->end());
       }
-    }   
-  } 
+    }
+  }
 
   BlockVector blocks = getRegionBlocks(defBlock, userBlock);
   return countLoads(blocks, defBlock, userBlock, def, user);
 }
 
 //------------------------------------------------------------------------------
-// MLP computation. 
-// MLP: count the number of loads that fall in each load-use interval 
+// MLP computation.
+// MLP: count the number of loads that fall in each load-use interval
 // (interval between a load and the first use of the loaded value).
 float getMLP(BasicBlock *block, DominatorTree *DT, PostDominatorTree *PDT) {
   std::vector<unsigned int> distances;
   for (BasicBlock::iterator inst = block->begin(), end = block->end();
-    inst != end; ++inst) {
-    if(isa<LoadInst>(inst)) {
+       inst != end; ++inst) {
+    if (isa<LoadInst>(inst)) {
       InstVector users = findUsers(inst);
       users = filterUsers(users, block);
 
       for (InstVector::iterator iter = users.begin(), end = users.end();
-        iter != end; ++iter) {
-           
+           iter != end; ++iter) {
+
         Instruction *user = *iter;
         unsigned int distance = computeDistance(inst, user);
         distances.push_back(distance);
       }
     }
   }
-  
+
   return getAverage(distances);
 }

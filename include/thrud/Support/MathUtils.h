@@ -1,5 +1,5 @@
 #include <vector>
-  
+
 template <typename integerType>
 float getAverage(const std::vector<integerType> &elements);
 

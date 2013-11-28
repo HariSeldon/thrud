@@ -3,17 +3,16 @@
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
 #include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
 
-cl::opt<std::string>
-kernelName("count-kernel-name", cl::init(""), cl::Hidden,
-               cl::desc("Name of the kernel to analyze"));
+cl::opt<std::string> kernelName("count-kernel-name", cl::init(""), cl::Hidden,
+                                cl::desc("Name of the kernel to analyze"));
 
 char OpenCLFeatureExtractor::ID = 0;
-static RegisterPass<OpenCLFeatureExtractor> X(
-       "opencl-instcount", "Collect opencl features");
+static RegisterPass<OpenCLFeatureExtractor> X("opencl-instcount",
+                                              "Collect opencl features");
 
 //------------------------------------------------------------------------------
 bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
-  if(F.getName() != kernelName)
+  if (F.getName() != kernelName)
     return false;
 
   PDT = &getAnalysis<PostDominatorTree>();
@@ -51,8 +50,8 @@ void OpenCLFeatureExtractor::visitInstruction(Instruction &inst) {
 }
 
 //------------------------------------------------------------------------------
-void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) { 
-  BasicBlock *block = (BasicBlock *) &basicBlock;
+void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
+  BasicBlock *block = (BasicBlock *)&basicBlock;
   collector.instTypes["blocks"] += 1;
   collector.computeILP(block);
   collector.computeMLP(block, DT, PDT);

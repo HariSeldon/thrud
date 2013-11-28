@@ -38,12 +38,12 @@ using yaml::Output;
 namespace llvm {
 namespace yaml {
 
-template <>
-struct MappingTraits<FeatureCollector> {
+template <> struct MappingTraits<FeatureCollector> {
   static void mapping(IO &io, FeatureCollector &collector) {
-    for (std::map<std::string, unsigned int>::iterator 
-      iter = collector.instTypes.begin(), end = collector.instTypes.end(); 
-      iter != end; ++iter) {
+    for (std::map<std::string, unsigned int>::iterator
+             iter = collector.instTypes.begin(),
+             end = collector.instTypes.end();
+         iter != end; ++iter) {
       io.mapRequired(iter->first.c_str(), iter->second);
     }
     // Instructions per block.
@@ -53,18 +53,20 @@ struct MappingTraits<FeatureCollector> {
     std::vector<unsigned int> args;
 
     for (std::map<std::string, std::vector<std::string> >::iterator
-      iter = collector.blockPhis.begin(), end = collector.blockPhis.end(); 
-      iter != end; ++iter) {
+             iter = collector.blockPhis.begin(),
+             end = collector.blockPhis.end();
+         iter != end; ++iter) {
       std::vector<std::string> phis = iter->second;
       unsigned int argSum = 0;
       for (std::vector<std::string>::iterator phiIter = phis.begin(),
-           phiEnd = phis.end(); phiIter != phiEnd; ++phiIter) {
+                                              phiEnd = phis.end();
+           phiIter != phiEnd; ++phiIter) {
         unsigned int argNumber = collector.phiArgs[*phiIter];
         argSum += argNumber;
       }
       args.push_back(argSum);
     }
-    
+
     io.mapRequired("phiArgs", args);
     io.mapRequired("ilpPerBlock", collector.blockILP);
     io.mapRequired("mlpPerBlock", collector.blockMLP);
@@ -74,8 +76,7 @@ struct MappingTraits<FeatureCollector> {
 };
 
 //------------------------------------------------------------------------------
-template <>
-struct MappingTraits<std::pair<float, float> > {
+template <> struct MappingTraits<std::pair<float, float> > {
   static void mapping(IO &io, std::pair<float, float> &avgVar) {
     io.mapRequired("avg", avgVar.first);
     io.mapRequired("var", avgVar.second);
@@ -84,68 +85,61 @@ struct MappingTraits<std::pair<float, float> > {
 
 //------------------------------------------------------------------------------
 // Sequence of unsigned ints.
-template <>
-struct SequenceTraits <std::vector<unsigned int> > {
+template <> struct SequenceTraits<std::vector<unsigned int> > {
   static size_t size(IO &io, std::vector<unsigned int> &seq) {
     return seq.size();
   }
-  static unsigned int& element(IO &, std::vector<unsigned int> &seq, 
-    size_t index) {
-    if ( index >= seq.size() )
-      seq.resize(index+1);
+  static unsigned int &element(IO &, std::vector<unsigned int> &seq,
+                               size_t index) {
+    if (index >= seq.size())
+      seq.resize(index + 1);
     return seq[index];
-  } 
+  }
 
   static const bool flow = true;
 };
 //------------------------------------------------------------------------------
 // Sequence of floats.
-template <>
-struct SequenceTraits <std::vector<float> > {
-  static size_t size(IO &io, std::vector<float> &seq) {
-    return seq.size();
-  }
-  static float& element(IO &, std::vector<float> &seq, 
-    size_t index) {
-    if ( index >= seq.size() )
-      seq.resize(index+1);
+template <> struct SequenceTraits<std::vector<float> > {
+  static size_t size(IO &io, std::vector<float> &seq) { return seq.size(); }
+  static float &element(IO &, std::vector<float> &seq, size_t index) {
+    if (index >= seq.size())
+      seq.resize(index + 1);
     return seq[index];
-  } 
+  }
 
   static const bool flow = true;
 };
 
 //------------------------------------------------------------------------------
 // Sequence of pairs.
-template <>
-struct SequenceTraits <std::vector<std::pair<float, float> > > {
+template <> struct SequenceTraits<std::vector<std::pair<float, float> > > {
   static size_t size(IO &io, std::vector<std::pair<float, float> > &seq) {
     return seq.size();
   }
-  static std::pair<float, float>& element(IO &, 
-                                  std::vector<std::pair<float, float> > &seq,
-                                  size_t index) {
-    if ( index >= seq.size() )
-      seq.resize(index+1);
+  static std::pair<float, float> &
+  element(IO &, std::vector<std::pair<float, float> > &seq, size_t index) {
+    if (index >= seq.size())
+      seq.resize(index + 1);
     return seq[index];
-  } 
+  }
 
   static const bool flow = true;
 };
 
-}}
+}
+}
 
 //------------------------------------------------------------------------------
-FeatureCollector::FeatureCollector() { 
-  // Instruction-specific counters.   
-  #define HANDLE_INST(N, OPCODE, CLASS) \
-    instTypes[#OPCODE] = 0;
-  #include "llvm/IR/Instruction.def"
-  
+FeatureCollector::FeatureCollector() {
+// Instruction-specific counters.
+#define HANDLE_INST(N, OPCODE, CLASS) instTypes[#OPCODE] = 0;
+#include "llvm/IR/Instruction.def"
+
   // Initialize all counters.
   instTypes["insts"] = 0;
   instTypes["blocks"] = 0;
-  instTypes["edges"] = 0; 
+  instTypes["edges"] = 0;
   instTypes["criticalEdges"] = 0;
   instTypes["condBranches"] = 0;
   instTypes["uncondBranches"] = 0;
@@ -160,7 +154,7 @@ FeatureCollector::FeatureCollector() {
   instTypes["mathFunctions"] = 0;
   instTypes["barriers"] = 0;
   instTypes["args"] = 0;
-  instTypes["divRegions"] = 0; 
+  instTypes["divRegions"] = 0;
   instTypes["divInsts"] = 0;
   instTypes["divRegionInsts"] = 0;
   instTypes["uniformLoads"] = 0;
@@ -172,8 +166,8 @@ void FeatureCollector::computeILP(BasicBlock *block) {
 }
 
 //------------------------------------------------------------------------------
-void FeatureCollector::computeMLP(BasicBlock *block, DominatorTree *DT, 
-     PostDominatorTree *PDT) {
+void FeatureCollector::computeMLP(BasicBlock *block, DominatorTree *DT,
+                                  PostDominatorTree *PDT) {
   blockMLP.push_back(getMLP(block, DT, PDT));
 }
 
@@ -181,7 +175,7 @@ void FeatureCollector::computeMLP(BasicBlock *block, DominatorTree *DT,
 void FeatureCollector::countIncomingEdges(const BasicBlock &block) {
   const BasicBlock *tmpBlock = (const BasicBlock *)&block;
   const_pred_iterator first = pred_begin(tmpBlock), last = pred_end(tmpBlock);
-  blockIncoming[block.getName()] = std::distance(first, last); 
+  blockIncoming[block.getName()] = std::distance(first, last);
 }
 
 //------------------------------------------------------------------------------
@@ -191,27 +185,26 @@ void FeatureCollector::countOutgoingEdges(const BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countInstsBlock(const BasicBlock &block) {
-  blockInsts.push_back(
-    static_cast<unsigned int>(block.getInstList().size()));
+  blockInsts.push_back(static_cast<unsigned int>(block.getInstList().size()));
 }
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countEdges(const Function &function) {
   unsigned int edges = 0;
   unsigned int criticalEdges = 0;
-  for (Function::const_iterator block = function.begin(), end = function.end(); 
-    block != end; ++block) {
+  for (Function::const_iterator block = function.begin(), end = function.end();
+       block != end; ++block) {
     edges += block->getTerminator()->getNumSuccessors();
   }
 
   for (Function::const_iterator block = function.begin(), end = function.end();
-    block != end; ++block) {
+       block != end; ++block) {
     const TerminatorInst *termInst = block->getTerminator();
     unsigned int termNumber = termInst->getNumSuccessors();
-    
+
     for (unsigned int index = 0; index < termNumber; ++index) {
       criticalEdges += isCriticalEdge(termInst, index);
-    } 
+    }
   }
 
   instTypes["edges"] = edges;
@@ -222,11 +215,11 @@ void FeatureCollector::countEdges(const Function &function) {
 void FeatureCollector::countBranches(const Function &function) {
   unsigned int condBranches = 0;
   unsigned int uncondBranches = 0;
-  for (Function::const_iterator block = function.begin(), end = function.end(); 
-    block != end; ++block) {
+  for (Function::const_iterator block = function.begin(), end = function.end();
+       block != end; ++block) {
     const TerminatorInst *term = block->getTerminator();
-    if(const BranchInst *branch = dyn_cast<BranchInst>(term)) {
-      if(branch->isConditional() == true)
+    if (const BranchInst *branch = dyn_cast<BranchInst>(term)) {
+      if (branch->isConditional() == true)
         ++condBranches;
       else
         ++uncondBranches;
@@ -240,8 +233,9 @@ void FeatureCollector::countBranches(const Function &function) {
 //------------------------------------------------------------------------------
 void FeatureCollector::countPhis(const BasicBlock &block) {
   std::vector<std::string> names;
-  for (BasicBlock::const_iterator inst = block.begin(); isa<PHINode>(inst); ++inst) {
-    std::string name = inst->getName(); 
+  for (BasicBlock::const_iterator inst = block.begin(); isa<PHINode>(inst);
+       ++inst) {
+    std::string name = inst->getName();
     unsigned int argCount = inst->getNumOperands();
 
     phiArgs[name] = argCount;
@@ -260,20 +254,21 @@ void FeatureCollector::countConstants(const BasicBlock &block) {
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
     const Instruction *inst = iter;
-    for (Instruction::const_op_iterator opIter = inst->op_begin(), 
-         opEnd = inst->op_end(); opIter != opEnd; ++opIter) {
+    for (Instruction::const_op_iterator opIter = inst->op_begin(),
+                                        opEnd = inst->op_end();
+         opIter != opEnd; ++opIter) {
       const Value *operand = opIter->get();
-      if(const ConstantInt *constInt = dyn_cast<ConstantInt>(operand)) {
-        if(constInt->getBitWidth() == 32) 
+      if (const ConstantInt *constInt = dyn_cast<ConstantInt>(operand)) {
+        if (constInt->getBitWidth() == 32)
           fourB++;
-  
-        if(constInt->getBitWidth() == 64) 
+
+        if (constInt->getBitWidth() == 64)
           eightB++;
       }
 
-      if(isa<ConstantFP>(operand)) 
+      if (isa<ConstantFP>(operand))
         fps++;
-    } 
+    }
   }
 
   instTypes["fourB"] = fourB;
@@ -284,11 +279,11 @@ void FeatureCollector::countConstants(const BasicBlock &block) {
 //------------------------------------------------------------------------------
 void FeatureCollector::countBarriers(const BasicBlock &block) {
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
-    iter != end; ++iter) {
-    const Instruction *inst = iter; 
+       iter != end; ++iter) {
+    const Instruction *inst = iter;
     if (const CallInst *callInst = dyn_cast<CallInst>(inst)) {
-      const Function *function = callInst->getCalledFunction(); 
-      if(function == NULL) 
+      const Function *function = callInst->getCalledFunction();
+      if (function == NULL)
         continue;
       if (function->getName() == "barrier") {
         safeIncrement(instTypes, "barriers");
@@ -300,11 +295,11 @@ void FeatureCollector::countBarriers(const BasicBlock &block) {
 //------------------------------------------------------------------------------
 void FeatureCollector::countMathFunctions(const BasicBlock &block) {
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
-    iter != end; ++iter) {
+       iter != end; ++iter) {
     const Instruction *inst = iter;
     if (const CallInst *callInst = dyn_cast<CallInst>(inst)) {
       const Function *function = callInst->getCalledFunction();
-      if(function == NULL) 
+      if (function == NULL)
         continue;
       if (isMathName(function->getName())) {
         safeIncrement(instTypes, "mathFunctions");
@@ -316,21 +311,21 @@ void FeatureCollector::countMathFunctions(const BasicBlock &block) {
 //------------------------------------------------------------------------------
 void FeatureCollector::countLocalMemoryUsage(const BasicBlock &block) {
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
-    iter != end; ++iter) {
+       iter != end; ++iter) {
     const Instruction *inst = iter;
-    if (const LoadInst *loadInst = dyn_cast<LoadInst>(inst)) { 
-      if(loadInst->getPointerAddressSpace() == LOCAL_AS)
-        safeIncrement(instTypes, "localLoads"); 
-    } 
+    if (const LoadInst *loadInst = dyn_cast<LoadInst>(inst)) {
+      if (loadInst->getPointerAddressSpace() == LOCAL_AS)
+        safeIncrement(instTypes, "localLoads");
+    }
     if (const StoreInst *storeInst = dyn_cast<StoreInst>(inst)) {
-      if(storeInst->getPointerAddressSpace() == LOCAL_AS) 
-        safeIncrement(instTypes, "localStores"); 
+      if (storeInst->getPointerAddressSpace() == LOCAL_AS)
+        safeIncrement(instTypes, "localStores");
     }
   }
 }
 
 //------------------------------------------------------------------------------
-void FeatureCollector::countDivInsts(Function &function, 
+void FeatureCollector::countDivInsts(Function &function,
                                      MultiDimDivAnalysis *mdda,
                                      SingleDimDivAnalysis *sdda) {
   instTypes["divRegions"] = mdda->getDivergentRegions().size();
@@ -338,21 +333,20 @@ void FeatureCollector::countDivInsts(Function &function,
 
   // Insts in divergent regions.
   unsigned int divRegionInsts = 0;
-  RegionVector Regions = mdda->getDivergentRegions(); 
-  for (RegionVector::iterator I = Regions.begin(), 
-                              E = Regions.end(); 
-                              I != E; ++I) {
-    divRegionInsts += (*I)->size(); 
+  RegionVector Regions = mdda->getDivergentRegions();
+  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
+       ++I) {
+    divRegionInsts += (*I)->size();
   }
 
   instTypes["divRegionInsts"] = divRegionInsts;
 
   // Count uniform loads.
   unsigned int uniformLoads = 0;
-  for (inst_iterator I = inst_begin(function), E = inst_end(function); 
-       I != E; ++I) {
+  for (inst_iterator I = inst_begin(function), E = inst_end(function); I != E;
+       ++I) {
     Instruction *inst = &*I;
-    if(isa<LoadInst>(inst)) {
+    if (isa<LoadInst>(inst)) {
       inst->dump();
       llvm::errs() << sdda->IsThreadIdDependent(inst) << "\n";
     }
@@ -371,37 +365,38 @@ void FeatureCollector::countArgs(const Function &function) {
 unsigned int computeLiveRange(Instruction *inst) {
   Instruction *lastUser = findLastUser(inst);
 
-  if(lastUser == NULL)
+  if (lastUser == NULL)
     return inst->getParent()->size();
 
-  assert(lastUser->getParent() == inst->getParent() && "Different basic blocks");
+  assert(lastUser->getParent() == inst->getParent() &&
+         "Different basic blocks");
 
-  BasicBlock::iterator begin(inst), end(lastUser); 
+  BasicBlock::iterator begin(inst), end(lastUser);
 
   return std::distance(begin, end);
-} 
+}
 
 //------------------------------------------------------------------------------
 void FeatureCollector::livenessAnalysis(BasicBlock &block) {
   unsigned int aliveValues = 0;
   std::vector<unsigned int> ranges;
 
-  for (BasicBlock::iterator iter = block.begin(), end = block.end(); 
-    iter != end; ++iter) {
-    llvm::Instruction *inst = iter; 
-    if(!inst->hasName())
+  for (BasicBlock::iterator iter = block.begin(), end = block.end();
+       iter != end; ++iter) {
+    llvm::Instruction *inst = iter;
+    if (!inst->hasName())
       continue;
-    
+
     bool isUsedElseWhere = isUsedOutsideOfDefiningBlock(inst);
     aliveValues += isUsedElseWhere;
 
-    if(!isUsedElseWhere) { 
-      unsigned int liveRange = computeLiveRange(inst); 
+    if (!isUsedElseWhere) {
+      unsigned int liveRange = computeLiveRange(inst);
       ranges.push_back(liveRange);
     }
   }
 
-  avgLiveRange.push_back(getAverage(ranges)); 
+  avgLiveRange.push_back(getAverage(ranges));
   aliveOutBlocks.push_back(aliveValues);
 }
 
@@ -414,9 +409,8 @@ void FeatureCollector::countDimensions(Function &function) {
   InstVector tids1 = FindThreadIds(F, 1);
   InstVector tids2 = FindThreadIds(F, 2);
 
-  unsigned int dimensionNumber = (tids0.size() != 0) + 
-                                 (tids1.size() != 0) + 
-                                 (tids2.size() != 0);
+  unsigned int dimensionNumber =
+      (tids0.size() != 0) + (tids1.size() != 0) + (tids2.size() != 0);
 
   instTypes["dimensions"] = dimensionNumber;
 }

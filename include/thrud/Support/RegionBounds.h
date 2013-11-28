@@ -7,32 +7,32 @@
 #include "llvm/Analysis/PostDominators.h"
 
 namespace llvm {
-  class BasicBlock;
-  class DominatorTree;
-  class Instruction;
+class BasicBlock;
+class DominatorTree;
+class Instruction;
 }
 
 // Lightweigth couple of blocks enclosing a region.
 class RegionBounds {
 public:
-  RegionBounds(BasicBlock *Header, BasicBlock *Exiting); 
+  RegionBounds(BasicBlock *Header, BasicBlock *Exiting);
   RegionBounds();
- 
+
 public:
   BasicBlock *getHeader();
   BasicBlock *getExiting();
-  
+
   void setHeader(BasicBlock *Header);
   void setExiting(BasicBlock *Exiting);
 
-  bool Contains(const BasicBlock *BB, 
-                const DominatorTree *DT, const PostDominatorTree *PDT);
-  bool Contains(const Instruction *Inst, 
-                const DominatorTree *DT, const PostDominatorTree *PDT);
+  bool Contains(const BasicBlock *BB, const DominatorTree *DT,
+                const PostDominatorTree *PDT);
+  bool Contains(const Instruction *Inst, const DominatorTree *DT,
+                const PostDominatorTree *PDT);
 
 private:
-  BasicBlock* Header;
-  BasicBlock* Exiting;
+  BasicBlock *Header;
+  BasicBlock *Exiting;
 
 };
 

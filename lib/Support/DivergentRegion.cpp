@@ -16,14 +16,10 @@ DivergentRegion::DivergentRegion(BasicBlock *Header, BasicBlock *Exiting) {
 }
 
 //------------------------------------------------------------------------------
-BasicBlock *DivergentRegion::getHeader() {
-  return Bounds->getHeader();
-}
+BasicBlock *DivergentRegion::getHeader() { return Bounds->getHeader(); }
 
 //------------------------------------------------------------------------------
-BasicBlock *DivergentRegion::getExiting() {
-  return Bounds->getExiting();
-}
+BasicBlock *DivergentRegion::getExiting() { return Bounds->getExiting(); }
 
 //------------------------------------------------------------------------------
 void DivergentRegion::setHeader(BasicBlock *Header) {
@@ -36,56 +32,50 @@ void DivergentRegion::setExiting(BasicBlock *Exiting) {
 }
 
 //------------------------------------------------------------------------------
-RegionBounds *DivergentRegion::getBounds() {
-  return Bounds;
-}
+RegionBounds *DivergentRegion::getBounds() { return Bounds; }
 
 //------------------------------------------------------------------------------
-BlockVector *DivergentRegion::getBlocks() {
-  return Blocks;
-}
+BlockVector *DivergentRegion::getBlocks() { return Blocks; }
 
 //------------------------------------------------------------------------------
 void DivergentRegion::FillRegion(DominatorTree *DT, PostDominatorTree *PDT) {
   Blocks = ListBlocks(Bounds);
 
   // If H is dominated by a block in the region than recompute the bounds.
-  if (IsDominated(Bounds->getHeader(), *Blocks, DT)) { 
-    Bounds = FindBounds(*Blocks, DT, PDT); 
+  if (IsDominated(Bounds->getHeader(), *Blocks, DT)) {
+    Bounds = FindBounds(*Blocks, DT, PDT);
   }
 }
 
 //------------------------------------------------------------------------------
-void DivergentRegion::UpdateRegion() {
-  Blocks = ListBlocks(Bounds);
-}
+void DivergentRegion::UpdateRegion() { Blocks = ListBlocks(Bounds); }
 
 //------------------------------------------------------------------------------
 void DivergentRegion::dump() {
-  errs() << "Bounds: " << getHeader()->getName() << 
-           " / " << getExiting()->getName() << "\n";
-  errs() << "Blocks: \n"; 
-  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); 
-       I != E; ++I) {
+  errs() << "Bounds: " << getHeader()->getName() << " / "
+         << getExiting()->getName() << "\n";
+  errs() << "Blocks: \n";
+  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
+       ++I) {
     errs() << (*I)->getName() << "\n";
   }
   errs() << "----------\nCondition: ";
-  switch(Condition) {
-    case DivergentRegion::LB:
-      errs() << "LOWER BOUND\n";
-      break;
-    case DivergentRegion::UB:
-      errs() << "UPPER BOUND\n";
-      break;
-    case DivergentRegion::EQ:
-      errs() << "EQUALS\n";
-      break;
-    case DivergentRegion::DATA:
-      errs() << "DATA\n";
-      break;
-    case DivergentRegion::ND:
-      errs() << "ND\n";
-      break;
+  switch (Condition) {
+  case DivergentRegion::LB:
+    errs() << "LOWER BOUND\n";
+    break;
+  case DivergentRegion::UB:
+    errs() << "UPPER BOUND\n";
+    break;
+  case DivergentRegion::EQ:
+    errs() << "EQUALS\n";
+    break;
+  case DivergentRegion::DATA:
+    errs() << "DATA\n";
+    break;
+  case DivergentRegion::ND:
+    errs() << "ND\n";
+    break;
   }
 }
 
@@ -111,17 +101,16 @@ bool DivergentRegion::Contains(const BasicBlock *BB) {
 
 //------------------------------------------------------------------------------
 bool DivergentRegion::ContainsInternally(const BasicBlock *BB) {
-  
-  for (BlockVector::iterator I = Blocks->begin(), 
-                             E = Blocks->end();
-                             I != E; ++I) {
+
+  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
+       ++I) {
     BasicBlock *block = (*I);
 
-    if(block == Bounds->getHeader() || block == Bounds->getExiting())
-      continue;  
-    
-    if(block == BB)
-      return true; 
+    if (block == Bounds->getHeader() || block == Bounds->getExiting())
+      continue;
+
+    if (block == BB)
+      return true;
   }
   return false;
 }
@@ -133,9 +122,7 @@ bool DivergentRegion::PerformHeaderCheck(DominatorTree *DT) {
 }
 
 //------------------------------------------------------------------------------
-bool DivergentRegion::IsStrict() {
-  return Condition == DivergentRegion::EQ;
-}
+bool DivergentRegion::IsStrict() { return Condition == DivergentRegion::EQ; }
 
 //------------------------------------------------------------------------------
 void DivergentRegion::setCondition(DivergentRegion::BoundCheck Condition) {
@@ -151,13 +138,13 @@ DivergentRegion::BoundCheck DivergentRegion::getCondition() {
 void DivergentRegion::Analyze(ScalarEvolution *SE, LoopInfo *LI,
                               ValueVector &TIds, ValueVector &Inputs) {
   BasicBlock *Header = getHeader();
-  if(BranchInst *Branch = dyn_cast<BranchInst>(Header->getTerminator())) {
-    if(DependsOn(Branch, Inputs)) {
+  if (BranchInst *Branch = dyn_cast<BranchInst>(Header->getTerminator())) {
+    if (DependsOn(Branch, Inputs)) {
       setCondition(DivergentRegion::DATA);
       return;
     }
     Value *Cond = Branch->getCondition();
-    if(CmpInst* Cmp = dyn_cast<CmpInst>(Cond))
+    if (CmpInst *Cmp = dyn_cast<CmpInst>(Cond))
       setCondition(AnalyzeCmp(SE, LI, Cmp, TIds));
     else
       setCondition(DivergentRegion::ND);
@@ -167,14 +154,15 @@ void DivergentRegion::Analyze(ScalarEvolution *SE, LoopInfo *LI,
 }
 
 //------------------------------------------------------------------------------
-DivergentRegion::BoundCheck 
-  DivergentRegion::AnalyzeCmp(ScalarEvolution *SE, LoopInfo *LI,
-                              CmpInst *Cmp, ValueVector &TIds) {
-  if(IsEquals(Cmp->getPredicate()))
+DivergentRegion::BoundCheck DivergentRegion::AnalyzeCmp(ScalarEvolution *SE,
+                                                        LoopInfo *LI,
+                                                        CmpInst *Cmp,
+                                                        ValueVector &TIds) {
+  if (IsEquals(Cmp->getPredicate()))
     return DivergentRegion::EQ;
 
   Value *TIdOp = GetTIdOperand(Cmp, TIds);
-  if(TIdOp == NULL)
+  if (TIdOp == NULL)
     return DivergentRegion::ND;
 
   // Get the operand position.
@@ -183,19 +171,19 @@ DivergentRegion::BoundCheck
   // Get the comparison sign.
   bool GT = IsGreaterThan(Cmp->getPredicate());
 
-  if(Loop *L = LI->getLoopFor(getHeader())) {
-    if(PHINode *Phi = dyn_cast<PHINode>(TIdOp)) { 
+  if (Loop *L = LI->getLoopFor(getHeader())) {
+    if (PHINode *Phi = dyn_cast<PHINode>(TIdOp)) {
       BasicBlock *Latch = L->getLoopLatch();
-      TIdOp = Phi->getIncomingValueForBlock(Latch); 
+      TIdOp = Phi->getIncomingValueForBlock(Latch);
     }
   }
-  
+
   // Check is the value is SCEVable.
-  if(!SE->isSCEVable(TIdOp->getType()))
-    return DivergentRegion::ND;    
+  if (!SE->isSCEVable(TIdOp->getType()))
+    return DivergentRegion::ND;
 
   // Get the TID subscript sign.
-  SmallPtrSet<const SCEV*, 8> Processed;
+  SmallPtrSet<const SCEV *, 8> Processed;
   const SCEV *Scev = SE->getSCEV(TIdOp);
   unsigned int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
   if (result == 0)
@@ -204,11 +192,11 @@ DivergentRegion::BoundCheck
 
   // Compare all of the previous.
   unsigned int sum = isFirst + GT + IsTIdPositive;
-  
-  if(sum == 0)
-    return DivergentRegion::UB; 
 
-  if(sum % 2 == 0)
+  if (sum == 0)
+    return DivergentRegion::UB;
+
+  if (sum % 2 == 0)
     return DivergentRegion::UB;
   else
     return DivergentRegion::LB;
@@ -219,11 +207,10 @@ DivergentRegion::BoundCheck
 unsigned int DivergentRegion::size() {
   unsigned int result = 0;
 
-  for (BlockVector::iterator I = Blocks->begin(), 
-                             E = Blocks->end(); 
-                             I != E; ++I) {
+  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
+       ++I) {
     BasicBlock *block = (*I);
-    if(block == Bounds->getHeader() || block == Bounds->getExiting())
+    if (block == Bounds->getHeader() || block == Bounds->getExiting())
       continue;
 
     result += block->size();

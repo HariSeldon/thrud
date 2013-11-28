@@ -11,20 +11,20 @@
 using namespace llvm;
 
 namespace llvm {
-  class CmpInst;
-  class ScalarEvolution;
-  class LoopInfo;
+class CmpInst;
+class ScalarEvolution;
+class LoopInfo;
 }
 
 class MultiDimDivAnalysis : public FunctionPass {
-  void operator=(const MultiDimDivAnalysis &);        // Do not implement.
-  MultiDimDivAnalysis(const MultiDimDivAnalysis &);   // Do not implement.
+  void operator=(const MultiDimDivAnalysis &);      // Do not implement.
+  MultiDimDivAnalysis(const MultiDimDivAnalysis &); // Do not implement.
 
 public:
   static char ID;
   MultiDimDivAnalysis();
 
-  virtual bool runOnFunction(Function &F); 
+  virtual bool runOnFunction(Function &F);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
 
   bool IsThreadIdDependent(Instruction *I) const;
@@ -35,9 +35,9 @@ public:
   InstVector getInstToRepOutsideRegions() const;
 
   void AnalyzeRegion(DivergentRegion *Region);
-  Value *GetTIdOperand(CmpInst* Cmp);
+  Value *GetTIdOperand(CmpInst *Cmp);
 
-  InstVector getToRep() const ;
+  InstVector getToRep() const;
 
 private:
   DivergentRegion::BoundCheck AnalyzeCmp(CmpInst *Cmp);

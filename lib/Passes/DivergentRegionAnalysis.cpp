@@ -37,12 +37,12 @@
 
 using namespace llvm;
 
-cl::opt<int>
-CoarseningDirection("coarsening-direction", cl::init(-1), cl::Hidden,
-                    cl::desc("The coarsening direction"));
+cl::opt<int> CoarseningDirection("coarsening-direction", cl::init(-1),
+                                 cl::Hidden,
+                                 cl::desc("The coarsening direction"));
 
 //------------------------------------------------------------------------------
-DivergentRegionAnalysis::DivergentRegionAnalysis() : FunctionPass(ID) { }
+DivergentRegionAnalysis::DivergentRegionAnalysis() : FunctionPass(ID) {}
 
 //------------------------------------------------------------------------------
 void DivergentRegionAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -78,12 +78,11 @@ bool DivergentRegionAnalysis::runOnFunction(Function &F) {
 }
 
 //------------------------------------------------------------------------------
-std::vector<DivergentRegion*> DivergentRegionAnalysis::getRegions() {
+std::vector<DivergentRegion *> DivergentRegionAnalysis::getRegions() {
   return Regions;
 }
 
 //------------------------------------------------------------------------------
 char DivergentRegionAnalysis::ID = 0;
-static RegisterPass<DivergentRegionAnalysis> X(
-       "dra",
-       "OpenCL divergent region analysis");
+static RegisterPass<DivergentRegionAnalysis>
+    X("dra", "OpenCL divergent region analysis");

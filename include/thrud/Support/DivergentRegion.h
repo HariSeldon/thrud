@@ -7,21 +7,27 @@
 #include "llvm/Analysis/PostDominators.h"
 
 namespace llvm {
-  class CmpInst;
-  class LoopInfo;
-  class ScalarEvolution;
+class CmpInst;
+class LoopInfo;
+class ScalarEvolution;
 }
 
 class RegionBounds;
 
 class DivergentRegion {
 public:
-  enum BoundCheck {LB, UB, EQ, ND, DATA};
+  enum BoundCheck {
+    LB,
+    UB,
+    EQ,
+    ND,
+    DATA
+  };
 
 public:
   DivergentRegion(BasicBlock *Header, BasicBlock *Exiting);
 
-  // Getter and Setter. 
+  // Getter and Setter.
   BasicBlock *getHeader();
   BasicBlock *getExiting();
 
@@ -48,8 +54,8 @@ public:
   bool Contains(const BasicBlock *BB);
   bool ContainsInternally(const BasicBlock *BB);
 
-  void Analyze(ScalarEvolution *SE, LoopInfo *LI,
-               ValueVector &TIds, ValueVector &Inputs);
+  void Analyze(ScalarEvolution *SE, LoopInfo *LI, ValueVector &TIds,
+               ValueVector &Inputs);
   DivergentRegion::BoundCheck AnalyzeCmp(ScalarEvolution *SE, LoopInfo *LI,
                                          CmpInst *Cmp, ValueVector &TIds);
 
@@ -61,10 +67,10 @@ public:
 private:
   RegionBounds *Bounds;
   BlockVector *Blocks;
-  BoundCheck Condition; 
+  BoundCheck Condition;
 
 };
 
-typedef std::vector<DivergentRegion*> RegionVector;
+typedef std::vector<DivergentRegion *> RegionVector;
 
 #endif

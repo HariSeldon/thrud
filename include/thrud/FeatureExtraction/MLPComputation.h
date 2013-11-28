@@ -5,9 +5,7 @@
 
 #include "llvm/Analysis/PostDominators.h"
 
-namespace llvm {
-  class BasicBlock;
-}
+namespace llvm { class BasicBlock; }
 
 using namespace llvm;
 

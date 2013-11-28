@@ -51,7 +51,7 @@ void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 
 //------------------------------------------------------------------------------
 bool MultiDimDivAnalysis::runOnFunction(Function &F) {
-  Function *Func = (Function *) &F;
+  Function *Func = (Function *)&F;
 
   // Apply the pass to kernels only.
   if (!IsKernel(Func))
@@ -82,7 +82,8 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
   DoNotReplicate.insert(DoNotReplicate.end(), Sizes.begin(), Sizes.end());
   DoNotReplicate.insert(DoNotReplicate.end(), AllTIds.begin(), AllTIds.end());
   DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
-  ToRep = GetInstToReplicateOutsideRegionCores(TIdInsts, AllTIds, Regions, DoNotReplicate);
+  ToRep = GetInstToReplicateOutsideRegionCores(TIdInsts, AllTIds, Regions,
+                                               DoNotReplicate);
 
   return false;
 }
@@ -93,14 +94,10 @@ RegionVector MultiDimDivAnalysis::getDivergentRegions() const {
 }
 
 //------------------------------------------------------------------------------
-InstVector MultiDimDivAnalysis::getThreadIds() const {
-  return AllTIds;
-}
+InstVector MultiDimDivAnalysis::getThreadIds() const { return AllTIds; }
 
 //------------------------------------------------------------------------------
-InstVector MultiDimDivAnalysis::getSizes() const {
-  return Sizes;
-}
+InstVector MultiDimDivAnalysis::getSizes() const { return Sizes; }
 
 //------------------------------------------------------------------------------
 bool MultiDimDivAnalysis::IsThreadIdDependent(Instruction *I) const {
@@ -108,12 +105,9 @@ bool MultiDimDivAnalysis::IsThreadIdDependent(Instruction *I) const {
 }
 
 //------------------------------------------------------------------------------
-InstVector MultiDimDivAnalysis::getToRep() const {
-  return ToRep;
-}
+InstVector MultiDimDivAnalysis::getToRep() const { return ToRep; }
 
 //------------------------------------------------------------------------------
 char MultiDimDivAnalysis::ID = 0;
-static RegisterPass<MultiDimDivAnalysis> X(
-       "mdda", 
-       "OpenCL multi dimension divergence analysis");
+static RegisterPass<MultiDimDivAnalysis>
+    X("mdda", "OpenCL multi dimension divergence analysis");

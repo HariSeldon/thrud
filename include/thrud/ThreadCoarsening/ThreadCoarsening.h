@@ -12,13 +12,11 @@
 
 using namespace llvm;
 
-namespace llvm {
-  class BasicBlock;
-}
+namespace llvm { class BasicBlock; }
 
 class ThreadCoarsening : public FunctionPass {
-  void operator=(const ThreadCoarsening &);    // Do not implement.
-  ThreadCoarsening(const ThreadCoarsening &);  // Do not implement.
+  void operator=(const ThreadCoarsening &);   // Do not implement.
+  ThreadCoarsening(const ThreadCoarsening &); // Do not implement.
 
 public:
   static char ID;
@@ -33,8 +31,7 @@ private:
   void RenameInstructionWithIndex(Instruction *I, StringRef oldName,
                                   unsigned int index);
 
-  InstVector createOffsetInsts(Value *tId,
-                               unsigned int CoarseningFactor,
+  InstVector createOffsetInsts(Value *tId, unsigned int CoarseningFactor,
                                unsigned int index);
 
   InstVector ScaleSizeAndIds(unsigned int CD, unsigned int CF, unsigned int ST,

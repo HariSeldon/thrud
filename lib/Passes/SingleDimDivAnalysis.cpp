@@ -53,8 +53,8 @@ void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 
 //------------------------------------------------------------------------------
 bool SingleDimDivAnalysis::runOnFunction(Function &F) {
-  Function *Func = (Function *) &F;
- // Apply the pass to kernels only.
+  Function *Func = (Function *)&F;
+  // Apply the pass to kernels only.
   if (!IsKernel(Func))
     return false;
 
@@ -81,8 +81,8 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   ValueVector TIdsV = ToValueVector(TIds);
   TIdBranches = GetThreadDepBranches(Branches, TIdsV);
   Regions = GetDivergentRegions(TIdBranches, DT, PDT, LI);
-  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); 
-       I != E; ++I) {
+  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
+       ++I) {
     DivergentRegion *R = *I;
     R->Analyze(SE, LI, TIdsV, Inputs);
   }
@@ -93,7 +93,8 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   DoNotReplicate.insert(DoNotReplicate.end(), Sizes.begin(), Sizes.end());
   DoNotReplicate.insert(DoNotReplicate.end(), AllTIds.begin(), AllTIds.end());
   DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
-  ToRep = GetInstToReplicateOutsideRegions(TIdInsts, TIds, Regions, DoNotReplicate); 
+  ToRep =
+      GetInstToReplicateOutsideRegions(TIdInsts, TIds, Regions, DoNotReplicate);
 
   return false;
 }
@@ -146,7 +147,7 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
 //
 //  // Compare all of the previous.
 //  unsigned int sum = isFirst + GT; // + IsTIdPositive;
-//  
+//
 //  if(sum % 2 == 0)
 //    return DivergentRegion::UB;
 //  else
@@ -158,7 +159,7 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
 //Value *SingleDimDivAnalysis::GetTIdOperand(CmpInst* Cmp) {
 //  // ASSUMPTION: only one operand of the comparison depends on the TId.
 //  ValueVector TIdsV = ToValueVector(TIds);
-//  for (CmpInst::op_iterator I = Cmp->op_begin(), E = Cmp->op_end();             
+//  for (CmpInst::op_iterator I = Cmp->op_begin(), E = Cmp->op_end();
 //       I != E; ++I) {
 //    Value *V = I->get();
 //    if(DependsOn(V, TIdsV)) {
@@ -179,14 +180,10 @@ RegionVector SingleDimDivAnalysis::getDivergentRegions() const {
 }
 
 //------------------------------------------------------------------------------
-InstVector SingleDimDivAnalysis::getThreadIds() const {
-  return TIds;
-}
+InstVector SingleDimDivAnalysis::getThreadIds() const { return TIds; }
 
 //------------------------------------------------------------------------------
-InstVector SingleDimDivAnalysis::getSizes() const {
-  return Sizes;
-}
+InstVector SingleDimDivAnalysis::getSizes() const { return Sizes; }
 
 //------------------------------------------------------------------------------
 bool SingleDimDivAnalysis::IsThreadIdDependent(Instruction *I) const {
@@ -199,12 +196,9 @@ InstVector SingleDimDivAnalysis::FindInstToReplicate() {
 }
 
 //------------------------------------------------------------------------------
-InstVector SingleDimDivAnalysis::getTIdInsts() const {
-  return TIdInsts;
-}
+InstVector SingleDimDivAnalysis::getTIdInsts() const { return TIdInsts; }
 
 //------------------------------------------------------------------------------
 char SingleDimDivAnalysis::ID = 0;
-static RegisterPass<SingleDimDivAnalysis> X(
-       "sdda", 
-       "OpenCL single dimension divergence analysis");
+static RegisterPass<SingleDimDivAnalysis>
+    X("sdda", "OpenCL single dimension divergence analysis");
