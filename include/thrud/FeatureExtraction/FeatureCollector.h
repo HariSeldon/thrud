@@ -7,6 +7,7 @@
 // Try to remove these two.
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/LoopInfo.h"
 
 #include "llvm/Support/YAMLTraits.h"
 
@@ -77,9 +78,7 @@ public:
   // Local memory usage.
   void countLocalMemoryUsage(const BasicBlock &block);
 
-  //===================
   // Function counters.
-  //===================
   void countDimensions(Function &function);
   void countEdges(const Function &function);
   void countBranches(const Function &function);
@@ -87,18 +86,12 @@ public:
                      SingleDimDivAnalysis *sdda);
   void countArgs(const Function &function);
 
-  //// Number of unary operations in the method.
-  //unsigned int
-  //// Number of indirect references via pointers (“*” in C).
-  //unsigned int
-  //// Number of times the address of a variables is taken (“&” in C).
-  //unsigned int
-  //// Number of assignment instructions with the left operand an integer
-  //// constant in the method.
-  //unsigned int
-  //// Number of binary operations with one of the operands an integer
-  //// constant in the method.
-  //unsigned int
+  // Loop Function counters.
+  void loopCountEdges(const Function &function, LoopInfo *LI);
+  void loopCountBranches(const Function &function, LoopInfo *LI);
+  void loopCountDivInsts(Function &function, MultiDimDivAnalysis *mdda,
+                         SingleDimDivAnalysis *sdda, LoopInfo *LI);
+  
 };
 
 #endif

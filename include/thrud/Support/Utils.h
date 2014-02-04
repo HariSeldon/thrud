@@ -18,6 +18,10 @@ using namespace llvm;
 
 #define LOCAL_AS 3
 
+// Loop management.
+bool IsInLoop(const Instruction *I, LoopInfo *LI);
+bool IsInLoop(const BasicBlock *BB, LoopInfo *LI);
+
 // OpenCL management.
 bool IsKernel(const Function *F);
 

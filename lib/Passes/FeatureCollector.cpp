@@ -126,7 +126,6 @@ template <> struct SequenceTraits<std::vector<std::pair<float, float> > > {
 
   static const bool flow = true;
 };
-
 }
 }
 
@@ -419,4 +418,106 @@ void FeatureCollector::countDimensions(Function &function) {
 void FeatureCollector::dump() {
   Output yout(llvm::outs());
   yout << *this;
+}
+
+//------------------------------------------------------------------------------
+void FeatureCollector::loopCountEdges(const Function &function, LoopInfo *LI) {
+  unsigned int edges = 0;
+  unsigned int criticalEdges = 0;
+  for (Function::const_iterator block = function.begin(), end = function.end();
+       block != end; ++block) {
+    if(!IsInLoop(block, LI))
+      continue;
+    edges += block->getTerminator()->getNumSuccessors();
+  }
+
+  for (Function::const_iterator block = function.begin(), end = function.end();
+       block != end; ++block) {
+
+    if(!IsInLoop(block, LI))
+      continue;
+
+    const TerminatorInst *termInst = block->getTerminator();
+    unsigned int termNumber = termInst->getNumSuccessors();
+
+    for (unsigned int index = 0; index < termNumber; ++index) {
+      criticalEdges += isCriticalEdge(termInst, index);
+    }
+  }
+
+  instTypes["edges"] = edges;
+  instTypes["criticalEdges"] = criticalEdges;
+}
+
+//------------------------------------------------------------------------------
+void FeatureCollector::loopCountBranches(const Function &function,
+                                         LoopInfo *LI) {
+  unsigned int condBranches = 0;
+  unsigned int uncondBranches = 0;
+  for (Function::const_iterator block = function.begin(), end = function.end();
+       block != end; ++block) {
+
+    if(!IsInLoop(block, LI))
+      continue;
+
+    const TerminatorInst *term = block->getTerminator();
+    if (const BranchInst *branch = dyn_cast<BranchInst>(term)) {
+      if (branch->isConditional() == true)
+        ++condBranches;
+      else
+        ++uncondBranches;
+    }
+  }
+
+  instTypes["condBranches"] = condBranches;
+  instTypes["uncondBranches"] = uncondBranches;
+}
+//------------------------------------------------------------------------------
+void FeatureCollector::loopCountDivInsts(Function &function,
+                                         MultiDimDivAnalysis *mdda,
+                                         SingleDimDivAnalysis *sdda,
+                                         LoopInfo *LI) {
+  // Count divergent regions.
+  RegionVector Regions = mdda->getDivergentRegions();
+  InstVector DivInsts = mdda->getToRep(); 
+  unsigned int divRegions = 0;
+  unsigned int divInsts = 0;
+//  instTypes["divInsts"] = std::count_if(DivInsts.begin(), DivInsts.end(), std::bind2nd((bool *(*)(const Instruction*, LoopInfo*))IsInLoop, LI));
+
+  for (InstVector::iterator I = DivInsts.begin(), E = DivInsts.end(); I != E; ++I) {
+    if(!IsInLoop(*I, LI))
+      continue;
+    ++divInsts;
+  } 
+
+
+  // Insts in divergent regions.
+  unsigned int divRegionInsts = 0;
+  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
+       ++I) {
+    if(!IsInLoop((*I)->getHeader(), LI))
+      continue;
+    divRegionInsts += (*I)->size();
+    ++divRegions;
+  }
+
+  instTypes["divRegionInsts"] = divRegionInsts;
+
+  // Count uniform loads.
+  unsigned int uniformLoads = 0;
+  for (inst_iterator I = inst_begin(function), E = inst_end(function); I != E;
+       ++I) {
+    Instruction *inst = &*I;
+
+    if(!IsInLoop(inst, LI))
+      continue;
+
+    if (isa<LoadInst>(inst)) {
+      inst->dump();
+      llvm::errs() << sdda->IsThreadIdDependent(inst) << "\n";
+    }
+    uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
+  }
+
+  instTypes["uniformLoads"] = uniformLoads;
 }

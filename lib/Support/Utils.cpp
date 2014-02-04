@@ -39,6 +39,17 @@ const char *GetSizeNames[2] = { GetGlobalSize, GetLocalSize };
 const char *GetGroupIdNames[1] = { GetGroupId };
 
 //------------------------------------------------------------------------------
+bool IsInLoop(const Instruction *I, LoopInfo *LI) {
+  const BasicBlock *P = I->getParent();
+  return LI->getLoopFor(P) != NULL;
+}
+
+//------------------------------------------------------------------------------
+bool IsInLoop(const BasicBlock *BB, LoopInfo *LI) {
+  return LI->getLoopFor(BB) != NULL;
+}
+
+//------------------------------------------------------------------------------
 bool IsKernel(const Function *F) {
   const Module *M = F->getParent();
   const llvm::NamedMDNode *KernsMD = M->getNamedMetadata("opencl.kernels");
