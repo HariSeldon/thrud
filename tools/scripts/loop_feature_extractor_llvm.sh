@@ -6,16 +6,17 @@ LLVM_DIS=llvm-dis
 AXTOR=axtor
 LIB_THRUD=$HOME/root/lib/libThrud.so
 
-if [ $# -ne 4 ]
+if [ $# -ne 5 ]
 then
-  echo "Must specify: input file, cd, cf, st"
+  echo "Must specify: input file, kernel name, cd, cf, st"
 exit 1;
 fi
 
 INPUT_FILE=$1
-COARSENING_DIRECTION=$2
-COARSENING_FACTOR=$3
-COARSENING_STRIDE=$4
+KERNEL_NAME=$2
+COARSENING_DIRECTION=$3
+COARSENING_FACTOR=$4
+COARSENING_STRIDE=$5
 
 OCLDEF=$HOME/src/thrud/tools/scripts/ocldef.h
 OPTIMIZATION=-O0
@@ -48,6 +49,7 @@ $CLANG -x cl \
 $OPT -instnamer \
      -mem2reg \
      -inline -inline-threshold=10000 \
-     -O3 \
-     -o - |
-$OPT -dot-cfg -o /dev/null
+     -O3 -load ${LIB_THRUD} -opencl-loop-instcount -count-loop-kernel-name ${KERNEL_NAME} \
+     -o /dev/null
+
+rm ${OUTPUT_FILE}

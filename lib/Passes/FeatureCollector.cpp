@@ -246,9 +246,9 @@ void FeatureCollector::countPhis(const BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countConstants(const BasicBlock &block) {
-  unsigned int fourB = 0;
-  unsigned int eightB = 0;
-  unsigned int fps = 0;
+  unsigned int fourB = instTypes["fourB"];
+  unsigned int eightB = instTypes["eightB"];
+  unsigned int fps = instTypes["fps"];
 
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
@@ -259,14 +259,14 @@ void FeatureCollector::countConstants(const BasicBlock &block) {
       const Value *operand = opIter->get();
       if (const ConstantInt *constInt = dyn_cast<ConstantInt>(operand)) {
         if (constInt->getBitWidth() == 32)
-          fourB++;
+          ++fourB;
 
-        if (constInt->getBitWidth() == 64)
-          eightB++;
+        if (constInt->getBitWidth() == 64) 
+          ++eightB;
       }
 
-      if (isa<ConstantFP>(operand))
-        fps++;
+      if (isa<ConstantFP>(operand)) 
+        ++fps;
     }
   }
 
@@ -481,7 +481,6 @@ void FeatureCollector::loopCountDivInsts(Function &function,
   InstVector DivInsts = mdda->getToRep(); 
   unsigned int divRegions = 0;
   unsigned int divInsts = 0;
-//  instTypes["divInsts"] = std::count_if(DivInsts.begin(), DivInsts.end(), std::bind2nd((bool *(*)(const Instruction*, LoopInfo*))IsInLoop, LI));
 
   for (InstVector::iterator I = DivInsts.begin(), E = DivInsts.end(); I != E; ++I) {
     if(!IsInLoop(*I, LI))
