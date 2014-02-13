@@ -1,5 +1,7 @@
+typedef float float4 __attribute__((ext_vector_type(4)));
+
 extern "C" {
-  float __nv_sqrtf(float);
+  float __nv_fsqrt_ru(float);
   float __nv_cosf(float);
   float __nv_sinf(float);
   float __nv_expf(float);
@@ -8,7 +10,7 @@ extern "C" {
 }
 
 extern float sqrt(float f){
-  return __nv_sqrtf(f);
+  return __nv_fsqrt_ru(f);
 }
 
 extern float cos(float f){
@@ -27,6 +29,12 @@ extern float log(float f){
   return __nv_logf(f);
 }
 
-extern float hypot(float a, float b){
-  return __nv_hypotf(a, b);
+extern float4 hypot(float4 a, float4 b){
+  float4 result;
+  result.x = __nv_hypotf(a.x, b.x);
+  result.y = __nv_hypotf(a.y, b.y);
+  result.z = __nv_hypotf(a.z, b.z);
+  result.w = __nv_hypotf(a.w, b.w);
+
+  return result;
 }
