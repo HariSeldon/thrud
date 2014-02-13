@@ -8,6 +8,7 @@
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 
 #include "llvm/Support/YAMLTraits.h"
 
@@ -64,6 +65,7 @@ public:
   std::vector<unsigned int> aliveOutBlocks;
   std::vector<float> avgLiveRange;
   void livenessAnalysis(BasicBlock &block);
+  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, ValueVector &TIds);
 
   // Phis.
   // Map phi name with arg number.

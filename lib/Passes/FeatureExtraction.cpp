@@ -1,5 +1,7 @@
 #include "thrud/FeatureExtraction/FeatureExtraction.h"
 
+#include "llvm/Analysis/ScalarEvolution.h"
+
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
 #include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
 
@@ -19,6 +21,7 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTree>();
   MDDA = &getAnalysis<MultiDimDivAnalysis>();
   SDDA = &getAnalysis<SingleDimDivAnalysis>();
+  SE = &getAnalysis<ScalarEvolution>();
 
   visit(F);
   collector.dump();
@@ -31,6 +34,7 @@ void OpenCLFeatureExtractor::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SingleDimDivAnalysis>();
   AU.addRequired<PostDominatorTree>();
   AU.addRequired<DominatorTree>();
+  AU.addRequired<ScalarEvolution>();
   AU.setPreservesAll();
 }
 
@@ -51,6 +55,7 @@ void OpenCLFeatureExtractor::visitInstruction(Instruction &inst) {
 
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
+  //llvm::errs() << "visitBasicBlock\n";
   BasicBlock *block = (BasicBlock *)&basicBlock;
   collector.instTypes["blocks"] += 1;
   collector.computeILP(block);
@@ -64,10 +69,12 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
+//  collector.coalescingAnalysis(basicBlock, SE);
 }
 
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitFunction(Function &function) {
+  //llvm::errs () << "visitFunction\n";
   collector.countDimensions(function);
   collector.countBranches(function);
   collector.countEdges(function);

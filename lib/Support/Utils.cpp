@@ -834,6 +834,23 @@ bool IsGreaterThan(CmpInst::Predicate Pred) {
 bool IsEquals(CmpInst::Predicate Pred) { return Pred == CmpInst::ICMP_EQ; }
 
 //------------------------------------------------------------------------------
+bool IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds) {
+  if(!isa<GetElementPtrInst>(value)) {
+    return true;
+  }
+
+  if(!SE->isSCEVable(value->getType())) {
+    return false;
+  }
+
+  llvm::errs() << "=============== IsCoalesced ====================\n"; 
+  const SCEV *scev = SE->getSCEV(value); 
+
+  SmallPtrSet<const SCEV*, 8> Processed;
+//  AnalyzeSubscript(SE, scev, );
+}
+
+//------------------------------------------------------------------------------
 // FIXME: for multiplications this goes down just one level.
 // WARNING: SCEV does not support %.
 int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,

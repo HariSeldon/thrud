@@ -38,6 +38,7 @@ using yaml::Output;
 namespace llvm {
 namespace yaml {
 
+//------------------------------------------------------------------------------
 template <> struct MappingTraits<FeatureCollector> {
   static void mapping(IO &io, FeatureCollector &collector) {
     for (std::map<std::string, unsigned int>::iterator
@@ -157,6 +158,8 @@ FeatureCollector::FeatureCollector() {
   instTypes["divInsts"] = 0;
   instTypes["divRegionInsts"] = 0;
   instTypes["uniformLoads"] = 0;
+  instTypes["coalescedLoads"] = 0;
+  instTypes["coalescedStores"] = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -396,6 +399,25 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
 
   avgLiveRange.push_back(getAverage(ranges));
   aliveOutBlocks.push_back(aliveValues);
+}
+
+//------------------------------------------------------------------------------
+void FeatureCollector::coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, ValueVector &TIds) {
+  for (BasicBlock::iterator iter = block.begin(), end = block.end();
+       iter != end; ++iter) {
+    llvm::Instruction *inst = iter;
+    if(LoadInst *LI = dyn_cast<LoadInst>(inst)) {
+      Value *pointer = LI->getOperand(0);
+
+      if(IsCoalesced(pointer, SE, TIds))  
+        safeIncrement(instTypes, "coalescedLoads");
+    }
+    if(StoreInst *SI = dyn_cast<StoreInst>(inst)) {
+      Value *pointer = SI->getOperand(1);
+      if(IsCoalesced(pointer, SE, TIds))
+        safeIncrement(instTypes, "coalescedStores");
+    }
+  }
 }
 
 //------------------------------------------------------------------------------

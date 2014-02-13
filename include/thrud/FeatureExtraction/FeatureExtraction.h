@@ -53,5 +53,6 @@ private:
   FeatureCollector collector;
   PostDominatorTree *PDT;
   DominatorTree *DT;
+  ScalarEvolution *SE;
 };
 }
