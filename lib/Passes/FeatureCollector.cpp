@@ -346,7 +346,6 @@ void FeatureCollector::countDivInsts(Function &function,
        ++I) {
     Instruction *inst = &*I;
     if (isa<LoadInst>(inst)) {
-      inst->dump();
       llvm::errs() << sdda->IsThreadIdDependent(inst) << "\n";
     }
     uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
@@ -513,7 +512,6 @@ void FeatureCollector::loopCountDivInsts(Function &function,
       continue;
 
     if (isa<LoadInst>(inst)) {
-      inst->dump();
       llvm::errs() << sdda->IsThreadIdDependent(inst) << "\n";
     }
     uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
