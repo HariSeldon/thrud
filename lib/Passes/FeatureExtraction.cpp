@@ -4,6 +4,7 @@
 
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
 #include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+#include "thrud/Support/Utils.h"
 
 cl::opt<std::string> kernelName("count-kernel-name", cl::init(""), cl::Hidden,
                                 cl::desc("Name of the kernel to analyze"));
@@ -55,7 +56,6 @@ void OpenCLFeatureExtractor::visitInstruction(Instruction &inst) {
 
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
-  //llvm::errs() << "visitBasicBlock\n";
   BasicBlock *block = (BasicBlock *)&basicBlock;
   collector.instTypes["blocks"] += 1;
   collector.computeILP(block);
@@ -69,12 +69,14 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-//  collector.coalescingAnalysis(basicBlock, SE);
+  collector.coalescingAnalysis(basicBlock, SE, TIds);
 }
 
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitFunction(Function &function) {
-  //llvm::errs () << "visitFunction\n";
+  // Extract ThreadId values. 
+  InstVector tmp = SDDA->getThreadIds();
+  TIds = ToValueVector(tmp);
   collector.countDimensions(function);
   collector.countBranches(function);
   collector.countEdges(function);

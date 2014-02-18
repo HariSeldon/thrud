@@ -73,6 +73,7 @@ template <> struct MappingTraits<FeatureCollector> {
     io.mapRequired("mlpPerBlock", collector.blockMLP);
     io.mapRequired("avgLiveRange", collector.avgLiveRange);
     io.mapRequired("aliveOut", collector.aliveOutBlocks);
+    io.mapRequired("memoryStrides", collector.memoryStrides);
   }
 };
 
@@ -99,6 +100,22 @@ template <> struct SequenceTraits<std::vector<unsigned int> > {
 
   static const bool flow = true;
 };
+
+//------------------------------------------------------------------------------
+// Sequence of ints.
+template <> struct SequenceTraits<std::vector<int> > {
+  static size_t size(IO &io, std::vector<int> &seq) {
+    return seq.size();
+  }
+  static int &element(IO &, std::vector<int> &seq, size_t index) {
+    if (index >= seq.size())
+      seq.resize(index + 1);
+    return seq[index];
+  }
+
+  static const bool flow = true;
+};
+
 //------------------------------------------------------------------------------
 // Sequence of floats.
 template <> struct SequenceTraits<std::vector<float> > {
@@ -402,20 +419,19 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
 }
 
 //------------------------------------------------------------------------------
-void FeatureCollector::coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, ValueVector &TIds) {
+void FeatureCollector::coalescingAnalysis(BasicBlock &block,
+                                          ScalarEvolution *SE,
+                                          ValueVector &TIds) {
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
     llvm::Instruction *inst = iter;
     if(LoadInst *LI = dyn_cast<LoadInst>(inst)) {
       Value *pointer = LI->getOperand(0);
-
-      if(IsCoalesced(pointer, SE, TIds))  
-        safeIncrement(instTypes, "coalescedLoads");
+      memoryStrides.push_back(IsCoalesced(pointer, SE, TIds));
     }
     if(StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
-      if(IsCoalesced(pointer, SE, TIds))
-        safeIncrement(instTypes, "coalescedStores");
+      memoryStrides.push_back(IsCoalesced(pointer, SE, TIds));
     }
   }
 }

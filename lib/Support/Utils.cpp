@@ -834,7 +834,8 @@ bool IsGreaterThan(CmpInst::Predicate Pred) {
 bool IsEquals(CmpInst::Predicate Pred) { return Pred == CmpInst::ICMP_EQ; }
 
 //------------------------------------------------------------------------------
-bool IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds) {
+// TODO fix the return type.
+int IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds) {
   if(!isa<GetElementPtrInst>(value)) {
     return true;
   }
@@ -845,9 +846,10 @@ bool IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds) {
 
   llvm::errs() << "=============== IsCoalesced ====================\n"; 
   const SCEV *scev = SE->getSCEV(value); 
-
   SmallPtrSet<const SCEV*, 8> Processed;
-//  AnalyzeSubscript(SE, scev, );
+  int result = AnalyzeSubscript(SE, scev, TIds, Processed);
+  llvm::errs() << "Result: " << result << "\n";
+  return result;
 }
 
 //------------------------------------------------------------------------------
@@ -858,16 +860,23 @@ int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
   if (!Processed.insert(Scev))
     return false;
 
-  //errs() << "SCEV: " << Scev->getSCEVType() << "\n";
+  Scev->dump();
 
   switch (Scev->getSCEVType()) {
+  case scAddRecExpr: {
+    const SCEVAddRecExpr *addRecExpr = cast<SCEVAddRecExpr>(Scev);
+    const SCEV* start = addRecExpr->getStart();
+    // const SCEV* step = addRecExpr->getStepRecurrence(*SE);
+    // Check that the step is independent of the TID. TODO.
+    return AnalyzeSubscript(SE, start, TIds, Processed);
+  }
   case scAddExpr: {
     const SCEVAddExpr *AddExpr = cast<SCEVAddExpr>(Scev);
     return AnalyzeAdd(SE, AddExpr, TIds, Processed);
   }
   case scMulExpr: {
     const SCEVMulExpr *MulExpr = cast<SCEVMulExpr>(Scev);
-    return AnalyzeMultiplication(MulExpr, TIds);
+    return AnalyzeMultiplication(SE, MulExpr, TIds);
   }
   case scUnknown: {
     const SCEVUnknown *U = cast<SCEVUnknown>(Scev);
@@ -889,52 +898,98 @@ int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
 //------------------------------------------------------------------------------
 int AnalyzePHI(ScalarEvolution *SE, PHINode *Phi, ValueVector &TIds,
                SmallPtrSet<const SCEV *, 8> &Processed) {
-  int sum = 0;
-  int absSum = 0;
-  for (PHINode::const_op_iterator I = Phi->op_begin(), E = Phi->op_end();
-       I != E; ++I) {
-    Value *V = I->get();
-    const SCEV *Scev = SE->getSCEV(V);
-    int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
-    sum += result;
-    absSum += abs(result);
-  }
-
-  if (absSum > 1)
-    return 0;
-  return sum;
+  return 0;
+//  int sum = 0;
+//  int absSum = 0;
+//  for (PHINode::const_op_iterator I = Phi->op_begin(), E = Phi->op_end();
+//       I != E; ++I) {
+//    Value *V = I->get();
+//    const SCEV *Scev = SE->getSCEV(V);
+//    int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
+//    sum += result;
+//    absSum += abs(result);
+//  }
+//
+//  if (absSum > 1)
+//    return 0;
+//  return sum;
 }
 
 //------------------------------------------------------------------------------
 int AnalyzeAdd(ScalarEvolution *SE, const SCEVAddExpr *Scev, ValueVector &TIds,
                SmallPtrSet<const SCEV *, 8> &Processed) {
+
+  llvm::errs() << "Sum. +++++++++++++++++++\n";
   int sum = 0;
   int absSum = 0;
+  std::vector<int> results;
   for (SCEVAddExpr::op_iterator I = Scev->op_begin(), E = Scev->op_end();
        I != E; ++I) {
     int result = AnalyzeSubscript(SE, *I, TIds, Processed);
-    sum += result;
-    absSum += abs(result);
+    results.push_back(result);
   }
-  if (absSum > 1)
-    return 0;
-  return sum;
+
+  if(std::find(results.begin(), results.end(), -1) != results.end()) {
+    return -1;
+  }
+
+  int positiveValues = 0;
+  for (int index = 0; index < results.size(); ++index) {
+    if(results[index] > 0)
+      positiveValues++;
+  }
+
+  if(positiveValues > 1) return -1;
+
+  int result = *std::max_element(results.begin(), results.end());
+  return result;
 }
 
 //------------------------------------------------------------------------------
-int AnalyzeMultiplication(const SCEVNAryExpr *Scev, ValueVector &TIds) {
-  size_t operands = Scev->getNumOperands();
-  if (operands != 2)
-    return 0;
-  const SCEV *first = *Scev->op_begin();
-  const SCEV *second = *next(Scev->op_begin());
+int AnalyzeMultiplication(ScalarEvolution *SE, const SCEVNAryExpr *Scev, ValueVector &TIds) {
+//  size_t operands = Scev->getNumOperands();
+//  if (operands != 2)
+//    return 0;
+//  const SCEV *first = *Scev->op_begin();
+//  const SCEV *second = *next(Scev->op_begin());
+//
+//  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(first))
+//    if (const SCEVConstant *C = dyn_cast<SCEVConstant>(second))
+//      return AnalyzeFactors(U, C, TIds);
+//  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(second))
+//    if (const SCEVConstant *C = dyn_cast<SCEVConstant>(first))
+//      return AnalyzeFactors(U, C, TIds);
+//  return 0;
 
-  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(first))
-    if (const SCEVConstant *C = dyn_cast<SCEVConstant>(second))
-      return AnalyzeFactors(U, C, TIds);
-  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(second))
-    if (const SCEVConstant *C = dyn_cast<SCEVConstant>(first))
-      return AnalyzeFactors(U, C, TIds);
+  llvm::errs() << "Multiplication. **********\n";
+  int tidPresent = 0;
+  int unknowPresent = 0;
+
+  std::vector<const SCEV *> Operands;
+  for (SCEVNAryExpr::op_iterator I = Scev->op_begin(), E = Scev->op_end();
+       I != E; ++I) {
+    if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(*I)) {
+      Value *value = U->getValue();
+      if(IsPresent(value, TIds)) 
+        ++tidPresent;
+      else 
+        ++unknowPresent;
+      continue;
+    }
+    Operands.push_back(*I); 
+  }
+
+  if(tidPresent != 1) return -1;
+  if(unknowPresent > 0) return -1; 
+  if(Operands.size() != 1)  return -1;
+
+  const SCEV* Const = Operands.at(0);
+  if(const SCEVConstant* ConstSCEV = dyn_cast<SCEVConstant>(Const)) {
+    const ConstantInt* value = ConstSCEV->getValue(); 
+    int result = (int)value->getValue().roundToDouble();
+    llvm::errs() << "Mul result: " << result << "\n";
+    return result;
+  } 
   return 0;
 }
 

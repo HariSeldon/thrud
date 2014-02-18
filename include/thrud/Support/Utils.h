@@ -140,14 +140,14 @@ RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *DT,
                          PostDominatorTree *PDT);
 
 // Scalar Evolution analysis.
-bool IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds);
+int IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds);
 int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
                      SmallPtrSet<const SCEV *, 8> &Processed);
 int AnalyzePHI(ScalarEvolution *SE, PHINode *V, ValueVector &TIds,
                SmallPtrSet<const SCEV *, 8> &Processed);
 int AnalyzeAdd(ScalarEvolution *SE, const SCEVAddExpr *Scev, ValueVector &TIds,
                SmallPtrSet<const SCEV *, 8> &Processed);
-int AnalyzeMultiplication(const SCEVNAryExpr *Scev, ValueVector &TIds);
+int AnalyzeMultiplication(ScalarEvolution *SE, const SCEVNAryExpr *Scev, ValueVector &TIds);
 int AnalyzeFactors(const SCEVUnknown *U, const SCEVConstant *C,
                    ValueVector &TIds);
 

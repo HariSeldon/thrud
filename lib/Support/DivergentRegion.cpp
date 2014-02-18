@@ -158,48 +158,48 @@ DivergentRegion::BoundCheck DivergentRegion::AnalyzeCmp(ScalarEvolution *SE,
                                                         LoopInfo *LI,
                                                         CmpInst *Cmp,
                                                         ValueVector &TIds) {
-  if (IsEquals(Cmp->getPredicate()))
-    return DivergentRegion::EQ;
-
-  Value *TIdOp = GetTIdOperand(Cmp, TIds);
-  if (TIdOp == NULL)
-    return DivergentRegion::ND;
-
-  // Get the operand position.
-  unsigned int position = GetOperandPosition(Cmp, TIdOp);
-  bool isFirst = (position == 0);
-  // Get the comparison sign.
-  bool GT = IsGreaterThan(Cmp->getPredicate());
-
-  if (Loop *L = LI->getLoopFor(getHeader())) {
-    if (PHINode *Phi = dyn_cast<PHINode>(TIdOp)) {
-      BasicBlock *Latch = L->getLoopLatch();
-      TIdOp = Phi->getIncomingValueForBlock(Latch);
-    }
-  }
-
-  // Check is the value is SCEVable.
-  if (!SE->isSCEVable(TIdOp->getType()))
-    return DivergentRegion::ND;
-
-  // Get the TID subscript sign.
-  SmallPtrSet<const SCEV *, 8> Processed;
-  const SCEV *Scev = SE->getSCEV(TIdOp);
-  unsigned int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
-  if (result == 0)
-    return DivergentRegion::ND;
-  bool IsTIdPositive = (result == 1);
-
-  // Compare all of the previous.
-  unsigned int sum = isFirst + GT + IsTIdPositive;
-
-  if (sum == 0)
-    return DivergentRegion::UB;
-
-  if (sum % 2 == 0)
-    return DivergentRegion::UB;
-  else
-    return DivergentRegion::LB;
+//  if (IsEquals(Cmp->getPredicate()))
+//    return DivergentRegion::EQ;
+//
+//  Value *TIdOp = GetTIdOperand(Cmp, TIds);
+//  if (TIdOp == NULL)
+//    return DivergentRegion::ND;
+//
+//  // Get the operand position.
+//  unsigned int position = GetOperandPosition(Cmp, TIdOp);
+//  bool isFirst = (position == 0);
+//  // Get the comparison sign.
+//  bool GT = IsGreaterThan(Cmp->getPredicate());
+//
+//  if (Loop *L = LI->getLoopFor(getHeader())) {
+//    if (PHINode *Phi = dyn_cast<PHINode>(TIdOp)) {
+//      BasicBlock *Latch = L->getLoopLatch();
+//      TIdOp = Phi->getIncomingValueForBlock(Latch);
+//    }
+//  }
+//
+//  // Check is the value is SCEVable.
+//  if (!SE->isSCEVable(TIdOp->getType()))
+//    return DivergentRegion::ND;
+//
+//  // Get the TID subscript sign.
+//  SmallPtrSet<const SCEV *, 8> Processed;
+//  const SCEV *Scev = SE->getSCEV(TIdOp);
+//  unsigned int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
+//  if (result == 0)
+//    return DivergentRegion::ND;
+//  bool IsTIdPositive = (result == 1);
+//
+//  // Compare all of the previous.
+//  unsigned int sum = isFirst + GT + IsTIdPositive;
+//
+//  if (sum == 0)
+//    return DivergentRegion::UB;
+//
+//  if (sum % 2 == 0)
+//    return DivergentRegion::UB;
+//  else
+//    return DivergentRegion::LB;
 }
 
 //------------------------------------------------------------------------------
