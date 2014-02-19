@@ -6,7 +6,8 @@
 
 //------------------------------------------------------------------------------
 int GetThreadStride(Value *value, ScalarEvolution *SE, ValueVector& TIds) {
-  llvm::errs() << "=============== GetThreadStride ====================\n";
+//  llvm::errs() << "================ GetThreadStride ==================\n"; 
+
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
   }
@@ -15,6 +16,11 @@ int GetThreadStride(Value *value, ScalarEvolution *SE, ValueVector& TIds) {
     return -1;
   }
 
+//  if(Instruction *I = dyn_cast<Instruction>(value)) {
+//    I->dump();
+//    I->getParent()->dump();
+//  }
+
   const SCEV *scev = SE->getSCEV(value);
   SmallPtrSet<const SCEV *, 8> Processed;
   int result = AnalyzeSubscript(SE, scev, TIds, Processed);
@@ -22,75 +28,31 @@ int GetThreadStride(Value *value, ScalarEvolution *SE, ValueVector& TIds) {
 }
 
 //------------------------------------------------------------------------------
-// FIXME: for multiplications this goes down just one level.
 // WARNING: SCEV does not support %.
 int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
                      SmallPtrSet<const SCEV *, 8> &Processed) {
+//  Scev->dump();
+
   if (!Processed.insert(Scev))
     return false;
 
-//  Scev->dump();
-  const SCEV *result = NULL;
+  APInt One = APInt(32, 1);
+  APInt Two = APInt(32, 2);
+  const SCEV *first = ReplaceInExpr(SE, Scev, TIds, One);
+  const SCEV *second = ReplaceInExpr(SE, Scev, TIds, Two);
+  const SCEV* result = SE->getMinusSCEV(second, first);
+  
+  if(result == NULL) {
+    return -1;
+  }
 
-  return 1;
+  int numericResult = -1;
+  if(const SCEVConstant *ConstSCEV = dyn_cast<SCEVConstant>(result)) {
+    const ConstantInt *value = ConstSCEV->getValue();
+    numericResult = (int)value->getValue().roundToDouble();
+  }
 
-//  switch (Scev->getSCEVType()) {
-//  case scAddRecExpr: {
-//    const SCEVAddRecExpr *addRecExpr = cast<SCEVAddRecExpr>(Scev);
-//    const SCEV *start = addRecExpr->getStart();
-//    // const SCEV* step = addRecExpr->getStepRecurrence(*SE);
-//    // Check that the step is independent of the TID. TODO.
-//    return AnalyzeSubscript(SE, start, TIds, Processed);
-//  }
-//  case scAddExpr: {
-//    const SCEVAddExpr *AddExpr = cast<SCEVAddExpr>(Scev);
-//    APInt One = APInt(32, 1);
-//    APInt Two = APInt(32, 2);
-//    const SCEV *first = ReplaceInAdd(SE, AddExpr, TIds, One);
-//    const SCEV *second = ReplaceInAdd(SE, AddExpr, TIds, Two);
-//    result = SE->getMinusSCEV(second, first);
-//    break;
-//  }
-//  case scMulExpr: {
-//    const SCEVMulExpr *MulExpr = cast<SCEVMulExpr>(Scev);
-//    APInt One = APInt(32, 1);
-//    APInt Two = APInt(32, 2);
-//    const SCEV *first = ReplaceInMul(SE, MulExpr, TIds, One);
-//    const SCEV *second = ReplaceInMul(SE, MulExpr, TIds, Two);
-//    result = SE->getMinusSCEV(second, first);
-//    break;
-//  }
-//  case scUnknown: {
-//    const SCEVUnknown *U = cast<SCEVUnknown>(Scev);
-//    Value *UV = U->getValue();
-//    if (IsPresent<Value>(UV, TIds))
-//      return 0;
-//    else {
-//      // If it is a phinode look inside it.
-//      if (PHINode *Phi = dyn_cast<PHINode>(UV))
-//        return AnalyzePHI(SE, Phi, TIds, Processed);
-//      else
-//        result = NULL;
-//    }
-//    break;
-//  }
-//  default: {
-//    result = NULL;
-//    break;
-//  }
-//  }
-//
-//  if(result == NULL) {
-//    return -1;
-//  }
-//
-//  int numericResult = -1;
-//  if(const SCEVConstant *ConstSCEV = dyn_cast<SCEVConstant>(result)) {
-//    const ConstantInt *value = ConstSCEV->getValue();
-//    numericResult = (int)value->getValue().roundToDouble();
-//  }
-//
-//  return numericResult;
+  return numericResult;
 }
 
 //------------------------------------------------------------------------------
@@ -105,10 +67,18 @@ const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEV *Expr,
     return ReplaceInExpr(SE, tmp, TIds, value);
   if(const SCEVUDivExpr* tmp = dyn_cast<SCEVUDivExpr>(Expr)) 
     return ReplaceInExpr(SE, tmp, TIds, value);
-//  if(SCEVExpr* tmp = dyn_cast<SCEVExpr>(Expr)) 
-//    return ReplaceInExpr(SE, tmp, TIds, value);
-//  if(SCEVExpr* tmp = dyn_cast<SCEVExpr>(Expr)) 
-//    return ReplaceInExpr(SE, tmp, TIds, value);
+  if(const SCEVAddRecExpr* tmp = dyn_cast<SCEVAddRecExpr>(Expr)) 
+    return ReplaceInExpr(SE, tmp, TIds, value);
+  return NULL;
+}
+
+//------------------------------------------------------------------------------
+const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVAddRecExpr *Expr,
+                          ValueVector &TIds, const APInt &value) {
+  const SCEV *start = Expr->getStart();
+  // const SCEV* step = addRecExpr->getStepRecurrence(*SE);
+  // Check that the step is independent of the TID. TODO.
+  return ReplaceInExpr(SE, start, TIds, value);
 }
 
 //------------------------------------------------------------------------------
@@ -167,20 +137,11 @@ int AnalyzePHI(ScalarEvolution *SE, PHINode *Phi, ValueVector &TIds,
                SmallPtrSet<const SCEV *, 8> &Processed) {
   llvm::errs() << "AnalyzePHI\n";
   exit(1);
-  return 0;
-  //  int sum = 0;
-  //  int absSum = 0;
-  //  for (PHINode::const_op_iterator I = Phi->op_begin(), E = Phi->op_end();
-  //       I != E; ++I) {
-  //    Value *V = I->get();
-  //    const SCEV *Scev = SE->getSCEV(V);
-  //    int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
-  //    sum += result;
-  //    absSum += abs(result);
-  //  }
-  //
-  //  if (absSum > 1)
-  //    return 0;
-  //  return sum;
+//  return 0;
+//  for (PHINode::const_op_iterator I = Phi->op_begin(), E = Phi->op_end();
+//       I != E; ++I) {
+//    Value *V = I->get();
+//    const SCEV *Scev = SE->getSCEV(V);
+//    int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
+//  }
 }
-

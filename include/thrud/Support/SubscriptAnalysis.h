@@ -10,6 +10,9 @@ int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
 
 const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEV *Expr,
                           ValueVector &TIds, const APInt &value);
+
+const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVAddRecExpr *Expr,
+                          ValueVector &TIds, const APInt &value);
 const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVCommutativeExpr *Expr,
                           ValueVector &TIds, const APInt &value);
 const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVConstant *Expr,

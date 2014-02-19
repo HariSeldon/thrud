@@ -428,10 +428,18 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
     llvm::Instruction *inst = iter;
     if(LoadInst *LI = dyn_cast<LoadInst>(inst)) {
       Value *pointer = LI->getOperand(0);
+      if(GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+        if(gep->getPointerAddressSpace() == LOCAL_AS)
+          continue;
+      }
       memoryStrides.push_back(GetThreadStride(pointer, SE, TIds));
     }
     if(StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
+      if(GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+        if(gep->getPointerAddressSpace() == LOCAL_AS)
+          continue;
+      }
       memoryStrides.push_back(GetThreadStride(pointer, SE, TIds));
     }
   }
