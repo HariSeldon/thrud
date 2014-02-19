@@ -4,6 +4,7 @@
 #include "thrud/Support/Graph.h"
 #include "thrud/Support/MathUtils.h"
 #include "thrud/Support/Utils.h"
+#include "thrud/Support/SubscriptAnalysis.h"
 
 #include "thrud/FeatureExtraction/ILPComputation.h"
 #include "thrud/FeatureExtraction/MLPComputation.h"
@@ -427,11 +428,11 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
     llvm::Instruction *inst = iter;
     if(LoadInst *LI = dyn_cast<LoadInst>(inst)) {
       Value *pointer = LI->getOperand(0);
-      memoryStrides.push_back(IsCoalesced(pointer, SE, TIds));
+      memoryStrides.push_back(GetThreadStride(pointer, SE, TIds));
     }
     if(StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
-      memoryStrides.push_back(IsCoalesced(pointer, SE, TIds));
+      memoryStrides.push_back(GetThreadStride(pointer, SE, TIds));
     }
   }
 }

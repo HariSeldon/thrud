@@ -1,5 +1,5 @@
-##! /bin/bash
-#
+#! /bin/bash
+
 #CLANG=clang
 #OPT=opt
 #LLVM_DIS=llvm-dis
@@ -53,8 +53,6 @@
 #     -o /dev/null
 #
 #rm ${OUTPUT_FILE}
-
-#! /bin/bash
 
 CLANG=clang
 OPT=opt

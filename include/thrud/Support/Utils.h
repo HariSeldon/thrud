@@ -139,17 +139,22 @@ bool PostDominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
 RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *DT,
                          PostDominatorTree *PDT);
 
-// Scalar Evolution analysis.
-int IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds);
-int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
-                     SmallPtrSet<const SCEV *, 8> &Processed);
-int AnalyzePHI(ScalarEvolution *SE, PHINode *V, ValueVector &TIds,
-               SmallPtrSet<const SCEV *, 8> &Processed);
-int AnalyzeAdd(ScalarEvolution *SE, const SCEVAddExpr *Scev, ValueVector &TIds,
-               SmallPtrSet<const SCEV *, 8> &Processed);
-int AnalyzeMultiplication(ScalarEvolution *SE, const SCEVNAryExpr *Scev, ValueVector &TIds);
-int AnalyzeFactors(const SCEVUnknown *U, const SCEVConstant *C,
-                   ValueVector &TIds);
+//// Scalar Evolution analysis.
+//int IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds);
+//int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
+//                     SmallPtrSet<const SCEV *, 8> &Processed);
+//int AnalyzePHI(ScalarEvolution *SE, PHINode *V, ValueVector &TIds,
+//               SmallPtrSet<const SCEV *, 8> &Processed);
+//int AnalyzeAdd(ScalarEvolution *SE, const SCEVAddExpr *Scev, ValueVector &TIds,
+//               SmallPtrSet<const SCEV *, 8> &Processed);
+//int AnalyzeMultiplication(ScalarEvolution *SE, const SCEVNAryExpr *Scev, ValueVector &TIds);
+//int AnalyzeFactors(const SCEVUnknown *U, const SCEVConstant *C,
+//                   ValueVector &TIds);
+//
+//const SCEV *ReplaceInAdd(ScalarEvolution *SE, const SCEVAddExpr *AddExpr,
+//                         ValueVector &TIds, const APInt &value);
+//const SCEV *ReplaceInMul(ScalarEvolution *SE, const SCEVMulExpr *MulExpr,
+//                         ValueVector &TIds, const APInt &value);
 
 // Dependance analysis.
 // Return true if V depends on any of the values in Rs.
