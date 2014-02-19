@@ -23,6 +23,7 @@ bool OpenCLLoopFeatureExtractor::runOnFunction(Function &F) {
   MDDA = &getAnalysis<MultiDimDivAnalysis>();
   SDDA = &getAnalysis<SingleDimDivAnalysis>();
   LI = &getAnalysis<LoopInfo>();
+  SE = &getAnalysis<ScalarEvolution>();
 
   visit(F);
   collector.dump();
@@ -36,6 +37,7 @@ void OpenCLLoopFeatureExtractor::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<PostDominatorTree>();
   AU.addRequired<DominatorTree>();
   AU.addRequired<LoopInfo>();
+  AU.addRequired<ScalarEvolution>();
   AU.setPreservesAll();
 }
 
@@ -76,10 +78,14 @@ void OpenCLLoopFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
+  collector.coalescingAnalysis(basicBlock, SE, TIds);
 }
 
 //------------------------------------------------------------------------------
 void OpenCLLoopFeatureExtractor::visitFunction(Function &function) {
+  // Extract ThreadId values. 
+  InstVector tmp = SDDA->getThreadIds();
+  TIds = ToValueVector(tmp);
   collector.loopCountBranches(function, LI);
   collector.loopCountEdges(function, LI);
   collector.loopCountDivInsts(function, MDDA, SDDA, LI);

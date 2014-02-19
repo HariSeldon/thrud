@@ -54,5 +54,7 @@ private:
   PostDominatorTree *PDT;
   DominatorTree *DT;
   LoopInfo *LI;
+  ScalarEvolution *SE;
+  ValueVector TIds;
 };
 }
