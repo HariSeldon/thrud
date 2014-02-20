@@ -373,6 +373,7 @@ template void dumpVector(const std::vector<Instruction *> &toDump);
 template void dumpVector(const std::vector<BranchInst *> &toDump);
 template void dumpVector(const std::vector<DivergentRegion *> &toDump);
 template void dumpVector(const std::vector<PHINode *> &toDump);
+template void dumpVector(const std::vector<Value *> &toDump);
 
 //-----------------------------------------------------------------------------
 // 'map' will contain the mapping between the old and the new instructions in
