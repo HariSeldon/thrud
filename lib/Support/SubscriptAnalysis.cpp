@@ -18,9 +18,10 @@ int GetThreadStride(Value *value, ScalarEvolution *SE, ValueVector &TIds) {
     return -1;
   }
 
-//  if (Instruction *I = dyn_cast<Instruction>(value)) {
-//    I->dump();
-//  }
+  if (Instruction *I = dyn_cast<Instruction>(value)) {
+    I->dump();
+    I->getParent()->getParent()->dump();
+  }
 
   const SCEV *scev = SE->getSCEV(value);
   int result = AnalyzeSubscript(SE, scev, TIds);
@@ -36,11 +37,11 @@ int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds) {
   APInt One = APInt(32, 1);
   APInt Two = APInt(32, 2);
   const SCEV *first = ReplaceInExpr(SE, Scev, TIds, One, Processed1);
-//  llvm::errs() << "Result1: ";
-//  first->dump();
+  llvm::errs() << "Result1: ";
+  first->dump();
   const SCEV *second = ReplaceInExpr(SE, Scev, TIds, Two, Processed2);
-//  llvm::errs() << "Result2: ";
-//  second->dump();
+  llvm::errs() << "Result2: ";
+  second->dump();
   const SCEV *result = SE->getMinusSCEV(second, first);
 
   if (result == NULL) {
@@ -68,8 +69,8 @@ const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEV *Expr,
                           ValueVector &TIds, const APInt &value,
                           SmallPtrSet<const SCEV *, 8> &Processed) {
 
-//  llvm::errs() << "Replace In Expr: ";
-//  Expr->dump();
+  llvm::errs() << "Replace In Expr: ";
+  Expr->dump();
 
   if (!Processed.insert(Expr))
     return Expr;
