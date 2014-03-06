@@ -421,8 +421,12 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::coalescingAnalysis(BasicBlock &block,
-                                          ScalarEvolution *SE,
-                                          ValueVector &TIds) {
+                                          ScalarEvolution *SE, NDRange *NDR,
+                                          int CoarseningDirection) {
+  SubscriptAnalysis SA(SE, NDR, CoarseningDirection);
+
+  llvm::errs() << "coalescingAnalysis: " << CoarseningDirection << "\n";
+
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
     llvm::Instruction *inst = iter;
@@ -432,7 +436,8 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
         if(gep->getPointerAddressSpace() == LOCAL_AS)
           continue;
       }
-      memoryStrides.push_back(GetThreadStride(pointer, SE, TIds));
+
+      memoryStrides.push_back(SA.GetThreadStride(pointer));
     }
     if(StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
@@ -440,7 +445,7 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
         if(gep->getPointerAddressSpace() == LOCAL_AS)
           continue;
       }
-      memoryStrides.push_back(GetThreadStride(pointer, SE, TIds));
+      memoryStrides.push_back(SA.GetThreadStride(pointer));
     }
   }
 }

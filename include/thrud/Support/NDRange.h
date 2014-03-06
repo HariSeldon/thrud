@@ -28,19 +28,19 @@ public:
   InstVector getTids(unsigned int direction);
   InstVector getSizes(unsigned int direction);
 
-  bool IsGetTid(Instruction *I);
-  bool IsGetTidInDirection(Instruction *I, unsigned int direction);
+  bool IsTid(Instruction *I);
+  bool IsTidInDirection(Instruction *I, unsigned int direction);
 
-  bool IsGetGlobal(llvm::Instruction *I);
-  bool IsGetLocal(llvm::Instruction *I);
-  bool IsGetGlobalSize(llvm::Instruction *I);
-  bool IsGetLocalSize(llvm::Instruction *I);
+  bool IsGlobal(llvm::Instruction *I);
+  bool IsLocal(llvm::Instruction *I);
+  bool IsGlobalSize(llvm::Instruction *I);
+  bool IsLocalSize(llvm::Instruction *I);
   bool IsGroupId(Instruction *I);
   
-  bool IsGetGlobal(llvm::Instruction *I, int direction);
-  bool IsGetLocal(llvm::Instruction *I, int direction);
-  bool IsGetGlobalSize(llvm::Instruction *I, int direction);
-  bool IsGetLocalSize(llvm::Instruction *I, int direction);
+  bool IsGlobal(llvm::Instruction *I, int direction);
+  bool IsLocal(llvm::Instruction *I, int direction);
+  bool IsGlobalSize(llvm::Instruction *I, int direction);
+  bool IsLocalSize(llvm::Instruction *I, int direction);
   bool IsGroupId(Instruction *I, int direction);
 
   void dump();

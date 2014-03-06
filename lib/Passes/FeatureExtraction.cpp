@@ -10,6 +10,8 @@
 cl::opt<std::string> kernelName("count-kernel-name", cl::init(""), cl::Hidden,
                                 cl::desc("Name of the kernel to analyze"));
 
+extern cl::opt<int> CoarseningDirection;
+
 char OpenCLFeatureExtractor::ID = 0;
 static RegisterPass<OpenCLFeatureExtractor> X("opencl-instcount",
                                               "Collect opencl features");
@@ -21,9 +23,8 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
 
   PDT = &getAnalysis<PostDominatorTree>();
   DT = &getAnalysis<DominatorTree>();
-  // FIXME.
-//  MDDA = &getAnalysis<MultiDimDivAnalysis>();
-//  SDDA = &getAnalysis<SingleDimDivAnalysis>();
+  MDDA = &getAnalysis<MultiDimDivAnalysis>();
+  SDDA = &getAnalysis<SingleDimDivAnalysis>();
   SE = &getAnalysis<ScalarEvolution>();
   NDR = &getAnalysis<NDRange>();
 
@@ -73,14 +74,12 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, SE, TIds);
+  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirection);
 }
 
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitFunction(Function &function) {
   // Extract ThreadId values. 
-  InstVector tmp = SDDA->getThreadIds();
-  TIds = ToValueVector(tmp);
   collector.countDimensions(function);
   collector.countBranches(function);
   collector.countEdges(function);

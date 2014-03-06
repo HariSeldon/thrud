@@ -1,31 +1,50 @@
+#ifndef SUBSCRIPT_ANALYSIS_H
+#define SUBSCRIPT_ANALYSIS_H
+
 #include "thrud/Support/Utils.h"
 
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
-int GetThreadStride(Value *value, ScalarEvolution *SE, ValueVector &TIds);
+class NDRange;
 
-int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds);
+class SubscriptAnalysis {
+public:
+  SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR, unsigned int Dir);
 
-const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEV *Expr,
-                          ValueVector &TIds, const APInt &value,
-                          SmallPtrSet<const SCEV *, 8> &Processed);
+public:
+  int AnalyzeSubscript(const SCEV *Scev);
+  int GetThreadStride(Value *value);
 
-const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVAddRecExpr *Expr,
-                          ValueVector &TIds, const APInt &value,
-                          SmallPtrSet<const SCEV *, 8> &Processed);
-const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVCommutativeExpr *Expr,
-                          ValueVector &TIds, const APInt &value,
-                          SmallPtrSet<const SCEV *, 8> &Processed);
-const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVConstant *Expr,
-                          ValueVector &TIds, const APInt &value,
-                          SmallPtrSet<const SCEV *, 8> &Processed);
-const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVUnknown *Expr,
-                          ValueVector &TIds, const APInt &value,
-                          SmallPtrSet<const SCEV *, 8> &Processed);
-const SCEV *ReplaceInExpr(ScalarEvolution *SE, const SCEVUDivExpr *Expr,
-                          ValueVector &TIds, const APInt &value,
-                          SmallPtrSet<const SCEV *, 8> &Processed);
-const SCEV *ReplaceInPhi(ScalarEvolution *SE, PHINode *Phi, ValueVector &TIds,
-                         const APInt &value,
-                         SmallPtrSet<const SCEV *, 8> &Processed);
+private:
+  ScalarEvolution *SE;
+  NDRange *NDR;
+  unsigned int Dir;
+
+private:
+  const SCEV *ReplaceInExpr(const SCEV *Expr, const APInt &globalValue,
+                            const APInt &localValue, const APInt &groupValue,
+                            SmallPtrSet<const SCEV *, 8> &Processed);
+  const SCEV *ReplaceInExpr(const SCEVAddRecExpr *Expr,
+                            const APInt &globalValue, const APInt &localValue,
+                            const APInt &groupValue,
+                            SmallPtrSet<const SCEV *, 8> &Processed);
+  const SCEV *ReplaceInExpr(const SCEVCommutativeExpr *Expr,
+                            const APInt &globalValue, const APInt &localValue,
+                            const APInt &groupValue,
+                            SmallPtrSet<const SCEV *, 8> &Processed);
+  const SCEV *ReplaceInExpr(const SCEVConstant *Expr, const APInt &globalValue,
+                            const APInt &localValue, const APInt &groupValue,
+                            SmallPtrSet<const SCEV *, 8> &Processed);
+  const SCEV *ReplaceInExpr(const SCEVUnknown *Expr, const APInt &globalValue,
+                            const APInt &localValue, const APInt &groupValue,
+                            SmallPtrSet<const SCEV *, 8> &Processed);
+  const SCEV *ReplaceInExpr(const SCEVUDivExpr *Expr, const APInt &globalValue,
+                            const APInt &localValue, const APInt &groupValue,
+                            SmallPtrSet<const SCEV *, 8> &Processed);
+  const SCEV *ReplaceInPhi(PHINode *Phi, const APInt &globalValue,
+                           const APInt &localValue, const APInt &groupValue,
+                           SmallPtrSet<const SCEV *, 8> &Processed);
+};
+
+#endif

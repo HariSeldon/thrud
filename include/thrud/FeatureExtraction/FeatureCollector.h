@@ -66,7 +66,8 @@ public:
   std::vector<float> avgLiveRange;
   std::vector<int> memoryStrides;
   void livenessAnalysis(BasicBlock &block);
-  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, ValueVector &TIds);
+  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, NDRange *NDR,
+                          int CoarseningDirection);
 
   // Phis.
   // Map phi name with arg number.

@@ -3,11 +3,14 @@
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
 #include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
 
+#include "thrud/Support/NDRange.h"
 #include "thrud/Support/Utils.h"
 
 cl::opt<std::string> loopKernelName("count-loop-kernel-name", cl::init(""),
                                     cl::Hidden,
                                     cl::desc("Name of the kernel to analyze"));
+
+extern int CoarseningDirection;
 
 char OpenCLLoopFeatureExtractor::ID = 0;
 static RegisterPass<OpenCLLoopFeatureExtractor>
@@ -24,6 +27,7 @@ bool OpenCLLoopFeatureExtractor::runOnFunction(Function &F) {
   SDDA = &getAnalysis<SingleDimDivAnalysis>();
   LI = &getAnalysis<LoopInfo>();
   SE = &getAnalysis<ScalarEvolution>();
+  NDR = &getAnalysis<NDRange>();
 
   visit(F);
   collector.dump();
@@ -38,6 +42,7 @@ void OpenCLLoopFeatureExtractor::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTree>();
   AU.addRequired<LoopInfo>();
   AU.addRequired<ScalarEvolution>();
+  AU.addRequired<NDRange>();
   AU.setPreservesAll();
 }
 
@@ -78,14 +83,14 @@ void OpenCLLoopFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, SE, TIds);
+  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirection);
 }
 
 //------------------------------------------------------------------------------
 void OpenCLLoopFeatureExtractor::visitFunction(Function &function) {
   // Extract ThreadId values. 
-  InstVector tmp = SDDA->getThreadIds();
-  TIds = ToValueVector(tmp);
+//  InstVector tmp = SDDA->getThreadIds();
+//  TIds = ToValueVector(tmp);
   collector.loopCountBranches(function, LI);
   collector.loopCountEdges(function, LI);
   collector.loopCountDivInsts(function, MDDA, SDDA, LI);

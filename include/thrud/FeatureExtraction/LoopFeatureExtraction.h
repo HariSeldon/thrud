@@ -22,6 +22,7 @@ class Function;
 
 class SingleDimDivAnalysis;
 class MultiDimDivAnalysis;
+class NDRange;
 
 /// Collect information about the kernel function.
 namespace {
@@ -55,6 +56,7 @@ private:
   DominatorTree *DT;
   LoopInfo *LI;
   ScalarEvolution *SE;
+  NDRange *NDR;
   ValueVector TIds;
 };
 }
