@@ -18,6 +18,18 @@ using namespace llvm;
 
 #define LOCAL_AS 3
 
+extern const char *GET_GLOBAL_ID;
+extern const char *GET_LOCAL_ID;
+extern const char *GET_GLOBAL_SIZE;
+extern const char *GET_LOCAL_SIZE;
+extern const char *GET_GROUP_ID;
+extern const char *BARRIER;
+
+extern unsigned int OPENCL_DIMS[3];
+extern const char *GET_THREAD_ID_NAMES[2];
+extern const char *GET_SIZE_NAME[2];
+extern const char *GET_GROUP_ID_NAMES[1];
+
 // Loop management.
 bool IsInLoop(const Instruction *I, LoopInfo *LI);
 bool IsInLoop(const BasicBlock *BB, LoopInfo *LI);
@@ -47,8 +59,8 @@ void InitializeMap(Map &map, const InstVector &TIds, const InstVector &NewTIds,
                    unsigned int CI, unsigned int CF);
 
 // Instruction management.
-Function *GetInstFunction(Instruction *I);
-const Function *GetInstFunction(const Instruction *I);
+Function *GetFunctionOfInst(Instruction *I);
+const Function *GetFunctionOfInst(const Instruction *I);
 BranchVector FindBranches(Function &F);
 template <class InstructionType>
 std::vector<InstructionType *> getInsts(Function &F);
@@ -187,6 +199,8 @@ bool IsEquals(CmpInst::Predicate Pred);
 bool IsStrictBranch(const BranchInst *Branch);
 
 // Divergence Utils.
+
+Function* GetOpenCLFunctionByName(std::string calleeName, Function *caller);
 
 // Find all the get_global_id or get_local_id function calls.
 InstVector FindThreadIds(Function *F);

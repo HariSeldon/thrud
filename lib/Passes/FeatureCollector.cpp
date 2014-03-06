@@ -447,17 +447,18 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countDimensions(Function &function) {
-  Function *F = &function;
+//  Function *F = &function;
+//
+//  // Get all uses of get_global_id, get_local_id
+//  InstVector tids0 = FindThreadIds(F, 0);
+//  InstVector tids1 = FindThreadIds(F, 1);
+//  InstVector tids2 = FindThreadIds(F, 2);
+//
+//  unsigned int dimensionNumber =
+//      (tids0.size() != 0) + (tids1.size() != 0) + (tids2.size() != 0);
 
-  // Get all uses of get_global_id, get_local_id
-  InstVector tids0 = FindThreadIds(F, 0);
-  InstVector tids1 = FindThreadIds(F, 1);
-  InstVector tids2 = FindThreadIds(F, 2);
-
-  unsigned int dimensionNumber =
-      (tids0.size() != 0) + (tids1.size() != 0) + (tids2.size() != 0);
-
-  instTypes["dimensions"] = dimensionNumber;
+//  instTypes["dimensions"] = dimensionNumber;
+  instTypes["dimensions"] = 42;
 }
 
 //------------------------------------------------------------------------------

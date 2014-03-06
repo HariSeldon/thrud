@@ -46,6 +46,7 @@ void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<PostDominatorTree>();
   AU.addRequired<DominatorTree>();
   AU.addRequired<ScalarEvolution>();
+  AU.addRequired<NDRange>();
   AU.setPreservesAll();
 }
 
@@ -61,10 +62,13 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTree>();
   SE = &getAnalysis<ScalarEvolution>();
   LI = &getAnalysis<LoopInfo>();
+  NDR = &getAnalysis<NDRange>();
 
-  AllTIds = FindThreadIds(Func);
-  Sizes = FindSpaceSizes(Func);
-  GroupIds = FindGroupIds(Func);
+  AllTIds = NDR->getTids();
+  Sizes = NDR->getSizes();
+//  AllTIds = FindThreadIds(Func);
+//  Sizes = FindSpaceSizes(Func);
+//  GroupIds = FindGroupIds(Func);
   Inputs = GetMemoryValues(Func);
 
   TIdInsts = ForwardCodeSlicing(AllTIds);
@@ -78,10 +82,11 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
 
   // Get instructions to replicate.
   InstVector DoNotReplicate;
-  DoNotReplicate.reserve(AllTIds.size() + Sizes.size() + GroupIds.size());
+//  DoNotReplicate.reserve(AllTIds.size() + Sizes.size() + GroupIds.size());
+  DoNotReplicate.reserve(AllTIds.size() + Sizes.size());
   DoNotReplicate.insert(DoNotReplicate.end(), Sizes.begin(), Sizes.end());
   DoNotReplicate.insert(DoNotReplicate.end(), AllTIds.begin(), AllTIds.end());
-  DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
+//  DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
   ToRep = GetInstToReplicateOutsideRegionCores(TIdInsts, AllTIds, Regions,
                                                DoNotReplicate);
 
