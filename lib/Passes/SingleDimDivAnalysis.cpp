@@ -48,6 +48,7 @@ void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<PostDominatorTree>();
   AU.addRequired<DominatorTree>();
   AU.addRequired<ScalarEvolution>();
+  AU.addRequired<NDRange>();
   AU.setPreservesAll();
 }
 
@@ -62,14 +63,20 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTree>();
   SE = &getAnalysis<ScalarEvolution>();
   LI = &getAnalysis<LoopInfo>();
+  NDR = &getAnalysis<NDRange>();
 
   llvm::errs() << "CD: " << CoarseningDirection << "\n";
 
-  TIds = FindThreadIds(Func, CoarseningDirection);
+//  TIds = FindThreadIds(Func, CoarseningDirection);
+  TIds = NDR->getTids();
+  llvm::errs() << "SDDA:\n";
+  dumpVector(TIds);
 
-  AllTIds = FindThreadIds(Func);
-  Sizes = FindSpaceSizes(Func, CoarseningDirection);
-  GroupIds = FindGroupIds(Func);
+  AllTIds = NDR->getTids(CoarseningDirection);
+  Sizes = NDR->getSizes(CoarseningDirection);
+//  AllTIds = FindThreadIds(Func);
+//  Sizes = FindSpaceSizes(Func, CoarseningDirection);
+//  GroupIds = FindGroupIds(Func);
   Inputs = GetMemoryValues(Func);
 
   TIdInsts = ForwardCodeSlicing(TIds);
@@ -89,10 +96,10 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
 
   // Get instructions to replicate.
   InstVector DoNotReplicate;
-  DoNotReplicate.reserve(AllTIds.size() + Sizes.size() + GroupIds.size());
+  DoNotReplicate.reserve(AllTIds.size() + Sizes.size());
   DoNotReplicate.insert(DoNotReplicate.end(), Sizes.begin(), Sizes.end());
   DoNotReplicate.insert(DoNotReplicate.end(), AllTIds.begin(), AllTIds.end());
-  DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
+//  DoNotReplicate.insert(DoNotReplicate.end(), GroupIds.begin(), GroupIds.end());
   ToRep =
       GetInstToReplicateOutsideRegions(TIdInsts, TIds, Regions, DoNotReplicate);
 
@@ -180,7 +187,11 @@ RegionVector SingleDimDivAnalysis::getDivergentRegions() const {
 }
 
 //------------------------------------------------------------------------------
-InstVector SingleDimDivAnalysis::getThreadIds() const { return TIds; }
+InstVector SingleDimDivAnalysis::getThreadIds() const { 
+  llvm::errs() << "SDDA - getThreadIds: \n";
+  TIds.size();
+  dumpVector(TIds);
+  return TIds; }
 
 //------------------------------------------------------------------------------
 InstVector SingleDimDivAnalysis::getSizes() const { return Sizes; }

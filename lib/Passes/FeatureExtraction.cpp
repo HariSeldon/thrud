@@ -4,6 +4,7 @@
 
 #include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
 #include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+#include "thrud/Support/NDRange.h"
 #include "thrud/Support/Utils.h"
 
 cl::opt<std::string> kernelName("count-kernel-name", cl::init(""), cl::Hidden,
@@ -20,9 +21,11 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
 
   PDT = &getAnalysis<PostDominatorTree>();
   DT = &getAnalysis<DominatorTree>();
-  MDDA = &getAnalysis<MultiDimDivAnalysis>();
-  SDDA = &getAnalysis<SingleDimDivAnalysis>();
+  // FIXME.
+//  MDDA = &getAnalysis<MultiDimDivAnalysis>();
+//  SDDA = &getAnalysis<SingleDimDivAnalysis>();
   SE = &getAnalysis<ScalarEvolution>();
+  NDR = &getAnalysis<NDRange>();
 
   visit(F);
   collector.dump();
@@ -36,6 +39,7 @@ void OpenCLFeatureExtractor::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<PostDominatorTree>();
   AU.addRequired<DominatorTree>();
   AU.addRequired<ScalarEvolution>();
+  AU.addRequired<NDRange>();
   AU.setPreservesAll();
 }
 

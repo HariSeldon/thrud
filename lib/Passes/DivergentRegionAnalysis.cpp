@@ -54,25 +54,25 @@ void DivergentRegionAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 
 //------------------------------------------------------------------------------
 bool DivergentRegionAnalysis::runOnFunction(Function &F) {
-  // Apply the pass to kernels only.
-  if (!IsKernel((const Function *)&F))
-    return false;
-
-  PostDominatorTree *PDT = &getAnalysis<PostDominatorTree>();
-  DominatorTree *DT = &getAnalysis<DominatorTree>();
-  LoopInfo *LI = &getAnalysis<LoopInfo>();
-  unsigned int CD = CoarseningDirection;
-
-  // Find all branches.
-  BranchVector Branches = FindBranches(F);
-  // Find TIds.
-  InstVector TIds = FindThreadIds((Function *)&F, CD);
-
-  // Find the branches that depend on the thread Id.
-  ValueVector VTIds = ToValueVector(TIds);
-  BranchVector TIdBs = GetThreadDepBranches(Branches, VTIds);
-
-  Regions = GetDivergentRegions(TIdBs, DT, PDT, LI);
+//  // Apply the pass to kernels only.
+//  if (!IsKernel((const Function *)&F))
+//    return false;
+//
+//  PostDominatorTree *PDT = &getAnalysis<PostDominatorTree>();
+//  DominatorTree *DT = &getAnalysis<DominatorTree>();
+//  LoopInfo *LI = &getAnalysis<LoopInfo>();
+//  unsigned int CD = CoarseningDirection;
+//
+//  // Find all branches.
+//  BranchVector Branches = FindBranches(F);
+//  // Find TIds.
+//  InstVector TIds = FindThreadIds((Function *)&F, CD);
+//
+//  // Find the branches that depend on the thread Id.
+//  ValueVector VTIds = ToValueVector(TIds);
+//  BranchVector TIdBs = GetThreadDepBranches(Branches, VTIds);
+//
+//  Regions = GetDivergentRegions(TIdBs, DT, PDT, LI);
 
   return false;
 }

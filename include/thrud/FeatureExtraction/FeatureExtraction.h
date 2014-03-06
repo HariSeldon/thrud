@@ -13,6 +13,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "thrud/Support/NDRange.h"
+
 using namespace llvm;
 
 namespace llvm { class Function; }
@@ -54,6 +56,7 @@ private:
   PostDominatorTree *PDT;
   DominatorTree *DT;
   ScalarEvolution *SE;
+  NDRange *NDR;
   ValueVector TIds;
 };
 }

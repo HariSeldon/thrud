@@ -7,7 +7,7 @@ LLVM_DIS=llvm-dis
 INPUT_FILE=$1
 KERNEL_NAME=$2
 
-OCLDEF=/home/s1158370/src/thrud/tools/scripts/ocldef_intel.h
+OCLDEF=$HOME/src/thrud/tools/scripts/ocldef_intel.h
 OPTIMIZATION=-O3
 
 $CLANG -x cl \

@@ -26,17 +26,17 @@
 #include <algorithm>
 
 // OpenCL function names.
-const char *GetGlobalId = "get_global_id";
-const char *GetLocalId = "get_local_id";
-const char *GetGlobalSize = "get_global_size";
-const char *GetLocalSize = "get_local_size";
-const char *GetGroupId = "get_group_id";
-const char *Barrier = "barrier";
-
-unsigned int OpenCLDims[3] = { 0, 1, 2 };
-const char *GetThreadIdNames[2] = { GetGlobalId, GetLocalId };
-const char *GetSizeNames[2] = { GetGlobalSize, GetLocalSize };
-const char *GetGroupIdNames[1] = { GetGroupId };
+//const char *GET_GLOBAL_ID = "get_global_id";
+//const char *GET_LOCAL_ID = "get_local_id";
+//const char *GET_GLOBAL_SIZE = "get_global_size";
+//const char *GET_LOCAL_SIZE = "get_local_size";
+//const char *GET_GROUP_ID = "get_group_id";
+const char *BARRIER = "barrier";
+//
+//unsigned int OPENCL_DIMS[3] = { 0, 1, 2 };
+//const char *GET_THREAD_ID_NAMES[2] = { GET_GLOBAL_ID, GET_LOCAL_ID };
+//const char *GET_SIZE_NAME[2] = { GET_GLOBAL_SIZE, GET_LOCAL_SIZE };
+//const char *GET_GROUP_ID_NAMES[1] = { GET_GROUP_ID };
 
 //------------------------------------------------------------------------------
 bool IsInLoop(const Instruction *I, LoopInfo *LI) {
@@ -129,12 +129,12 @@ void SubstituteUsages(Value *O, Value *N) {
 }
 
 //------------------------------------------------------------------------------
-Function *GetInstFunction(Instruction *I) {
+Function *GetFunctionOfInst(Instruction *I) {
   return I->getParent()->getParent();
 }
 
 //------------------------------------------------------------------------------
-const Function *GetInstFunction(const Instruction *I) {
+const Function *GetFunctionOfInst(const Instruction *I) {
   return I->getParent()->getParent();
 }
 
@@ -1201,83 +1201,93 @@ void InitializeMap(Map &map, const InstVector &TIds, const InstVector &NewTIds,
 }
 
 //------------------------------------------------------------------------------
+Function* GetOpenCLFunctionByName(std::string calleeName, Function *caller) {
+  Module &module = *caller->getParent();
+  Function *callee = module.getFunction(calleeName);
+
+  if (callee == NULL)
+    return NULL;
+
+  assert(callee->arg_size() == 1 && "Wrong OpenCL function");
+  return callee;
+}
+
+//// Prototypes of "private" functions.
+////------------------------------------------------------------------------------
+//InstVector FindWorkItemCalls(std::vector<std::string> &Names, Function *F,
+//                             int Dim);
+//void FindWorkItemCalls(const std::string &CalleeName, Function *F, int Dim,
+//                       InstVector &Target);
+//void FindWorkItemCalls(Function *Callee, Function *F, int Dim,
+//                       InstVector &Target);
+//
+////------------------------------------------------------------------------------
+//InstVector FindThreadIds(Function *F) { return FindThreadIds(F, -1); }
+//
+////------------------------------------------------------------------------------
+//InstVector FindThreadIds(Function *F, int Dim) {
+//  std::vector<std::string> Names(GET_THREAD_ID_NAMES, GET_THREAD_ID_NAMES + 2);
+//  return FindWorkItemCalls(Names, F, Dim);
+//}
+//
+////------------------------------------------------------------------------------
+//InstVector FindSpaceSizes(Function *F) { return FindSpaceSizes(F, -1); }
+//
+////------------------------------------------------------------------------------
+//InstVector FindSpaceSizes(Function *F, int Dim) {
+//  std::vector<std::string> Names(GET_SIZE_NAME, GET_SIZE_NAME + 2);
+//  return FindWorkItemCalls(Names, F, Dim);
+//}
+//
+////------------------------------------------------------------------------------
+//InstVector FindGroupIds(Function *F) { return FindGroupIds(F, -1); }
+//
+////------------------------------------------------------------------------------
+//InstVector FindGroupIds(Function *F, int Dim) {
+//  std::vector<std::string> Names(GET_GROUP_ID_NAMES, GET_GROUP_ID_NAMES + 1);
+//  return FindWorkItemCalls(Names, F, Dim);
+//}
+//
+////------------------------------------------------------------------------------
+//InstVector FindWorkItemCalls(std::vector<std::string> &Names, Function *F,
+//                             int Dim) {
+//  InstVector Result;
+//  for (std::vector<std::string>::iterator I = Names.begin(), E = Names.end();
+//       I != E; ++I)
+//    FindWorkItemCalls(*I, F, Dim, Result);
+//  return Result;
+//}
+//
+////------------------------------------------------------------------------------
+//void FindWorkItemCalls(const std::string &CalleeName, Function *F, int Dim,
+//                       InstVector &Target) {
+//  Module &M = *F->getParent();
+//  Function *Callee = M.getFunction(CalleeName);
+//
+//  if (Callee == NULL)
+//    return;
+//  assert(Callee->arg_size() == 1 && "Wrong WorkItem function.");
+//
+//  FindWorkItemCalls(Callee, F, Dim, Target);
+//}
+//
+//////------------------------------------------------------------------------------
+////void FindWorkItemCalls(Function *Callee, Function *F, int Dim,
+////                       InstVector &Target) {
+////  for (Value::use_iterator I = Callee->use_begin(), E = Callee->use_end();
+////       I != E; ++I)
+////    if (CallInst *Inst = dyn_cast<CallInst>(*I))
+////      if (F == getFunctionOfInst(Inst))
+////        if (const ConstantInt *CI =
+////                dyn_cast<ConstantInt>(Inst->getArgOperand(0))) {
+////          int ArgumentValue = GetInteger(CI);
+////          if (Dim == -1 || ArgumentValue == Dim)
+////            Target.push_back(Inst);
+////        }
+////}
+
+//------------------------------------------------------------------------------
 // Divergence Utils.
-//------------------------------------------------------------------------------
-
-// Prototypes of "private" functions.
-//------------------------------------------------------------------------------
-InstVector FindWorkItemCalls(std::vector<std::string> &Names, Function *F,
-                             int Dim);
-void FindWorkItemCalls(const std::string &CalleeName, Function *F, int Dim,
-                       InstVector &Target);
-void FindWorkItemCalls(Function *Callee, Function *F, int Dim,
-                       InstVector &Target);
-
-//------------------------------------------------------------------------------
-InstVector FindThreadIds(Function *F) { return FindThreadIds(F, -1); }
-
-//------------------------------------------------------------------------------
-InstVector FindThreadIds(Function *F, int Dim) {
-  std::vector<std::string> Names(GetThreadIdNames, GetThreadIdNames + 2);
-  return FindWorkItemCalls(Names, F, Dim);
-}
-
-//------------------------------------------------------------------------------
-InstVector FindSpaceSizes(Function *F) { return FindSpaceSizes(F, -1); }
-
-//------------------------------------------------------------------------------
-InstVector FindSpaceSizes(Function *F, int Dim) {
-  std::vector<std::string> Names(GetSizeNames, GetSizeNames + 2);
-  return FindWorkItemCalls(Names, F, Dim);
-}
-
-//------------------------------------------------------------------------------
-InstVector FindGroupIds(Function *F) { return FindGroupIds(F, -1); }
-
-//------------------------------------------------------------------------------
-InstVector FindGroupIds(Function *F, int Dim) {
-  std::vector<std::string> Names(GetGroupIdNames, GetGroupIdNames + 1);
-  return FindWorkItemCalls(Names, F, Dim);
-}
-
-//------------------------------------------------------------------------------
-InstVector FindWorkItemCalls(std::vector<std::string> &Names, Function *F,
-                             int Dim) {
-  InstVector Result;
-  for (std::vector<std::string>::iterator I = Names.begin(), E = Names.end();
-       I != E; ++I)
-    FindWorkItemCalls(*I, F, Dim, Result);
-  return Result;
-}
-
-//------------------------------------------------------------------------------
-void FindWorkItemCalls(const std::string &CalleeName, Function *F, int Dim,
-                       InstVector &Target) {
-  Module &M = *F->getParent();
-  Function *Callee = M.getFunction(CalleeName);
-
-  if (Callee == NULL)
-    return;
-  assert(Callee->arg_size() == 1 && "Wrong WorkItem function.");
-
-  FindWorkItemCalls(Callee, F, Dim, Target);
-}
-
-//------------------------------------------------------------------------------
-void FindWorkItemCalls(Function *Callee, Function *F, int Dim,
-                       InstVector &Target) {
-  for (Value::use_iterator I = Callee->use_begin(), E = Callee->use_end();
-       I != E; ++I)
-    if (CallInst *Inst = dyn_cast<CallInst>(*I))
-      if (F == GetInstFunction(Inst))
-        if (const ConstantInt *CI =
-                dyn_cast<ConstantInt>(Inst->getArgOperand(0))) {
-          int ArgumentValue = GetInteger(CI);
-          if (Dim == -1 || ArgumentValue == Dim)
-            Target.push_back(Inst);
-        }
-}
-
 //------------------------------------------------------------------------------
 BranchVector GetThreadDepBranches(BranchVector &Bs, ValueVector TIds) {
   BranchVector Result;

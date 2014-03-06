@@ -3,6 +3,7 @@
 
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/DivergentRegion.h"
+#include "thrud/Support/NDRange.h"
 
 #include "llvm/Pass.h"
 
@@ -58,6 +59,7 @@ private:
   DominatorTree *DT;
   ScalarEvolution *SE;
   LoopInfo *LI;
+  NDRange *NDR;
 };
 
 #endif
