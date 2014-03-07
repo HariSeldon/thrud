@@ -89,6 +89,29 @@ bool NDRange::IsTidInDirection(Instruction *I, unsigned int direction) {
   return isLocalId || isGlobalId || isGroupId;
 }
 
+std::string NDRange::getType(Instruction *I) {
+  if(IsGlobal(I))
+    return GET_GLOBAL_ID;
+  if(IsLocal(I))
+    return GET_LOCAL_ID;
+  if(IsGroupId(I))
+    return GET_GROUP_ID;
+  if(IsGlobalSize(I))
+    return GET_GLOBAL_SIZE;
+  if(IsLocalSize(I))
+    return GET_LOCAL_SIZE;
+  return "";
+}
+
+unsigned int NDRange::getDirection(Instruction *I) {
+  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+    bool result = IsGlobal(I, direction) || IsLocal(I, direction) || IsGlobalSize(I, direction) || IsLocalSize(I, direction) || IsGroupId(I, direction);
+    if(result == true)
+      return direction;
+  }
+  return -1;
+}
+
 bool NDRange::IsGlobal(Instruction *I) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
@@ -149,6 +172,15 @@ bool NDRange::IsGroupId(Instruction *I, int direction) {
   return IsPresentInDirection(I, GET_GROUP_ID, direction);
 }
 
+//std::pair<const std::string, const unsigned int> getCoordinates(Instruction *I) const {
+//  std::string type = getType(I); 
+//  if(type != GET_GLOBAL_ID && type != GET_LOCAL_ID) 
+//    return std::pair<const std::string, const unsigned int> ("", -1);
+//
+//  unsigned int direction = getDirection(I);
+//  return std::pair<const std::string, const unsigned int> (type, direction);
+//}
+
 void NDRange::dump() {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
@@ -184,18 +216,10 @@ void NDRange::Init() {
   }
 }
 
-void NDRange::ParseFunction(llvm::Function *F) {
-  FindOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_ID, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_ID, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_SIZE, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_SIZE, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_GROUP_ID, F);
-}
-
 bool NDRange::IsPresentInDirection(llvm::Instruction *I,
                                    const std::string &FuncName, int Dir) {
   std::map<std::string, InstVector> &DirInsts = OCLInsts[Dir];
-  InstVector &Insts = DirInsts[FuncName];
+  const InstVector &Insts = DirInsts[FuncName];
   return IsPresent(I, Insts);
 }
 

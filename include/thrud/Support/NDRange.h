@@ -30,17 +30,19 @@ public:
 
   bool IsTid(Instruction *I);
   bool IsTidInDirection(Instruction *I, unsigned int direction);
+  std::string getType(Instruction *I);
+  unsigned int getDirection(Instruction *I);
 
-  bool IsGlobal(llvm::Instruction *I);
-  bool IsLocal(llvm::Instruction *I);
-  bool IsGlobalSize(llvm::Instruction *I);
-  bool IsLocalSize(llvm::Instruction *I);
+  bool IsGlobal(Instruction *I);
+  bool IsLocal(Instruction *I);
+  bool IsGlobalSize(Instruction *I);
+  bool IsLocalSize(Instruction *I);
   bool IsGroupId(Instruction *I);
   
-  bool IsGlobal(llvm::Instruction *I, int direction);
-  bool IsLocal(llvm::Instruction *I, int direction);
-  bool IsGlobalSize(llvm::Instruction *I, int direction);
-  bool IsLocalSize(llvm::Instruction *I, int direction);
+  bool IsGlobal(Instruction *I, int direction);
+  bool IsLocal(Instruction *I, int direction);
+  bool IsGlobalSize(Instruction *I, int direction);
+  bool IsLocalSize(Instruction *I, int direction);
   bool IsGroupId(Instruction *I, int direction);
 
   void dump();
@@ -55,15 +57,14 @@ public:
 
 private:
   void Init();
-  void ParseFunction(llvm::Function *F);
-  bool IsPresentInDirection(llvm::Instruction *I,
+  bool IsPresentInDirection(Instruction *I,
                             const std::string &FuncName,
                             int Dir);
   void FindOpenCLFunctionCallsByNameAllDirs(std::string CalleeName, Function *Caller);
 
 
 private:
-  llvm::Function *kernel;
+  Function *kernel;
   std::vector<std::map<std::string, InstVector> > OCLInsts;
 };
 

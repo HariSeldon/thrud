@@ -6,6 +6,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "thrud/Support/NDRange.h"
+#include "thrud/Support/NDRangePoint.h"
 
 SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR,
                                      unsigned int Dir)
@@ -13,9 +14,6 @@ SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR,
 
 //------------------------------------------------------------------------------
 int SubscriptAnalysis::GetThreadStride(Value *value) {
-  //  llvm::errs() << "================ GetThreadStride ==================\n";
-  //  dumpVector(TIds);
-
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
   }
@@ -38,25 +36,25 @@ int SubscriptAnalysis::GetThreadStride(Value *value) {
 //------------------------------------------------------------------------------
 // WARNING: SCEV does not support %.
 int SubscriptAnalysis::AnalyzeSubscript(const SCEV *Scev) {
+  NDRangePoint firstPoint(0, 0, 0, 0, 0, 0);
+  NDRangePoint secondPoint(1, 0, 0, 0, 0, 0);
+
   SmallPtrSet<const SCEV *, 8> Processed1;
   SmallPtrSet<const SCEV *, 8> Processed2;
-  APInt Zero = APInt(32, 0);
-  APInt One = APInt(32, 1);
-  APInt Two = APInt(32, 2);
-  const SCEV *first = ReplaceInExpr(Scev, Zero, Zero, Zero, Processed1);
+  const SCEV *firstExp = ReplaceInExpr(Scev, firstPoint, Processed1);
   llvm::errs() << "Result1: ";
-  first->dump();
-  const SCEV *second = ReplaceInExpr(Scev, One, One, Zero, Processed2);
+  firstExp->dump();
+  const SCEV *secondExp = ReplaceInExpr(Scev, secondPoint, Processed2);
   llvm::errs() << "Result2: ";
-  second->dump();
-  const SCEV *result = SE->getMinusSCEV(second, first);
+  secondExp->dump();
+  const SCEV *result = SE->getMinusSCEV(secondExp, firstExp);
+
+  llvm::errs() << "Difference result.\n";
+  result->dump();
 
   if (result == NULL) {
     return -1;
   }
-
-  //  llvm::errs() << "Difference: ";
-  //  result->dump();
 
   int numericResult = -1;
   if (const SCEVAddRecExpr *AddRecSCEV = dyn_cast<SCEVAddRecExpr>(result)) {
@@ -72,58 +70,58 @@ int SubscriptAnalysis::AnalyzeSubscript(const SCEV *Scev) {
 }
 
 //------------------------------------------------------------------------------
-const SCEV *SubscriptAnalysis::ReplaceInExpr(
-    const SCEV *Expr, const APInt &globalValue, const APInt &localValue,
-    const APInt &groupValue, SmallPtrSet<const SCEV *, 8> &Processed) {
+const SCEV *
+SubscriptAnalysis::ReplaceInExpr(const SCEV *Expr, const NDRangePoint &point,
+                                 SmallPtrSet<const SCEV *, 8> &Processed) {
 
-  llvm::errs() << "Replace In Expr: ";
-  Expr->dump();
+//  llvm::errs() << "Replace In Expr: ";
+//  Expr->dump();
 
-  if (!Processed.insert(Expr))
-    return Expr;
+//  if (!Processed.insert(Expr)) {
+//    llvm::errs() << "Already processed!\n";
+//    return Expr;
+//  }
 
   // FIXME: This is ugly.
   if (const SCEVCommutativeExpr *tmp = dyn_cast<SCEVCommutativeExpr>(Expr))
-    return ReplaceInExpr(tmp, globalValue, localValue, groupValue, Processed);
+    return ReplaceInExpr(tmp, point, Processed);
   if (const SCEVConstant *tmp = dyn_cast<SCEVConstant>(Expr))
-    return ReplaceInExpr(tmp, globalValue, localValue, groupValue, Processed);
+    return ReplaceInExpr(tmp, point, Processed);
   if (const SCEVUnknown *tmp = dyn_cast<SCEVUnknown>(Expr))
-    return ReplaceInExpr(tmp, globalValue, localValue, groupValue, Processed);
-  if (const SCEVUDivExpr *tmp = dyn_cast<SCEVUDivExpr>(Expr))
-    return ReplaceInExpr(tmp, globalValue, localValue, groupValue, Processed);
+    return ReplaceInExpr(tmp, point, Processed);
+  if (const SCEVUDivExpr *tmp = dyn_cast<SCEVUDivExpr>(Expr)) 
+    return ReplaceInExpr(tmp, point, Processed);
   if (const SCEVAddRecExpr *tmp = dyn_cast<SCEVAddRecExpr>(Expr))
-    return ReplaceInExpr(tmp, globalValue, localValue, groupValue, Processed);
+    return ReplaceInExpr(tmp, point, Processed);
   llvm::errs() << "NULL!\n";
   return NULL;
 }
 
 //------------------------------------------------------------------------------
-const SCEV *SubscriptAnalysis::ReplaceInExpr(
-    const SCEVAddRecExpr *Expr, const APInt &globalValue,
-    const APInt &localValue, const APInt &groupValue,
-    SmallPtrSet<const SCEV *, 8> &Processed) {
+const SCEV *
+SubscriptAnalysis::ReplaceInExpr(const SCEVAddRecExpr *Expr,
+                                 const NDRangePoint &point,
+                                 SmallPtrSet<const SCEV *, 8> &Processed) {
   //  Expr->dump();
   const SCEV *start = Expr->getStart();
   // const SCEV* step = addRecExpr->getStepRecurrence(*SE);
   // Check that the step is independent of the TID. TODO.
-  return ReplaceInExpr(start, globalValue, localValue, groupValue, Processed);
+  return ReplaceInExpr(start, point, Processed);
 }
 
 //------------------------------------------------------------------------------
-const SCEV *SubscriptAnalysis::ReplaceInExpr(
-    const SCEVCommutativeExpr *Expr, const APInt &globalValue,
-    const APInt &localValue, const APInt &groupValue,
-    SmallPtrSet<const SCEV *, 8> &Processed) {
+const SCEV *
+SubscriptAnalysis::ReplaceInExpr(const SCEVCommutativeExpr *Expr,
+                                 const NDRangePoint &point,
+                                 SmallPtrSet<const SCEV *, 8> &Processed) {
 
-  //  llvm::errs() << "SCEVCommutativeExpr: ";
-  //  Expr->dump();
+//  llvm::errs() << "SCEVCommutativeExpr:";
+//  Expr->dump();
+
   SmallVector<const SCEV *, 8> Operands;
   for (SCEVNAryExpr::op_iterator I = Expr->op_begin(), E = Expr->op_end();
        I != E; ++I) {
-    const SCEV *NewOperand =
-        ReplaceInExpr(*I, globalValue, localValue, groupValue, Processed);
-    //    llvm::errs() << "New Operand: ";
-    //    NewOperand->dump();
+    const SCEV *NewOperand = ReplaceInExpr(*I, point, Processed);
     Operands.push_back(NewOperand);
   }
   const SCEV *result = NULL;
@@ -137,62 +135,81 @@ const SCEV *SubscriptAnalysis::ReplaceInExpr(
   if (isa<SCEVUMaxExpr>(Expr))
     result = SE->getUMaxExpr(Operands);
 
-  //  llvm::errs() << "SCEVCommutativeExpr Result: ";
-  //  result->dump();
-
   return (result);
 }
 
 //------------------------------------------------------------------------------
-const SCEV *SubscriptAnalysis::ReplaceInExpr(
-    const SCEVConstant *Expr, const APInt &globalValue, const APInt &localValue,
-    const APInt &groupValue, SmallPtrSet<const SCEV *, 8> &Processed) {
+const SCEV *
+SubscriptAnalysis::ReplaceInExpr(const SCEVConstant *Expr,
+                                 const NDRangePoint &point,
+                                 SmallPtrSet<const SCEV *, 8> &Processed) {
   //  llvm::errs() << "SCEVConstant:";
   //  Expr->dump();
   return Expr;
 }
 
 //------------------------------------------------------------------------------
-const SCEV *SubscriptAnalysis::ReplaceInExpr(
-    const SCEVUnknown *Expr, const APInt &globalValue, const APInt &localValue,
-    const APInt &groupValue, SmallPtrSet<const SCEV *, 8> &Processed) {
-  //  llvm::errs() << "SCEVUnknown: ";
-  //  Expr->dump();
+const SCEV *
+SubscriptAnalysis::ReplaceInExpr(const SCEVUnknown *Expr,
+                                 const NDRangePoint &point,
+                                 SmallPtrSet<const SCEV *, 8> &Processed) {
+//  llvm::errs() << "SCEVUnknown: ";
+//  Expr->dump();
   Value *V = Expr->getValue();
   // Implement proper replacement.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
-    if (NDR->IsGlobal(Inst, Dir))
-      return SE->getConstant(globalValue);
-    if (NDR->IsLocal(Inst, Dir))
-      return SE->getConstant(localValue);
-    if (NDR->IsGroupId(Inst, Dir))
-      return SE->getConstant(groupValue);
+    if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
+      if(BinOp->getOpcode() == Instruction::URem) {
+        // Expand remainder.
+        const SCEV *Arg = SE->getSCEV(BinOp->getOperand(0));
+        const SCEV *Modulo = SE->getSCEV(BinOp->getOperand(1));
+        const SCEV *Result = SE->getMinusSCEV(Arg, SE->getMulExpr(SE->getUDivExpr(Arg, Modulo), Modulo));
+        return ReplaceInExpr(Result, point, Processed);
+      }
+    }
+
+    std::string type = NDR->getType(Inst);
+
+    // FIXME
+    if (type == NDRange::GET_LOCAL_SIZE)
+      return SE->getConstant(APInt(32, 512));
+
+    if (type != NDRange::GET_GLOBAL_ID && type != NDRange::GET_LOCAL_ID &&
+        type != NDRange::GET_GROUP_ID) {
+      return Expr;
+    }
+
+    if (type == NDRange::GET_GLOBAL_ID)
+      type = NDRange::GET_LOCAL_ID;
+
+    unsigned int direction = NDR->getDirection(Inst);
+    unsigned int coordinate = point.getCoordinate(type, direction);
+    return SE->getConstant(APInt(32, coordinate));
   } else {
     if (PHINode *phi = dyn_cast<PHINode>(V))
-      return ReplaceInPhi(phi, globalValue, localValue, groupValue,
-                          Processed);
+      return ReplaceInPhi(phi, point, Processed);
   }
   return Expr;
 }
 
 //------------------------------------------------------------------------------
-const SCEV *SubscriptAnalysis::ReplaceInExpr(
-    const SCEVUDivExpr *Expr, const APInt &globalValue, const APInt &localValue,
-    const APInt &groupValue, SmallPtrSet<const SCEV *, 8> &Processed) {
+const SCEV *
+SubscriptAnalysis::ReplaceInExpr(const SCEVUDivExpr *Expr,
+                                 const NDRangePoint &point,
+                                 SmallPtrSet<const SCEV *, 8> &Processed) {
 
-  //  Expr->dump();
-  const SCEV *newLHS = ReplaceInExpr(Expr->getLHS(), globalValue, localValue,
-                                     groupValue, Processed);
-  const SCEV *newRHS = ReplaceInExpr(Expr->getRHS(), globalValue, localValue,
-                                     groupValue, Processed);
+//  llvm::errs() << "SCEVUDiv: ";
+//  Expr->dump();
+  const SCEV *newLHS = ReplaceInExpr(Expr->getLHS(), point, Processed);
+  const SCEV *newRHS = ReplaceInExpr(Expr->getRHS(), point, Processed);
 
   return SE->getUDivExpr(newLHS, newRHS);
 }
 
 //------------------------------------------------------------------------------
-const SCEV *SubscriptAnalysis::ReplaceInPhi(
-    PHINode *Phi, const APInt &globalValue, const APInt &localValue,
-    const APInt &groupValue, SmallPtrSet<const SCEV *, 8> &Processed) {
+const SCEV *
+SubscriptAnalysis::ReplaceInPhi(PHINode *Phi, const NDRangePoint &point,
+                                SmallPtrSet<const SCEV *, 8> &Processed) {
   //  llvm::errs() << "Phi: ";
   //  Phi->dump();
   // FIXME: Pick the first argument of the phi node.
@@ -203,5 +220,5 @@ const SCEV *SubscriptAnalysis::ReplaceInPhi(
 
   const SCEV *scev = SE->getSCEV(param);
 
-  return ReplaceInExpr(scev, globalValue, localValue, groupValue, Processed);
+  return ReplaceInExpr(scev, point, Processed);
 }

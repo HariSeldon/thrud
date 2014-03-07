@@ -7,6 +7,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 class NDRange;
+class NDRangePoint;
 
 class SubscriptAnalysis {
 public:
@@ -22,28 +23,21 @@ private:
   unsigned int Dir;
 
 private:
-  const SCEV *ReplaceInExpr(const SCEV *Expr, const APInt &globalValue,
-                            const APInt &localValue, const APInt &groupValue,
+  const SCEV *ReplaceInExpr(const SCEV *Expr, const NDRangePoint &point,
                             SmallPtrSet<const SCEV *, 8> &Processed);
   const SCEV *ReplaceInExpr(const SCEVAddRecExpr *Expr,
-                            const APInt &globalValue, const APInt &localValue,
-                            const APInt &groupValue,
+                            const NDRangePoint &point,
                             SmallPtrSet<const SCEV *, 8> &Processed);
   const SCEV *ReplaceInExpr(const SCEVCommutativeExpr *Expr,
-                            const APInt &globalValue, const APInt &localValue,
-                            const APInt &groupValue,
+                            const NDRangePoint &point,
                             SmallPtrSet<const SCEV *, 8> &Processed);
-  const SCEV *ReplaceInExpr(const SCEVConstant *Expr, const APInt &globalValue,
-                            const APInt &localValue, const APInt &groupValue,
+  const SCEV *ReplaceInExpr(const SCEVConstant *Expr, const NDRangePoint &point,
                             SmallPtrSet<const SCEV *, 8> &Processed);
-  const SCEV *ReplaceInExpr(const SCEVUnknown *Expr, const APInt &globalValue,
-                            const APInt &localValue, const APInt &groupValue,
+  const SCEV *ReplaceInExpr(const SCEVUnknown *Expr, const NDRangePoint &point,
                             SmallPtrSet<const SCEV *, 8> &Processed);
-  const SCEV *ReplaceInExpr(const SCEVUDivExpr *Expr, const APInt &globalValue,
-                            const APInt &localValue, const APInt &groupValue,
+  const SCEV *ReplaceInExpr(const SCEVUDivExpr *Expr, const NDRangePoint &point,
                             SmallPtrSet<const SCEV *, 8> &Processed);
-  const SCEV *ReplaceInPhi(PHINode *Phi, const APInt &globalValue,
-                           const APInt &localValue, const APInt &groupValue,
+  const SCEV *ReplaceInPhi(PHINode *Phi, const NDRangePoint &point,
                            SmallPtrSet<const SCEV *, 8> &Processed);
 };
 
