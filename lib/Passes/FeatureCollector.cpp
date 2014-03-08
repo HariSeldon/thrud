@@ -366,9 +366,6 @@ void FeatureCollector::countDivInsts(Function &function,
   for (inst_iterator I = inst_begin(function), E = inst_end(function); I != E;
        ++I) {
     Instruction *inst = &*I;
-    if (isa<LoadInst>(inst)) {
-      llvm::errs() << sdda->IsThreadIdDependent(inst) << "\n";
-    }
     uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
   }
 
@@ -424,8 +421,6 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
                                           ScalarEvolution *SE, NDRange *NDR,
                                           int CoarseningDirection) {
   SubscriptAnalysis SA(SE, NDR, CoarseningDirection);
-
-  llvm::errs() << "coalescingAnalysis: " << CoarseningDirection << "\n";
 
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
@@ -563,9 +558,6 @@ void FeatureCollector::loopCountDivInsts(Function &function,
     if(!IsInLoop(inst, LI))
       continue;
 
-    if (isa<LoadInst>(inst)) {
-      llvm::errs() << sdda->IsThreadIdDependent(inst) << "\n";
-    }
     uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
   }
 

@@ -21,24 +21,25 @@ private:
   ScalarEvolution *SE;
   NDRange *NDR;
   unsigned int Dir;
+  typedef std::map<const SCEV*, const SCEV*> SCEVMap;
 
 private:
   const SCEV *ReplaceInExpr(const SCEV *Expr, const NDRangePoint &point,
-                            SmallPtrSet<const SCEV *, 8> &Processed);
+                            SCEVMap &Processed);
   const SCEV *ReplaceInExpr(const SCEVAddRecExpr *Expr,
                             const NDRangePoint &point,
-                            SmallPtrSet<const SCEV *, 8> &Processed);
+                            SCEVMap &Processed);
   const SCEV *ReplaceInExpr(const SCEVCommutativeExpr *Expr,
                             const NDRangePoint &point,
-                            SmallPtrSet<const SCEV *, 8> &Processed);
+                            SCEVMap &Processed);
   const SCEV *ReplaceInExpr(const SCEVConstant *Expr, const NDRangePoint &point,
-                            SmallPtrSet<const SCEV *, 8> &Processed);
+                            SCEVMap &Processed);
   const SCEV *ReplaceInExpr(const SCEVUnknown *Expr, const NDRangePoint &point,
-                            SmallPtrSet<const SCEV *, 8> &Processed);
+                            SCEVMap &Processed);
   const SCEV *ReplaceInExpr(const SCEVUDivExpr *Expr, const NDRangePoint &point,
-                            SmallPtrSet<const SCEV *, 8> &Processed);
+                            SCEVMap &Processed);
   const SCEV *ReplaceInPhi(PHINode *Phi, const NDRangePoint &point,
-                           SmallPtrSet<const SCEV *, 8> &Processed);
+                           SCEVMap &Processed);
 };
 
 #endif

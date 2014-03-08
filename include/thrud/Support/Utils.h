@@ -18,17 +18,7 @@ using namespace llvm;
 
 #define LOCAL_AS 3
 
-extern const char *GET_GLOBAL_ID;
-extern const char *GET_LOCAL_ID;
-extern const char *GET_GLOBAL_SIZE;
-extern const char *GET_LOCAL_SIZE;
-extern const char *GET_GROUP_ID;
 extern const char *BARRIER;
-
-extern unsigned int OPENCL_DIMS[3];
-extern const char *GET_THREAD_ID_NAMES[2];
-extern const char *GET_SIZE_NAME[2];
-extern const char *GET_GROUP_ID_NAMES[1];
 
 // Loop management.
 bool IsInLoop(const Instruction *I, LoopInfo *LI);
@@ -151,23 +141,6 @@ bool PostDominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
 RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *DT,
                          PostDominatorTree *PDT);
 
-//// Scalar Evolution analysis.
-//int IsCoalesced(Value *value, ScalarEvolution *SE, ValueVector& TIds);
-//int AnalyzeSubscript(ScalarEvolution *SE, const SCEV *Scev, ValueVector &TIds,
-//                     SmallPtrSet<const SCEV *, 8> &Processed);
-//int AnalyzePHI(ScalarEvolution *SE, PHINode *V, ValueVector &TIds,
-//               SmallPtrSet<const SCEV *, 8> &Processed);
-//int AnalyzeAdd(ScalarEvolution *SE, const SCEVAddExpr *Scev, ValueVector &TIds,
-//               SmallPtrSet<const SCEV *, 8> &Processed);
-//int AnalyzeMultiplication(ScalarEvolution *SE, const SCEVNAryExpr *Scev, ValueVector &TIds);
-//int AnalyzeFactors(const SCEVUnknown *U, const SCEVConstant *C,
-//                   ValueVector &TIds);
-//
-//const SCEV *ReplaceInAdd(ScalarEvolution *SE, const SCEVAddExpr *AddExpr,
-//                         ValueVector &TIds, const APInt &value);
-//const SCEV *ReplaceInMul(ScalarEvolution *SE, const SCEVMulExpr *MulExpr,
-//                         ValueVector &TIds, const APInt &value);
-
 // Dependance analysis.
 // Return true if V depends on any of the values in Rs.
 bool DependsOn(const Value *V, const ValueVector &Rs);
@@ -201,16 +174,6 @@ bool IsStrictBranch(const BranchInst *Branch);
 // Divergence Utils.
 
 Function* GetOpenCLFunctionByName(std::string calleeName, Function *caller);
-
-// Find all the get_global_id or get_local_id function calls.
-InstVector FindThreadIds(Function *F);
-InstVector FindThreadIds(Function *F, int Dim);
-// Find all get_global_size or get_local_size function calls.
-InstVector FindSpaceSizes(Function *F);
-InstVector FindSpaceSizes(Function *F, int Dim);
-// Find all get_group_id function calls.
-InstVector FindGroupIds(Function *F);
-InstVector FindGroupIds(Function *F, int Dim);
 
 // Find all the instructions which depend on the TId.
 InstVector FindThreadDepInst(Function *F, ValueVector &TIds);

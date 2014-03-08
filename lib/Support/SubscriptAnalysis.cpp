@@ -22,35 +22,35 @@ int SubscriptAnalysis::GetThreadStride(Value *value) {
     return -1;
   }
 
-  if (Instruction *I = dyn_cast<Instruction>(value)) {
-    I->dump();
-    I->getParent()->getParent()->dump();
-  }
+//  if (Instruction *I = dyn_cast<Instruction>(value)) {
+//    I->dump();
+//    I->getParent()->getParent()->dump();
+//  }
 
   const SCEV *scev = SE->getSCEV(value);
   int result = AnalyzeSubscript(scev);
-  llvm::errs() << "Result: " << result << "\n";
+//  llvm::errs() << "Result: " << result << "\n";
   return result;
 }
 
 //------------------------------------------------------------------------------
 // WARNING: SCEV does not support %.
 int SubscriptAnalysis::AnalyzeSubscript(const SCEV *Scev) {
-  NDRangePoint firstPoint(0, 0, 0, 0, 0, 0);
-  NDRangePoint secondPoint(1, 0, 0, 0, 0, 0);
+  NDRangePoint firstPoint(0, 0, 0, 0, 0, 0, 32, 32, 1, 32, 32, 1);
+  NDRangePoint secondPoint(1, 0, 0, 0, 0, 0, 32, 32, 1, 32, 32, 1);
 
-  SmallPtrSet<const SCEV *, 8> Processed1;
-  SmallPtrSet<const SCEV *, 8> Processed2;
+  SCEVMap Processed1;
+  SCEVMap Processed2;
   const SCEV *firstExp = ReplaceInExpr(Scev, firstPoint, Processed1);
-  llvm::errs() << "Result1: ";
-  firstExp->dump();
+//  llvm::errs() << "Result1: ";
+//  firstExp->dump();
   const SCEV *secondExp = ReplaceInExpr(Scev, secondPoint, Processed2);
-  llvm::errs() << "Result2: ";
-  secondExp->dump();
+//  llvm::errs() << "Result2: ";
+//  secondExp->dump();
   const SCEV *result = SE->getMinusSCEV(secondExp, firstExp);
 
-  llvm::errs() << "Difference result.\n";
-  result->dump();
+//  llvm::errs() << "Difference result.\n";
+//  result->dump();
 
   if (result == NULL) {
     return -1;
@@ -72,36 +72,40 @@ int SubscriptAnalysis::AnalyzeSubscript(const SCEV *Scev) {
 //------------------------------------------------------------------------------
 const SCEV *
 SubscriptAnalysis::ReplaceInExpr(const SCEV *Expr, const NDRangePoint &point,
-                                 SmallPtrSet<const SCEV *, 8> &Processed) {
+                                 SCEVMap &Processed) {
 
 //  llvm::errs() << "Replace In Expr: ";
 //  Expr->dump();
 
-//  if (!Processed.insert(Expr)) {
-//    llvm::errs() << "Already processed!\n";
-//    return Expr;
-//  }
+  SCEVMap::iterator iter = Processed.find(Expr);
+  if(iter != Processed.end()) {
+    return Processed[Expr];    
+  }
+
+  const SCEV* result = NULL;
 
   // FIXME: This is ugly.
   if (const SCEVCommutativeExpr *tmp = dyn_cast<SCEVCommutativeExpr>(Expr))
-    return ReplaceInExpr(tmp, point, Processed);
+    result = ReplaceInExpr(tmp, point, Processed);
   if (const SCEVConstant *tmp = dyn_cast<SCEVConstant>(Expr))
-    return ReplaceInExpr(tmp, point, Processed);
+    result = ReplaceInExpr(tmp, point, Processed);
   if (const SCEVUnknown *tmp = dyn_cast<SCEVUnknown>(Expr))
-    return ReplaceInExpr(tmp, point, Processed);
+    result = ReplaceInExpr(tmp, point, Processed);
   if (const SCEVUDivExpr *tmp = dyn_cast<SCEVUDivExpr>(Expr)) 
-    return ReplaceInExpr(tmp, point, Processed);
+    result = ReplaceInExpr(tmp, point, Processed);
   if (const SCEVAddRecExpr *tmp = dyn_cast<SCEVAddRecExpr>(Expr))
-    return ReplaceInExpr(tmp, point, Processed);
-  llvm::errs() << "NULL!\n";
-  return NULL;
+    result = ReplaceInExpr(tmp, point, Processed);
+
+  Processed[Expr] = result;
+
+  return result; 
 }
 
 //------------------------------------------------------------------------------
 const SCEV *
 SubscriptAnalysis::ReplaceInExpr(const SCEVAddRecExpr *Expr,
                                  const NDRangePoint &point,
-                                 SmallPtrSet<const SCEV *, 8> &Processed) {
+                                 SCEVMap &Processed) {
   //  Expr->dump();
   const SCEV *start = Expr->getStart();
   // const SCEV* step = addRecExpr->getStepRecurrence(*SE);
@@ -113,7 +117,7 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVAddRecExpr *Expr,
 const SCEV *
 SubscriptAnalysis::ReplaceInExpr(const SCEVCommutativeExpr *Expr,
                                  const NDRangePoint &point,
-                                 SmallPtrSet<const SCEV *, 8> &Processed) {
+                                 SCEVMap &Processed) {
 
 //  llvm::errs() << "SCEVCommutativeExpr:";
 //  Expr->dump();
@@ -142,7 +146,7 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVCommutativeExpr *Expr,
 const SCEV *
 SubscriptAnalysis::ReplaceInExpr(const SCEVConstant *Expr,
                                  const NDRangePoint &point,
-                                 SmallPtrSet<const SCEV *, 8> &Processed) {
+                                 SCEVMap &Processed) {
   //  llvm::errs() << "SCEVConstant:";
   //  Expr->dump();
   return Expr;
@@ -152,7 +156,7 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVConstant *Expr,
 const SCEV *
 SubscriptAnalysis::ReplaceInExpr(const SCEVUnknown *Expr,
                                  const NDRangePoint &point,
-                                 SmallPtrSet<const SCEV *, 8> &Processed) {
+                                 SCEVMap &Processed) {
 //  llvm::errs() << "SCEVUnknown: ";
 //  Expr->dump();
   Value *V = Expr->getValue();
@@ -169,19 +173,6 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVUnknown *Expr,
     }
 
     std::string type = NDR->getType(Inst);
-
-    // FIXME
-    if (type == NDRange::GET_LOCAL_SIZE)
-      return SE->getConstant(APInt(32, 512));
-
-    if (type != NDRange::GET_GLOBAL_ID && type != NDRange::GET_LOCAL_ID &&
-        type != NDRange::GET_GROUP_ID) {
-      return Expr;
-    }
-
-    if (type == NDRange::GET_GLOBAL_ID)
-      type = NDRange::GET_LOCAL_ID;
-
     unsigned int direction = NDR->getDirection(Inst);
     unsigned int coordinate = point.getCoordinate(type, direction);
     return SE->getConstant(APInt(32, coordinate));
@@ -196,7 +187,7 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVUnknown *Expr,
 const SCEV *
 SubscriptAnalysis::ReplaceInExpr(const SCEVUDivExpr *Expr,
                                  const NDRangePoint &point,
-                                 SmallPtrSet<const SCEV *, 8> &Processed) {
+                                 SCEVMap &Processed) {
 
 //  llvm::errs() << "SCEVUDiv: ";
 //  Expr->dump();
@@ -209,7 +200,7 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVUDivExpr *Expr,
 //------------------------------------------------------------------------------
 const SCEV *
 SubscriptAnalysis::ReplaceInPhi(PHINode *Phi, const NDRangePoint &point,
-                                SmallPtrSet<const SCEV *, 8> &Processed) {
+                                SCEVMap &Processed) {
   //  llvm::errs() << "Phi: ";
   //  Phi->dump();
   // FIXME: Pick the first argument of the phi node.

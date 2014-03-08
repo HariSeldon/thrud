@@ -65,12 +65,8 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfo>();
   NDR = &getAnalysis<NDRange>();
 
-  llvm::errs() << "CD: " << CoarseningDirection << "\n";
-
 //  TIds = FindThreadIds(Func, CoarseningDirection);
   TIds = NDR->getTids();
-  llvm::errs() << "SDDA:\n";
-  dumpVector(TIds);
 
   AllTIds = NDR->getTids(CoarseningDirection);
   Sizes = NDR->getSizes(CoarseningDirection);
@@ -105,76 +101,6 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
 
   return false;
 }
-
-// TO REMOVE
-//------------------------------------------------------------------------------
-//void SingleDimDivAnalysis::AnalyzeRegion(DivergentRegion *Region) {
-//  BasicBlock *UB = Region->getHeader();
-//  if(UB->size() == 1) {
-//    Instruction *Inst = UB->begin();
-//    if(BranchInst *Branch = dyn_cast<BranchInst>(Inst)) {
-//      if(DependsOn(Branch, Inputs)) {
-//        Region->setCondition(DivergentRegion::ND);
-//        return;
-//      }
-//      Value *Cond = Branch->getCondition();
-//      if(CmpInst* Cmp = dyn_cast<CmpInst>(Cond)) {
-//        ////errs() << AnalyzeCmp(Cmp) << "\n";
-//        AnalyzeCmp(Cmp);
-//        //Region->setCondition(AnalyzeCmp(Cmp));
-//      }
-//      else {
-//        // FIXME: I am not considering compound conditions.
-//        Region->setCondition(DivergentRegion::ND);
-//      }
-//    }
-//  }
-//}
-//
-////------------------------------------------------------------------------------
-//DivergentRegion::BoundCheck SingleDimDivAnalysis::AnalyzeCmp(CmpInst *Cmp) {
-//  if(Cmp->isEquality())
-//    return DivergentRegion::EQ;
-//
-//  Value *TIdOp = GetTIdOperand(Cmp);
-//  // Get the operand position.
-//  unsigned int position = GetOperandPosition(Cmp, TIdOp);
-//  bool isFirst = (position == 0);
-//  // Get the comparison sign.
-//  bool GT = IsGreaterThan(Cmp->getPredicate());
-//  // Get the TID subscript sign.
-//  ValueVector VV = ToValueVector(TIds);
-//
-//  SmallPtrSet<const SCEV*, 8> Processed;
-//  unsigned int result = AnalyzeSubscript(SE->getSCEV(TIdOp), VV, Processed);
-//  ////errs() << "Result: " << result << "\n";
-//  if (result == 0)
-//    return DivergentRegion::ND;
-//  //bool IsTIdPositive = (result == 1);
-//
-//  // Compare all of the previous.
-//  unsigned int sum = isFirst + GT; // + IsTIdPositive;
-//
-//  if(sum % 2 == 0)
-//    return DivergentRegion::UB;
-//  else
-//    return DivergentRegion::LB;
-//
-//}
-//
-////------------------------------------------------------------------------------
-//Value *SingleDimDivAnalysis::GetTIdOperand(CmpInst* Cmp) {
-//  // ASSUMPTION: only one operand of the comparison depends on the TId.
-//  ValueVector TIdsV = ToValueVector(TIds);
-//  for (CmpInst::op_iterator I = Cmp->op_begin(), E = Cmp->op_end();
-//       I != E; ++I) {
-//    Value *V = I->get();
-//    if(DependsOn(V, TIdsV)) {
-//      return *I;
-//    }
-//  }
-//  return NULL;
-//}
 
 //------------------------------------------------------------------------------
 InstVector SingleDimDivAnalysis::getInstToRepOutsideRegions() const {
