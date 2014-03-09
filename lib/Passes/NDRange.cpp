@@ -90,23 +90,25 @@ bool NDRange::IsTidInDirection(Instruction *I, unsigned int direction) {
 }
 
 std::string NDRange::getType(Instruction *I) {
-  if(IsGlobal(I))
+  if (IsGlobal(I))
     return GET_GLOBAL_ID;
-  if(IsLocal(I))
+  if (IsLocal(I))
     return GET_LOCAL_ID;
-  if(IsGroupId(I))
+  if (IsGroupId(I))
     return GET_GROUP_ID;
-  if(IsGlobalSize(I))
+  if (IsGlobalSize(I))
     return GET_GLOBAL_SIZE;
-  if(IsLocalSize(I))
+  if (IsLocalSize(I))
     return GET_LOCAL_SIZE;
   return "";
 }
 
 unsigned int NDRange::getDirection(Instruction *I) {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    bool result = IsGlobal(I, direction) || IsLocal(I, direction) || IsGlobalSize(I, direction) || IsLocalSize(I, direction) || IsGroupId(I, direction);
-    if(result == true)
+    bool result = IsGlobal(I, direction) || IsLocal(I, direction) ||
+                  IsGlobalSize(I, direction) || IsLocalSize(I, direction) ||
+                  IsGroupId(I, direction);
+    if (result == true)
       return direction;
   }
   return -1;
@@ -172,9 +174,10 @@ bool NDRange::IsGroupId(Instruction *I, int direction) {
   return IsPresentInDirection(I, GET_GROUP_ID, direction);
 }
 
-//std::pair<const std::string, const unsigned int> getCoordinates(Instruction *I) const {
-//  std::string type = getType(I); 
-//  if(type != GET_GLOBAL_ID && type != GET_LOCAL_ID) 
+//std::pair<const std::string, const unsigned int> getCoordinates(Instruction
+//*I) const {
+//  std::string type = getType(I);
+//  if(type != GET_GLOBAL_ID && type != GET_LOCAL_ID)
 //    return std::pair<const std::string, const unsigned int> ("", -1);
 //
 //  unsigned int direction = getDirection(I);
