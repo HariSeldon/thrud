@@ -197,7 +197,7 @@ void NDRange::Init() {
   // A vector per dimension.
   OCLInsts.reserve(DIRECTION_NUMBER);
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    OCLInsts[direction] = std::map<std::string, InstVector>();
+    OCLInsts.push_back(std::map<std::string, InstVector>());
   }
   // Init the maps in every direction.
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
