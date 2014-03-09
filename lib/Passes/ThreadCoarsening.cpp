@@ -172,7 +172,6 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
       Instruction *Inst = I->second;
       ApplyMap(Inst, RegionsMap);
     }
-
   }
 
   // Apply the map to all the instrucions.
@@ -240,14 +239,12 @@ InstVector ThreadCoarsening::InsertIdOffset(unsigned int CD, unsigned int CF,
   unsigned int CFST = CF * ST;
   unsigned int ST1 = ST - 1;
 
-  llvm::errs() << "ST: " << ST << "\n";
-
   InstVector Result;
   InstVector TIds = SDDA->getThreadIds();
   NumThreadIds = TIds.size();
   for (InstVector::iterator I = TIds.begin(), E = TIds.end(); I != E; ++I) {
     Instruction *Shift = getShiftInst(*I, logST);
-//    Instruction *Shift = getMulInst(*I, ST);
+    //    Instruction *Shift = getMulInst(*I, ST);
     Shift->insertAfter(*I);
     Instruction *Mul = getMulInst(Shift, CFST);
     Mul->insertAfter(Shift);

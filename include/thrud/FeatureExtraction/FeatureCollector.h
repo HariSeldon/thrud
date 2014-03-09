@@ -83,7 +83,7 @@ public:
   void countLocalMemoryUsage(const BasicBlock &block);
 
   // Function counters.
-  void countDimensions(Function &function);
+  void countDimensions(NDRange *NDR);
   void countEdges(const Function &function);
   void countBranches(const Function &function);
   void countDivInsts(Function &function, MultiDimDivAnalysis *mdda,

@@ -100,8 +100,6 @@ bool BranchExtraction::runOnFunction(Function &F) {
 
   NumExtracted = Rs.size();
 
-  //dumpVector(Rs);
-
   return NumExtracted != 0;
 }
 

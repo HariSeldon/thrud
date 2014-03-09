@@ -80,7 +80,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitFunction(Function &function) {
   // Extract ThreadId values. 
-  collector.countDimensions(function);
+  collector.countDimensions(NDR);
   collector.countBranches(function);
   collector.countEdges(function);
   collector.countDivInsts(function, MDDA, SDDA);

@@ -7,7 +7,7 @@ std::string NDRange::GET_LOCAL_SIZE = "get_local_size";
 std::string NDRange::GET_GROUP_ID = "get_group_id";
 unsigned int NDRange::DIRECTION_NUMBER = 3;
 
-NDRange::NDRange() : FunctionPass(ID) { Init(); }
+NDRange::NDRange() : FunctionPass(ID) {}
 
 void NDRange::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -15,6 +15,7 @@ void NDRange::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool NDRange::runOnFunction(Function &Func) {
   Function *F = (Function *)&Func;
+  Init();
   FindOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_ID, F);
   FindOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_ID, F);
   FindOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_SIZE, F);
@@ -173,16 +174,6 @@ bool NDRange::IsLocalSize(Instruction *I, int direction) {
 bool NDRange::IsGroupId(Instruction *I, int direction) {
   return IsPresentInDirection(I, GET_GROUP_ID, direction);
 }
-
-//std::pair<const std::string, const unsigned int> getCoordinates(Instruction
-//*I) const {
-//  std::string type = getType(I);
-//  if(type != GET_GLOBAL_ID && type != GET_LOCAL_ID)
-//    return std::pair<const std::string, const unsigned int> ("", -1);
-//
-//  unsigned int direction = getDirection(I);
-//  return std::pair<const std::string, const unsigned int> (type, direction);
-//}
 
 void NDRange::dump() {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {

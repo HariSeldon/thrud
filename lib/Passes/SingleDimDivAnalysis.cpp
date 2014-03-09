@@ -113,11 +113,7 @@ RegionVector SingleDimDivAnalysis::getDivergentRegions() const {
 }
 
 //------------------------------------------------------------------------------
-InstVector SingleDimDivAnalysis::getThreadIds() const { 
-  llvm::errs() << "SDDA - getThreadIds: \n";
-  TIds.size();
-  dumpVector(TIds);
-  return TIds; }
+InstVector SingleDimDivAnalysis::getThreadIds() const { return TIds; }
 
 //------------------------------------------------------------------------------
 InstVector SingleDimDivAnalysis::getSizes() const { return Sizes; }

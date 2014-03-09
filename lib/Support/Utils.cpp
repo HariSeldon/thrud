@@ -514,6 +514,7 @@ BlockVector BuildPredList(RegionVector &Regions, LoopInfo *LI) {
     assert(P != NULL && "Region header does not have a single predecessor");
     Preds.push_back(P);
   }
+
   return Preds;
 }
 
