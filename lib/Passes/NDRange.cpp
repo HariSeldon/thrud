@@ -33,10 +33,8 @@ InstVector NDRange::getTids() {
     std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
     InstVector globalIds = DirInsts[GET_GLOBAL_ID];
     InstVector localIds = DirInsts[GET_LOCAL_ID];
-    InstVector groupIds = DirInsts[GET_GROUP_ID];
     result.insert(result.end(), globalIds.begin(), globalIds.end());
     result.insert(result.end(), localIds.begin(), localIds.end());
-    result.insert(result.end(), groupIds.begin(), groupIds.end());
   }
   return result;
 }
@@ -60,10 +58,8 @@ InstVector NDRange::getTids(unsigned int direction) {
   std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
   InstVector globalIds = DirInsts[GET_GLOBAL_ID];
   InstVector localIds = DirInsts[GET_LOCAL_ID];
-  InstVector groupIds = DirInsts[GET_GROUP_ID];
   result.insert(result.end(), globalIds.begin(), globalIds.end());
   result.insert(result.end(), localIds.begin(), localIds.end());
-  result.insert(result.end(), groupIds.begin(), groupIds.end());
   return result;
 }
 
