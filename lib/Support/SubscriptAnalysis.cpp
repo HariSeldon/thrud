@@ -29,25 +29,32 @@ int SubscriptAnalysis::GetThreadStride(Value *value) {
 
   const SCEV *scev = SE->getSCEV(value);
   int result = AnalyzeSubscript(scev);
-//  llvm::errs() << "Result: " << result << "\n";
   return result;
 }
 
 //------------------------------------------------------------------------------
 // WARNING: SCEV does not support %.
 int SubscriptAnalysis::AnalyzeSubscript(const SCEV *Scev) {
-  NDRangePoint firstPoint(0, 0, 0, 0, 0, 0, 32, 32, 1, 32, 32, 1);
-  NDRangePoint secondPoint(1, 0, 0, 0, 0, 0, 32, 32, 1, 32, 32, 1);
+  NDRangePoint firstPoint(0, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
+  NDRangePoint secondPoint(1, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
+
+//  llvm::errs() << "Original SCEV: ";
+//  Scev->dump();
 
   SCEVMap Processed1;
   SCEVMap Processed2;
-  const SCEV *firstExp = ReplaceInExpr(Scev, firstPoint, Processed1);
+  const SCEV *firstExpr = ReplaceInExpr(Scev, firstPoint, Processed1);
 //  llvm::errs() << "Result1: ";
-//  firstExp->dump();
-  const SCEV *secondExp = ReplaceInExpr(Scev, secondPoint, Processed2);
+//  firstExpr->dump();
+  const SCEV *secondExpr = ReplaceInExpr(Scev, secondPoint, Processed2);
 //  llvm::errs() << "Result2: ";
-//  secondExp->dump();
-  const SCEV *result = SE->getMinusSCEV(secondExp, firstExp);
+//  secondExpr->dump();
+
+  if(isa<SCEVCouldNotCompute>(firstExpr) || isa<SCEVCouldNotCompute>(secondExpr)) {
+    return -1; 
+  }
+
+  const SCEV *result = SE->getMinusSCEV(secondExpr, firstExpr);
 
 //  llvm::errs() << "Difference result.\n";
 //  result->dump();
@@ -97,6 +104,10 @@ SubscriptAnalysis::ReplaceInExpr(const SCEV *Expr, const NDRangePoint &point,
     result = ReplaceInExpr(tmp, point, Processed);
 
   Processed[Expr] = result;
+//  llvm::errs() << "-- Expr: ";
+//  Expr->dump();
+//  llvm::errs() << "-- Result: ";
+//  result->dump();
 
   return result; 
 }
@@ -126,6 +137,8 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVCommutativeExpr *Expr,
   for (SCEVNAryExpr::op_iterator I = Expr->op_begin(), E = Expr->op_end();
        I != E; ++I) {
     const SCEV *NewOperand = ReplaceInExpr(*I, point, Processed);
+    if(isa<SCEVCouldNotCompute>(NewOperand))
+      return SE->getCouldNotCompute();
     Operands.push_back(NewOperand);
   }
   const SCEV *result = NULL;
@@ -147,8 +160,6 @@ const SCEV *
 SubscriptAnalysis::ReplaceInExpr(const SCEVConstant *Expr,
                                  const NDRangePoint &point,
                                  SCEVMap &Processed) {
-  //  llvm::errs() << "SCEVConstant:";
-  //  Expr->dump();
   return Expr;
 }
 
@@ -160,26 +171,56 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVUnknown *Expr,
 //  llvm::errs() << "SCEVUnknown: ";
 //  Expr->dump();
   Value *V = Expr->getValue();
-  // Implement proper replacement.
+  // Implement actual replacement.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
-    if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
+
+    // Manage binary operations.
+    if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {      
+      // Modulo.
       if(BinOp->getOpcode() == Instruction::URem) {
-        // Expand remainder.
         const SCEV *Arg = SE->getSCEV(BinOp->getOperand(0));
         const SCEV *Modulo = SE->getSCEV(BinOp->getOperand(1));
         const SCEV *Result = SE->getMinusSCEV(Arg, SE->getMulExpr(SE->getUDivExpr(Arg, Modulo), Modulo));
         return ReplaceInExpr(Result, point, Processed);
       }
+  
+      // Signed division.
+      if(BinOp->getOpcode() == Instruction::SDiv) {
+        const SCEV *First = SE->getSCEV(BinOp->getOperand(0));
+        const SCEV *Second = SE->getSCEV(BinOp->getOperand(1));
+        const SCEV *Div = SE->getUDivExpr(First, Second);
+        return ReplaceInExpr(Div, point, Processed);
+      }
+
+      llvm::errs() << "Could not compute: ";
+      Inst->dump();
+      // All the rest.
+      return SE->getCouldNotCompute();
     }
 
-    std::string type = NDR->getType(Inst);
-    unsigned int direction = NDR->getDirection(Inst);
-    unsigned int coordinate = point.getCoordinate(type, direction);
-    return SE->getConstant(APInt(32, coordinate));
-  } else {
+    // Manage casts.
+    if (IsIntCast(Inst)) {
+//      llvm::errs() << "Cast!\n";
+      CallInst *Call = dyn_cast<CallInst>(Inst);
+      const SCEV *ArgSCEV = SE->getSCEV(Call->getArgOperand(0));
+//      ArgSCEV->dump();
+      return ReplaceInExpr(ArgSCEV, point, Processed);
+    }
+
+    // Manage phi nodes.
     if (PHINode *phi = dyn_cast<PHINode>(V))
       return ReplaceInPhi(phi, point, Processed);
-  }
+
+    std::string type = NDR->getType(Inst);
+    if(type == "")
+      return SE->getCouldNotCompute();
+    unsigned int direction = NDR->getDirection(Inst);
+    unsigned int coordinate = point.getCoordinate(type, direction);
+
+//    llvm::errs() << "coo: " << type << " " << coordinate << "\n";
+
+    return SE->getConstant(APInt(32, coordinate));
+  } 
   return Expr;
 }
 
@@ -192,8 +233,12 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVUDivExpr *Expr,
 //  llvm::errs() << "SCEVUDiv: ";
 //  Expr->dump();
   const SCEV *newLHS = ReplaceInExpr(Expr->getLHS(), point, Processed);
+  if(isa<SCEVCouldNotCompute>(newLHS)) 
+    return SE->getCouldNotCompute();
   const SCEV *newRHS = ReplaceInExpr(Expr->getRHS(), point, Processed);
-
+  if(isa<SCEVCouldNotCompute>(newRHS)) 
+    return SE->getCouldNotCompute();
+    
   return SE->getUDivExpr(newLHS, newRHS);
 }
 
@@ -201,15 +246,15 @@ SubscriptAnalysis::ReplaceInExpr(const SCEVUDivExpr *Expr,
 const SCEV *
 SubscriptAnalysis::ReplaceInPhi(PHINode *Phi, const NDRangePoint &point,
                                 SCEVMap &Processed) {
-  //  llvm::errs() << "Phi: ";
-  //  Phi->dump();
+//  llvm::errs() << "Phi: ";
+//  Phi->dump();
   // FIXME: Pick the first argument of the phi node.
   Value *param = Phi->getIncomingValue(0);
-  //  llvm::errs() << "Param: ";
-  //  param->dump();
   assert(SE->isSCEVable(param->getType()) && "PhiNode argument non-SCEVable");
 
   const SCEV *scev = SE->getSCEV(param);
+
+  Processed[SE->getSCEV(Phi)] = scev;
 
   return ReplaceInExpr(scev, point, Processed);
 }

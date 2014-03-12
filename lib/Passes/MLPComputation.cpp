@@ -15,33 +15,6 @@
 #include <algorithm>
 
 //------------------------------------------------------------------------------
-// Filter the vector of uses removing all the instructions that are dominated
-// by others.
-//InstVector filterUsers(InstVector &insts, DominatorTree *DT) {
-//  InstVector result;
-//  for (InstVector::iterator iter = insts.begin(), end = insts.end();
-//    iter != end; ++iter) {
-//    Instruction *inst = *iter;
-//
-//    bool include = true;
-//    for (InstVector::iterator iter2 = insts.begin(), end2 = insts.end();
-//      iter2 != end2; ++iter2) {
-//      Instruction *inst2 = *iter2;
-//
-//      if(inst == inst2)
-//        continue;
-//
-//      include &= !DT->dominates(inst2, inst);
-//    }
-//
-//    if(include)
-//      result.push_back(inst);
-//  }
-//
-//  return result;
-//}
-
-//------------------------------------------------------------------------------
 InstVector filterUsers(InstVector &insts, BasicBlock *block) {
   InstVector result;
   for (InstVector::iterator iter = insts.begin(), end = insts.end();

@@ -98,6 +98,7 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
 
   // Collect analysis results.
   InstVector TIds = SDDA->getThreadIds();
+  dumpVector(TIds);
   InstVector Insts = SDDA->getInstToRepOutsideRegions();
 
   NumReplicated = Insts.size();

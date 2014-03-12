@@ -1240,3 +1240,16 @@ Instruction *findFirstUser(Instruction *I) {
 
   return firstUser;
 }
+
+//------------------------------------------------------------------------------
+bool IsIntCast(Instruction *I) {
+  if(CallInst *call = dyn_cast<CallInst>(I)) {
+    Function *callee = call->getCalledFunction();
+    std::string name = callee->getName();
+    bool begin = (name[0] == '_' && name[1] == 'Z');
+    bool value = ((name.find("as_uint") != std::string::npos) ||
+                  (name.find("as_int") != std::string::npos));
+    return begin && value;
+  }
+  return false;
+}

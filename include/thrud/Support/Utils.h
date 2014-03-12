@@ -218,6 +218,7 @@ bool isMathName(std::string fName);
 bool isLocalMemoryAccess(Instruction *I);
 bool isLocalMemoryStore(Instruction *I);
 bool isLocalMemoryLoad(Instruction *I);
+bool IsIntCast(Instruction *I);
 
 //------------------------------------------------------------------------------
 bool isUsedOutsideOfDefiningBlock(const Instruction *I);

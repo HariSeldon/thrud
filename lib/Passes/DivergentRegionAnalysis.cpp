@@ -77,7 +77,6 @@ bool DivergentRegionAnalysis::runOnFunction(Function &F) {
   BranchVector TIdBs = GetThreadDepBranches(Branches, VTIds);
 
   Regions = GetDivergentRegions(TIdBs, DT, PDT, LI);
-
   return false;
 }
 

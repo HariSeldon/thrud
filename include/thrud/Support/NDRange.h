@@ -38,12 +38,14 @@ public:
   bool IsGlobalSize(Instruction *I);
   bool IsLocalSize(Instruction *I);
   bool IsGroupId(Instruction *I);
+  bool IsGroupsNum(Instruction *I);
   
   bool IsGlobal(Instruction *I, int direction);
   bool IsLocal(Instruction *I, int direction);
   bool IsGlobalSize(Instruction *I, int direction);
   bool IsLocalSize(Instruction *I, int direction);
   bool IsGroupId(Instruction *I, int direction);
+  bool IsGroupsNum(Instruction *I, int dimension);
 
   void dump();
 
@@ -53,6 +55,7 @@ public:
   static std::string GET_GLOBAL_SIZE;
   static std::string GET_LOCAL_SIZE;
   static std::string GET_GROUP_ID;
+  static std::string GET_GROUPS_NUMBER;
   static unsigned int DIRECTION_NUMBER;
 
 private:

@@ -71,6 +71,8 @@ unsigned int NDRangePoint::getCoordinate(const std::string &name,
     return getLocalSize(direction);
   if (name == NDRange::GET_GLOBAL_ID)
     return getGlobal(direction); 
+  if (name == NDRange::GET_GROUPS_NUMBER)
+    return getGroupNumber(direction);
 
   return 0;
 }

@@ -14,7 +14,7 @@ TMP_NAME=$THRUD_DIR/tmp.ll
 LINKER_OUTPUT=$THRUD_DIR/linked.bc
 EXTRACTOR_INPUT=$THRUD_DIR/extractor_input.bc
 
-OCLDEF=$THRUD_DIR/ocldef_intel.h
+OCLDEF=$THRUD_DIR/ocldef.h
 OPTIMIZATION=-O3
 
 if [ $# -ne 3 ]

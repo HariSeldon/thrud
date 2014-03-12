@@ -66,9 +66,11 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   NDR = &getAnalysis<NDRange>();
 
 //  TIds = FindThreadIds(Func, CoarseningDirection);
-  TIds = NDR->getTids();
+  TIds = NDR->getTids(CoarseningDirection);
 
-  AllTIds = NDR->getTids(CoarseningDirection);
+  AllTIds = NDR->getTids();
+  dumpVector(AllTIds);
+  llvm::errs() << "-------------\n";
   Sizes = NDR->getSizes(CoarseningDirection);
 //  AllTIds = FindThreadIds(Func);
 //  Sizes = FindSpaceSizes(Func, CoarseningDirection);

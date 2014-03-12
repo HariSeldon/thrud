@@ -5,6 +5,7 @@ std::string NDRange::GET_LOCAL_ID = "get_local_id";
 std::string NDRange::GET_GLOBAL_SIZE = "get_global_size";
 std::string NDRange::GET_LOCAL_SIZE = "get_local_size";
 std::string NDRange::GET_GROUP_ID = "get_group_id";
+std::string NDRange::GET_GROUPS_NUMBER = "get_num_groups";
 unsigned int NDRange::DIRECTION_NUMBER = 3;
 
 NDRange::NDRange() : FunctionPass(ID) {}
@@ -21,6 +22,7 @@ bool NDRange::runOnFunction(Function &Func) {
   FindOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_SIZE, F);
   FindOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_SIZE, F);
   FindOpenCLFunctionCallsByNameAllDirs(GET_GROUP_ID, F);
+  FindOpenCLFunctionCallsByNameAllDirs(GET_GROUPS_NUMBER, F);
   return false;
 }
 
@@ -45,8 +47,10 @@ InstVector NDRange::getSizes() {
     std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
     InstVector globalSizes = DirInsts[GET_GLOBAL_SIZE];
     InstVector localSizes = DirInsts[GET_LOCAL_SIZE];
+    InstVector numGroups = DirInsts[GET_GROUPS_NUMBER];
     result.insert(result.end(), globalSizes.begin(), globalSizes.end());
     result.insert(result.end(), localSizes.begin(), localSizes.end());
+    result.insert(result.end(), numGroups.begin(), numGroups.end());
   }
   return result;
 }
@@ -68,8 +72,10 @@ InstVector NDRange::getSizes(unsigned int direction) {
   std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
   InstVector globalSizes = DirInsts[GET_GLOBAL_SIZE];
   InstVector localSizes = DirInsts[GET_LOCAL_SIZE];
+  InstVector numGroups = DirInsts[GET_GROUPS_NUMBER];
   result.insert(result.end(), globalSizes.begin(), globalSizes.end());
   result.insert(result.end(), localSizes.begin(), localSizes.end());
+  result.insert(result.end(), numGroups.begin(), numGroups.begin());
   return result;
 }
 
@@ -101,6 +107,8 @@ std::string NDRange::getType(Instruction *I) {
     return GET_GLOBAL_SIZE;
   if (IsLocalSize(I))
     return GET_LOCAL_SIZE;
+  if (IsGroupsNum(I))
+    return GET_GROUPS_NUMBER;
   return "";
 }
 
@@ -108,7 +116,7 @@ unsigned int NDRange::getDirection(Instruction *I) {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     bool result = IsGlobal(I, direction) || IsLocal(I, direction) ||
                   IsGlobalSize(I, direction) || IsLocalSize(I, direction) ||
-                  IsGroupId(I, direction);
+                  IsGroupId(I, direction) || IsGroupsNum(I, direction);
     if (result == true)
       return direction;
   }
@@ -155,6 +163,14 @@ bool NDRange::IsGroupId(Instruction *I) {
   return result;
 }
 
+bool NDRange::IsGroupsNum(Instruction *I) {
+  bool result = false;
+  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+    result |= IsGroupsNum(I, direction);
+  }
+  return result;
+}
+
 bool NDRange::IsGlobal(Instruction *I, int direction) {
   return IsPresentInDirection(I, GET_GLOBAL_ID, direction);
 }
@@ -175,6 +191,10 @@ bool NDRange::IsGroupId(Instruction *I, int direction) {
   return IsPresentInDirection(I, GET_GROUP_ID, direction);
 }
 
+bool NDRange::IsGroupsNum(Instruction *I, int direction) {
+  return IsPresentInDirection(I, GET_GROUPS_NUMBER, direction);
+}
+
 void NDRange::dump() {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
@@ -189,6 +209,8 @@ void NDRange::dump() {
     dumpVector(DirInsts[GET_GLOBAL_SIZE]);
     llvm::errs() << GET_LOCAL_SIZE << "\n";
     dumpVector(DirInsts[GET_LOCAL_SIZE]);
+    llvm::errs() << GET_GROUPS_NUMBER << "\n";
+    dumpVector(DirInsts[GET_GROUPS_NUMBER]);
   }
 }
 
@@ -207,6 +229,7 @@ void NDRange::Init() {
     DirInsts[GET_GLOBAL_SIZE] = InstVector();
     DirInsts[GET_LOCAL_SIZE] = InstVector();
     DirInsts[GET_GROUP_ID] = InstVector();
+    DirInsts[GET_GROUPS_NUMBER] = InstVector();
   }
 }
 

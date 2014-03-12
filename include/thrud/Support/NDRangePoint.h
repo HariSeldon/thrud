@@ -23,6 +23,7 @@ public:
   unsigned int getLocal(unsigned int direction) const;
   unsigned int getGlobal(unsigned int direction) const;
   unsigned int getGroup(unsigned int direction) const;
+  unsigned int getNumberGroups(unsigned int direction) const;
   unsigned int getLocalSize(unsigned int direction) const;
   unsigned int getGlobalSize(unsigned int direction) const;
   unsigned int getGroupNumber(unsigned int direction) const;
