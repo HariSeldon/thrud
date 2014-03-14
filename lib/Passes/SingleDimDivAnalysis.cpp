@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-extern cl::opt<int> CoarseningDirection;
+extern cl::opt<int> CoarseningDirectionCL;
 
 SingleDimDivAnalysis::SingleDimDivAnalysis() : FunctionPass(ID) {}
 
@@ -66,12 +66,11 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   NDR = &getAnalysis<NDRange>();
 
 //  TIds = FindThreadIds(Func, CoarseningDirection);
-  TIds = NDR->getTids(CoarseningDirection);
+  TIds = NDR->getTids(CoarseningDirectionCL);
 
   AllTIds = NDR->getTids();
-  dumpVector(AllTIds);
   llvm::errs() << "-------------\n";
-  Sizes = NDR->getSizes(CoarseningDirection);
+  Sizes = NDR->getSizes(CoarseningDirectionCL);
 //  AllTIds = FindThreadIds(Func);
 //  Sizes = FindSpaceSizes(Func, CoarseningDirection);
 //  GroupIds = FindGroupIds(Func);

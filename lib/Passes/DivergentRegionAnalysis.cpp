@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-cl::opt<int> CoarseningDirection("coarsening-direction", cl::init(-1),
+cl::opt<int> CoarseningDirectionCL("coarsening-direction", cl::init(0),
                                  cl::Hidden,
                                  cl::desc("The coarsening direction"));
 
@@ -64,7 +64,7 @@ bool DivergentRegionAnalysis::runOnFunction(Function &F) {
   DominatorTree *DT = &getAnalysis<DominatorTree>();
   LoopInfo *LI = &getAnalysis<LoopInfo>();
   NDRange *NDR = &getAnalysis<NDRange>();
-  unsigned int CD = CoarseningDirection;
+  unsigned int CD = CoarseningDirectionCL;
 
   // Find all branches.
   BranchVector Branches = FindBranches(F);

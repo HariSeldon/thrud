@@ -36,11 +36,14 @@ void ApplyMap(Instruction *Inst, Map &map);
 void ApplyMap(BasicBlock *BB, Map &map);
 void ApplyMapToPHIs(BasicBlock *BB, Map &map);
 void ApplyMapToPhiBlocks(PHINode *Phi, Map &map);
+
+void ApplyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF);
+
 // Prints to stderr the given map. For debug only.
 void printMap(const Map &map);
 
 // Replate all the usages of O with N.
-void SubstituteUsages(Value *O, Value *N);
+void replaceUses(Value *O, Value *N);
 void BuildExitingPhiMap(BasicBlock *OldExiting, BasicBlock *NewExiting,
                         Map &map);
 void RemapBlocksInPHIs(BasicBlock *Target, BasicBlock *OldBlock,
@@ -110,7 +113,9 @@ unsigned int getInstructionNumberInRegion(DivergentRegion *R);
 void ListBlocksImpl(const BasicBlock *End, BasicBlock *BB, BlockSet &Set);
 BlockVector InsertChildren(BasicBlock *BB, BlockSet &Set);
 BlockVector BuildPredList(RegionVector &Regions, LoopInfo *LI);
+BasicBlock *GetPred(DivergentRegion *R, LoopInfo *LI);
 std::vector<RegionBounds *> BuildInsertionPoints(RegionVector &Regions);
+RegionBounds *GetInsertionPoints(DivergentRegion *R);
 
 // Cloning support.
 void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *DT);

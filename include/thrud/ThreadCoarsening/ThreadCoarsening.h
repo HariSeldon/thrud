@@ -12,11 +12,21 @@
 
 using namespace llvm;
 
-namespace llvm { class BasicBlock; }
+namespace llvm {
+class BasicBlock;
+}
 
 class ThreadCoarsening : public FunctionPass {
   void operator=(const ThreadCoarsening &);   // Do not implement.
   ThreadCoarsening(const ThreadCoarsening &); // Do not implement.
+
+public:
+  enum DivRegionOption {
+    FullReplication,
+    TrueBranchMerging,
+    FalseBranchMerging,
+    FullMerging
+  };
 
 public:
   static char ID;
@@ -26,32 +36,45 @@ public:
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
 
 private:
-  void DuplicateInsts(InstVector &Insts, InstPairs &IP, Map &map,
-                      unsigned int CI);
-  void RenameInstructionWithIndex(Instruction *I, StringRef oldName,
-                                  unsigned int index);
+  // NDRange scaling.
+  void scaleNDRange();
+  void scaleSizes();
+  void scaleIds();
 
-  InstVector createOffsetInsts(Value *tId, unsigned int CoarseningFactor,
-                               unsigned int index);
+  // Coarsening.
+  void coarsenFunction();
+  void replicateInst(Instruction *Inst);
+  void replicateRegion(DivergentRegion *R);
+  void replicateRegionClassic(DivergentRegion *R);
+  void replicateRegionFalseMerging(DivergentRegion *R);
+  void replicateRegionTrueMerging(DivergentRegion *R);
+  void replicateRegionFullMerging(DivergentRegion *R);
+  Instruction *getCoarsenedInstruction(Instruction *inst,
+                                       unsigned int coarseningIndex);
+  void renameInst(Instruction *I, StringRef oldName, unsigned int index);
 
-  InstVector ScaleSizeAndIds(unsigned int CD, unsigned int CF, unsigned int ST,
-                             InstVector &InstsTid);
-  void InsertSizeScale(unsigned int CD, unsigned int CF, unsigned int ST);
-  InstVector InsertIdOffset(unsigned int CD, unsigned int CF, unsigned int ST,
-                            InstVector &InstsTid);
+  // Manage placeholders.
+  void replacePlaceholders(); 
 
-  void InsertReplicatedInst(InstPairs &IP, Map &map);
-
-  void PerformDuplication();
-
-  void BuildPhiNodeMap(BasicBlock *OldBlock, BasicBlock *NewBlock, Map &map);
+//  void InsertReplicatedInst(InstPairs &IP, Map &map);
+//  void PerformDuplication();
+//  void BuildPhiNodeMap(BasicBlock *OldBlock, BasicBlock *NewBlock, Map &map);
 
 private:
-  PostDominatorTree *PDT;
-  DominatorTree *DT;
-  RegionInfo *RI;
-  SingleDimDivAnalysis *SDDA;
-  LoopInfo *LI;
+  unsigned int direction;
+  unsigned int factor;
+  unsigned int stride;
+  DivRegionOption divRegionOption; 
+
+  PostDominatorTree *pdt;
+  DominatorTree *dt;
+  RegionInfo *regionInfo;
+  SingleDimDivAnalysis *sdda;
+  LoopInfo *loopInfo;
+
+  CoarseningMap cMap;
+  CoarseningMap PHMap;
+  Map PHReplacementMap;
 };
 
 #endif

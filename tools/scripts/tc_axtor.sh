@@ -37,6 +37,7 @@ $OPT -mem2reg \
      -coarsening-direction ${COARSENING_DIRECTION} \
      -coarsening-stride ${COARSENING_STRIDE} -o - | \
 ${LLVM_DIS} -o ${TMP_FILE}
-${AXTOR} ${TMP_FILE} -m OCL -o ${OUTPUT_FILE} 
-
+cat ${TMP_FILE}
+#${AXTOR} ${TMP_FILE} -m OCL -o ${OUTPUT_FILE} 
+#
 rm ${TMP_FILE}

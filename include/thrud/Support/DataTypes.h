@@ -1,6 +1,7 @@
 #include "llvm/ADT/ValueMap.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
+#include <map>
 #include <set>
 #include <stack>
 #include <vector>
@@ -33,3 +34,4 @@ typedef std::vector<PHINode *> PHIVector;
 typedef std::pair<BranchInst *, BasicBlock *> Border;
 typedef std::vector<Border> BorderVector;
 typedef std::stack<BasicBlock *> BlockStack;
+typedef std::map<Instruction *, InstVector> CoarseningMap;

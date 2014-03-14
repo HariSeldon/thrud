@@ -73,6 +73,23 @@ void ApplyMapToPhiBlocks(PHINode *Phi, Map &map) {
 }
 
 //------------------------------------------------------------------------------
+void ApplyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF) {
+  for (unsigned op = 0, opE = Inst->getNumOperands(); op != opE; ++op) {
+    Instruction *Op = dyn_cast<Instruction>(Inst->getOperand(op));
+    CoarseningMap::iterator It = map.find(Op);
+
+    if (It != map.end()) {
+      InstVector &V = It->second;
+      Value *NewValue = V.at(CF);
+      Inst->setOperand(op, NewValue);
+    }
+  }
+
+//  if (PHINode *Phi = dyn_cast<PHINode>(Inst))
+//    ApplyMapToPhiBlocks(Phi, map);
+}
+
+//------------------------------------------------------------------------------
 void ApplyMap(Instruction *Inst, Map &map) {
   for (unsigned op = 0, opE = Inst->getNumOperands(); op != opE; ++op) {
     Value *Op = Inst->getOperand(op);
@@ -107,7 +124,7 @@ void printMap(const Map &map) {
 }
 
 //------------------------------------------------------------------------------
-void SubstituteUsages(Value *O, Value *N) {
+void replaceUses(Value *O, Value *N) {
   std::vector<User *> Uses;
   for (Value::use_iterator I = O->use_begin(), E = O->use_end(); I != E; ++I)
     Uses.push_back(*I);
@@ -504,18 +521,22 @@ bool IsInRegion(BasicBlock *Top, BasicBlock *Bottom, BasicBlock *BB,
 BlockVector BuildPredList(RegionVector &Regions, LoopInfo *LI) {
   BlockVector Preds;
   for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
-       ++I) {
-    BasicBlock *H = (*I)->getHeader();
-    BasicBlock *P = H->getSinglePredecessor();
-    if (P == NULL) {
-      Loop *L = LI->getLoopFor(H);
-      P = L->getLoopPredecessor();
-    }
-    assert(P != NULL && "Region header does not have a single predecessor");
-    Preds.push_back(P);
-  }
+       ++I) 
+    Preds.push_back(GetPred(*I, LI));
 
   return Preds;
+}
+
+//------------------------------------------------------------------------------
+BasicBlock *GetPred(DivergentRegion *R, LoopInfo *LI) {
+  BasicBlock *H = R->getHeader();
+  BasicBlock *P = H->getSinglePredecessor();
+  if (P == NULL) {
+    Loop *L = LI->getLoopFor(H);
+    P = L->getLoopPredecessor();
+  }
+  assert(P != NULL && "Region header does not have a single predecessor");
+  return P;  
 }
 
 //------------------------------------------------------------------------------
@@ -523,14 +544,19 @@ std::vector<RegionBounds *> BuildInsertionPoints(RegionVector &Regions) {
   std::vector<RegionBounds *> InsertionPoints;
   for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
        ++I) {
-    BasicBlock *Exiting = (*I)->getExiting();
-    TerminatorInst *T = Exiting->getTerminator();
-    assert(T->getNumSuccessors() == 1 &&
-           "Divergent region must have one successor only");
-    BasicBlock *Exit = T->getSuccessor(0);
-    InsertionPoints.push_back(new RegionBounds(Exiting, Exit));
+    InsertionPoints.push_back(GetInsertionPoints(*I));
   }
   return InsertionPoints;
+}
+
+//------------------------------------------------------------------------------
+RegionBounds *GetInsertionPoints(DivergentRegion *R) {
+  BasicBlock *Exiting = R->getExiting();
+  TerminatorInst *T = Exiting->getTerminator();
+  assert(T->getNumSuccessors() == 1 &&
+         "Divergent region must have one successor only");
+  BasicBlock *Exit = T->getSuccessor(0);
+  return new RegionBounds(Exiting, Exit);
 }
 
 //------------------------------------------------------------------------------
