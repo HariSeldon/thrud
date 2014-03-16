@@ -16,16 +16,18 @@ class ScalarEvolution;
 class DivergentRegion {
 public:
   enum BoundCheck {
-//    LB,
-//    UB,
-//    DATA,
+    //    LB,
+    //    UB,
+    //    DATA,
     EQ,
     ND
   };
 
 public:
-  DivergentRegion(BasicBlock *header, BasicBlock *exiting);
-  DivergentRegion(RegionBounds &bounds);
+  DivergentRegion(BasicBlock *header, BasicBlock *exiting, DominatorTree *dt,
+                  PostDominatorTree *pdt);
+  DivergentRegion(RegionBounds &bounds, DominatorTree *dt,
+                  PostDominatorTree *pdt);
 
   // Getter and Setter.
   BasicBlock *getHeader();
@@ -43,17 +45,16 @@ public:
   void setCondition(BoundCheck condition);
   BoundCheck getCondition() const;
 
-  void analyze();
-  bool IsStrict();
-
-  // Region filling.
   void fillRegion(DominatorTree *dt, PostDominatorTree *pdt);
-  void updateRegion();
 
-  bool PerformHeaderCheck(DominatorTree *DT);
-  
+  void analyze();
+  bool isStrict();
+
   unsigned int size();
   void dump();
+
+private:
+  void updateBounds(DominatorTree *dt, PostDominatorTree *pdt); 
 
 private:
   RegionBounds bounds;

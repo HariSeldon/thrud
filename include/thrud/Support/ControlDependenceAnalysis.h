@@ -1,5 +1,5 @@
-#ifndef DEPENCE_ANALYSIS_H
-#define DEPENCE_ANALYSIS_H
+#ifndef CONTROL_DEPENCE_ANALYSIS_H
+#define CONTROL_DEPENCE_ANALYSIS_H
 
 // Implementation based on Ferrante et al. "Program Dependecene Graph and Its
 // Use in Optimization". page 324
@@ -16,38 +16,37 @@
 
 using namespace llvm;
 
-class DependenceAnalysis : public FunctionPass {
-  void operator=(const DependenceAnalysis &);     // Do not implement.
-  DependenceAnalysis(const DependenceAnalysis &); // Do not implement.
-
+class ControlDependenceAnalysis : public FunctionPass {
 public:
   static char ID;
-  DependenceAnalysis();
-  ~DependenceAnalysis();
+  ControlDependenceAnalysis();
+  ~ControlDependenceAnalysis();
 
   virtual bool runOnFunction(Function &function);
   virtual void getAnalysisUsage(AnalysisUsage &au) const;
 
   bool dependsOn(BasicBlock *first, BasicBlock *second);
+  bool dependsOn(Instruction *first, Instruction *second);
   bool dependsOnAny(BasicBlock *block, BlockVector &blocks);
+  bool dependsOnAny(Instruction *inst, InstVector &insts);
   bool controls(BasicBlock *first, BasicBlock *second);
 
   void dump();
 
 private:
   void findS(Function &function);
-  void findLs(); 
+  void findLs();
   void buildGraph();
   void fillGraph(Function &function);
   void transitiveClosure();
   void buildBackwardGraph();
 
 private:
-  typedef std::map<BasicBlock*, BlockVector> GraphMap;
+  typedef std::map<BasicBlock *, BlockVector> GraphMap;
   PostDominatorTree *pdt;
-  GraphMap forwardGraph; 
+  GraphMap forwardGraph;
   GraphMap backwardGraph;
-  std::vector<std::pair<BasicBlock*, BasicBlock*> > s;
+  std::vector<std::pair<BasicBlock *, BasicBlock *> > s;
   std::vector<BasicBlock *> ls;
 };
 

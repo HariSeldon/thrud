@@ -22,7 +22,7 @@ extern const char *BARRIER;
 
 // Loop management.
 bool IsInLoop(const Instruction *inst, LoopInfo *loopInfo);
-bool IsInLoop(const BasicBlock *BB, LoopInfo *loopInfo);
+bool IsInLoop(const BasicBlock *block, LoopInfo *loopInfo);
 
 // OpenCL management.
 bool IsKernel(const Function *F);
@@ -33,8 +33,8 @@ void safeIncrement(std::map<std::string, unsigned int> &inputMap,
 // Map management.
 // Apply the given map to the given instruction.
 void applyMap(Instruction *Inst, Map &map);
-void applyMap(BasicBlock *BB, Map &map);
-void applyMapToPHIs(BasicBlock *BB, Map &map);
+void applyMap(BasicBlock *block, Map &map);
+void applyMapToPHIs(BasicBlock *block, Map &map);
 void applyMapToPhiBlocks(PHINode *Phi, Map &map);
 
 void applyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF);
@@ -60,7 +60,7 @@ BranchVector FindBranches(Function &F);
 template <class InstructionType>
 std::vector<InstructionType *> getInsts(Function &F);
 unsigned int GetOperandPosition(User *U, Value *value);
-void GetPHIs(BasicBlock *BB, PHIVector &Phis);
+void GetPHIs(BasicBlock *block, PHIVector &Phis);
 
 // Function and module management.
 ValueVector GetPointerArgs(Function *F);
@@ -101,16 +101,16 @@ std::vector<T *> difference(const std::vector<T *> &A,
 bool isPresent(const Instruction *inst, const BlockVector &value);
 bool isPresent(const Instruction *inst, std::vector<BlockVector *> &value);
 
-BasicBlock *findImmediatePostDom(BasicBlock *BB, const PostDominatorTree *pdt);
+BasicBlock *findImmediatePostDom(BasicBlock *block, const PostDominatorTree *pdt);
 
 // Block management.
 void changeBlockTarget(BasicBlock *bb, BasicBlock *newTarget);
 
 // Region analysis.
-BlockVector InsertChildren(BasicBlock *BB, BlockSet &Set);
+BlockVector InsertChildren(BasicBlock *block, BlockSet &Set);
 
 // Cloning support.
-void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *dt);
+void CloneDominatorInfo(BasicBlock *block, Map &map, DominatorTree *dt);
 
 // Domination.
 //bool IsTopLevel(const Instruction *inst, const PostDominatorTree *pdt);
@@ -118,23 +118,21 @@ void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *dt);
 //                                  const PostDominatorTree *pdt);
 BranchVector FindOutermostBranches(BranchSet Branches, const DominatorTree *dt,
                                    const PostDominatorTree *pdt);
-BranchInst *FindOutermostBranch(BranchSet &Bs, const DominatorTree *dt);
+BranchInst *FindOutermostBranch(BranchSet &blocks, const DominatorTree *dt);
 
-bool IsInRegion(BasicBlock *Top, BasicBlock *Bottom, BasicBlock *BB,
+bool IsInRegion(BasicBlock *Top, BasicBlock *Bottom, BasicBlock *block,
                 const DominatorTree *dt, const PostDominatorTree *pdt);
-bool IsDominated(const Instruction *inst, BranchSet &Bs, const DominatorTree *dt);
-bool IsDominated(const Instruction *inst, BranchVector &Bs,
+bool isDominated(const Instruction *inst, BranchSet &blocks, const DominatorTree *dt);
+bool isDominated(const Instruction *inst, BranchVector &blocks,
                  const DominatorTree *dt);
-bool IsDominated(const BasicBlock *BB, const BlockVector &Bs,
+bool isDominated(const BasicBlock *block, const BlockVector &blocks,
                  const DominatorTree *dt);
-bool Dominates(const BasicBlock *BB, const BranchVector &Bs,
+bool dominates(const BasicBlock *block, const BranchVector &blocks,
                const DominatorTree *dt);
-bool DominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
+bool dominatesAll(const BasicBlock *block, const BlockVector &blocks,
                   const DominatorTree *dt);
-bool PostDominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
+bool postdominatesAll(const BasicBlock *block, const BlockVector &blocks,
                       const PostDominatorTree *pdt);
-RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *dt,
-                         PostDominatorTree *pdt);
 
 // Dependance analysis.
 // Return true if value depends on any of the values in Rs.
@@ -173,7 +171,7 @@ Function *GetOpenCLFunctionByName(std::string calleeName, Function *caller);
 // Find all the instructions which depend on the TId.
 InstVector FindThreadDepInst(Function *F, ValueVector &TIds);
 
-BranchVector GetThreadDepBranches(BranchVector &Bs, ValueVector TIds);
+BranchVector GetThreadDepBranches(BranchVector &blocks, ValueVector TIds);
 
 //------------------------------------------------------------------------------
 // Divergent regions analysis.

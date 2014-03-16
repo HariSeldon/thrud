@@ -416,7 +416,7 @@ BranchVector FindOutermostBranches(BranchSet Branches, const DominatorTree *DT,
 BranchInst *FindOutermostBranch(BranchSet &Bs, const DominatorTree *DT) {
   for (BranchSet::iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
     BranchInst *B = *I;
-    if (!IsDominated(B, Bs, DT))
+    if (!isDominated(B, Bs, DT))
       return B;
   }
   return NULL;
@@ -429,7 +429,7 @@ bool IsInRegion(BasicBlock *Top, BasicBlock *Bottom, BasicBlock *BB,
 }
 
 //------------------------------------------------------------------------------
-bool IsDominated(const Instruction *I, BranchVector &Bs,
+bool isDominated(const Instruction *I, BranchVector &Bs,
                  const DominatorTree *DT) {
   bool isDominated = false;
   const BasicBlock *BI = I->getParent();
@@ -444,7 +444,7 @@ bool IsDominated(const Instruction *I, BranchVector &Bs,
 }
 
 //------------------------------------------------------------------------------
-bool IsDominated(const Instruction *I, BranchSet &Bs, const DominatorTree *DT) {
+bool isDominated(const Instruction *I, BranchSet &Bs, const DominatorTree *DT) {
   bool isDominated = false;
   const BasicBlock *BI = I->getParent();
   for (BranchSet::const_iterator Iter = Bs.begin(), E = Bs.end(); Iter != E;
@@ -458,7 +458,7 @@ bool IsDominated(const Instruction *I, BranchSet &Bs, const DominatorTree *DT) {
 }
 
 //------------------------------------------------------------------------------
-bool IsDominated(const BasicBlock *BB, const BlockVector &Bs,
+bool derderisDominated(const BasicBlock *BB, const BlockVector &Bs,
                  const DominatorTree *DT) {
   bool isDominated = false;
   for (BlockVector::const_iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
@@ -471,7 +471,7 @@ bool IsDominated(const BasicBlock *BB, const BlockVector &Bs,
 }
 
 //------------------------------------------------------------------------------
-bool DominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
+bool dominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
                   const DominatorTree *DT) {
   bool DomAll = true;
   for (BlockVector::const_iterator I = Blocks.begin(), E = Blocks.end(); I != E;
@@ -481,29 +481,13 @@ bool DominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
 }
 
 //------------------------------------------------------------------------------
-bool PostDominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
+bool PostdominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
                       const PostDominatorTree *PDT) {
   bool DomAll = true;
   for (BlockVector::const_iterator I = Blocks.begin(), E = Blocks.end(); I != E;
        ++I)
     DomAll &= PDT->dominates(BB, *I);
   return DomAll;
-}
-
-//------------------------------------------------------------------------------
-RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *DT,
-                         PostDominatorTree *PDT) {
-  BasicBlock *Header = NULL;
-  BasicBlock *Exiting = NULL;
-  for (BlockVector::iterator I = Blocks.begin(), E = Blocks.end(); I != E;
-       ++I) {
-    BasicBlock *BB = *I;
-    if (DominatesAll(BB, Blocks, DT))
-      Header = BB;
-    else if (PostDominatesAll(BB, Blocks, PDT))
-      Exiting = BB;
-  }
-  return new RegionBounds(Header, Exiting);
 }
 
 //------------------------------------------------------------------------------

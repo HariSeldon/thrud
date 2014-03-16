@@ -164,7 +164,7 @@ void ThreadCoarsening::replacePlaceholders() {
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegion(DivergentRegion * region) {
   // Do not replicate if the region is strict.
-  if (region->IsStrict())
+  if (region->isStrict())
     return;
 
   switch (divRegionOption) {

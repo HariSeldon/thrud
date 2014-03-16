@@ -5,6 +5,8 @@
 #include "thrud/Support/DivergentRegion.h"
 #include "thrud/Support/NDRange.h"
 
+#include "thrud/Support/ControlDependenceAnalysis.h"
+
 #include "llvm/Pass.h"
 
 #include "llvm/Analysis/PostDominators.h"
@@ -32,17 +34,20 @@ protected:
   void findBranches();
   void findRegions();
   void findExternalInsts();
+  void findOutermostBranches(InstVector &result);
 
 protected:
   InstVector divInsts;
   InstVector externalDivInsts;
   InstVector divBranches;
-  RegionVector divRegions;
+  RegionVector regions;
 
   NDRange *ndr;
   PostDominatorTree *pdt;
   DominatorTree *dt;
   LoopInfo *loopInfo;
+  ControlDependenceAnalysis *cda;
+  
 };
 
 #endif

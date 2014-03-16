@@ -30,9 +30,7 @@ using namespace llvm;
 // Support functions.
 // -----------------------------------------------------------------------------
 void findUsesOf(Instruction *inst, InstSet &result);
-Instruction *findOutermostBranch(InstVector &insts, const DominatorTree *dt);
-InstVector findOutermostBranches(InstVector &branches, const DominatorTree *dt,
-                                 const PostDominatorTree *pdt);
+bool isExternal(Instruction *inst, RegionVector &regions);
 
 // DivergenceAnalysis.
 // -----------------------------------------------------------------------------
@@ -44,6 +42,7 @@ void DivergenceAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<PostDominatorTree>();
   au.addRequired<DominatorTree>();
   au.addRequired<NDRange>();
+  au.addRequired<ControlDependenceAnalysis>();
   au.setPreservesAll();
 }
 
@@ -57,6 +56,7 @@ bool DivergenceAnalysis::runOnFunction(Function &functionRef) {
   dt = &getAnalysis<DominatorTree>();
   loopInfo = &getAnalysis<LoopInfo>();
   ndr = &getAnalysis<NDRange>();
+  cda = &getAnalysis<ControlDependenceAnalysis>();
 
   performAnalysis();
   findBranches();
@@ -108,55 +108,45 @@ void DivergenceAnalysis::findBranches() {
       divBranches.push_back(*iter);
     }
   }
+}
 
-//  while (BranchInst *Top = findOutermostBranch(Branches, dt)) {
-//    Result.push_back(Top);
-//    Remove(Branches, Top);
-//    BasicBlock *TopBlock = Top->getParent();
-//    BasicBlock *Exiting = findImmediatePostDom(TopBlock, PDT);
-//    BranchSet ToRemove;
-//    for (BranchSet::iterator I = Branches.begin(), E = Branches.end(); I != E;
-//         ++I) {
-//      BranchInst *Branch = *I;
-//      BasicBlock *BB = Branch->getParent();
-//      if (BB != TopBlock && BB != Exiting &&
-//          IsInRegion(TopBlock, Exiting, BB, DT, PDT))
-//        ToRemove.insert(Branch);
-//    }
-//    Remove(Branches, ToRemove);
-//  }
-//  return Result;
-  
-  
-
+void DivergenceAnalysis::findOutermostBranches(InstVector &result) {
+  for (InstVector::iterator iter = divBranches.begin(),
+                            iterEnd = divBranches.end();
+       iter != iterEnd; ++iter) {
+    Instruction *inst = *iter;
+    if (!cda->dependsOnAny(inst, divBranches)) {
+      result.push_back(inst);
+    }
+  }
 }
 
 void DivergenceAnalysis::findRegions() {
-//  BranchSet allBranches(branches.begin(), branches.end());
-//  BranchVector Bs = findOutermostBranches(allBranches, dt, pdt);
-//
-//  for (BranchVector::iterator iter = Bs.begin(), iterEnd = Bs.end();
-//       iter != iterEnd; ++iter) {
-//    BasicBlock *block = (*iter)->getParent();
-//    BasicBlock *postDom = findImmediatePostDom(block, pdt);
-//
-//    if (loopInfo->isLoopHeader(block)) {
-//      Loop *loop = loopInfo->getLoopFor(block);
-//      if (loop == loopInfo->getLoopFor(postDom))
-//        postDom = loop->getExitBlock();
-//    }
-//
-//    regions.push_back(new DivergentRegion(block, postDom));
-//  }
-//
-//  // FIXME: remove this adding fill region to the region construction.
-//  for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
-//       iter != iterEnd; ++iter) {
-//    (*iter)->fillRegion(dt, pdt);
-//  }
+  InstVector branches;
+  findOutermostBranches(branches);
+
+  for (InstVector::iterator iter = branches.begin(), iterEnd = branches.end();
+       iter != iterEnd; ++iter) {
+    BasicBlock *header = (*iter)->getParent();
+    BasicBlock *exiting = findImmediatePostDom(header, pdt);
+
+    if (loopInfo->isLoopHeader(header)) {
+      Loop *loop = loopInfo->getLoopFor(header);
+      if (loop == loopInfo->getLoopFor(exiting))
+        exiting = loop->getExitBlock();
+    }
+
+    regions.push_back(new DivergentRegion(header, exiting, dt, pdt));
+  }
 }
 
 void DivergenceAnalysis::findExternalInsts() {
+  for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();
+       iter != iterEnd; ++iter) {
+    if (isExternal(*iter, regions)) {
+      externalDivInsts.push_back(*iter);
+    }
+  }
 }
 
 // Support functions.
@@ -171,39 +161,13 @@ void findUsesOf(Instruction *inst, InstSet &result) {
   }
 }
 
-//------------------------------------------------------------------------------
-Instruction *findOutermostBranch(InstSet &insts, const DominatorTree *dt) {
-//  for (InstSet::iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
-//    BranchInst *B = *I;
-//    if (!IsDominated(B, Bs, DT))
-//      return B;
-//  }
-//  return NULL;
+bool isExternal(Instruction *inst, RegionVector &regions) {
+  bool result = false;
+  for (RegionVector::const_iterator iter = regions.begin(),
+                                    iterEnd = regions.end();
+       iter != iterEnd; ++iter) {
+    DivergentRegion *region = *iter;
+    result |= contains(*region, inst);
+  }
+  return !result;
 }
-
-////------------------------------------------------------------------------------
-//BranchVector FindOutermostBranches(BranchSet &Branches, const DominatorTree *dt,
-//                                   const PostDominatorTree *pdt) {
-//  BranchVector Result;
-//  while (BranchInst *Top = FindOutermostBranch(Branches, DT)) {
-//    Result.push_back(Top);
-//    Remove(Branches, Top);
-//    BasicBlock *TopBlock = Top->getParent();
-//    BasicBlock *Exiting = findImmediatePostDom(TopBlock, PDT);
-//    BranchSet ToRemove;
-//    for (BranchSet::iterator I = Branches.begin(), E = Branches.end(); I != E;
-//         ++I) {
-//      BranchInst *Branch = *I;
-//      BasicBlock *BB = Branch->getParent();
-//      if (BB != TopBlock && BB != Exiting &&
-//          IsInRegion(TopBlock, Exiting, BB, DT, PDT))
-//        ToRemove.insert(Branch);
-//    }
-//    Remove(Branches, ToRemove);
-//  }
-//  return Result;
-//}
-
-char DivergenceAnalysis::ID = 0;
-static RegisterPass<DivergenceAnalysis>
-    X("divergence-analysis", "OpenCL divergence analysis");

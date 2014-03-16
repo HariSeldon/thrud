@@ -12,16 +12,26 @@
 
 #include <numeric>
 
-DivergentRegion::DivergentRegion(BasicBlock *header, BasicBlock *exiting)
+DivergentRegion::DivergentRegion(BasicBlock *header, BasicBlock *exiting,
+                                 DominatorTree *dt, PostDominatorTree *pdt)
     : condition(DivergentRegion::ND) {
   bounds.setHeader(header);
   bounds.setExiting(exiting);
-  updateRegion();
+
+  fillRegion(dt, pdt);
+
+  // Check that the header dominates all the blocks in the region.
+  assert(dominatesAll(bounds.getHeader(), blocks, dt) == true &&
+         "Header does not dominate all blocks");
 }
 
-DivergentRegion::DivergentRegion(RegionBounds &bounds)
+DivergentRegion::DivergentRegion(RegionBounds &bounds, DominatorTree *dt,
+                                 PostDominatorTree *pdt)
     : bounds(bounds), condition(DivergentRegion::ND) {
-  updateRegion();
+  fillRegion(dt, pdt);
+  // Check that the header dominates all the blocks in the region.
+  assert(dominatesAll(bounds.getHeader(), blocks, dt) == true &&
+         "Header does not dominate all blocks");
 }
 
 BasicBlock *DivergentRegion::getHeader() { return bounds.getHeader(); }
@@ -42,24 +52,28 @@ RegionBounds &DivergentRegion::getBounds() { return bounds; }
 BlockVector &DivergentRegion::getBlocks() { return blocks; }
 
 void DivergentRegion::fillRegion(DominatorTree *dt, PostDominatorTree *pdt) {
-//  blocks = listBlocks(bounds);
-//
-//  // If H is dominated by a block in the region than recompute the bounds.
-//  if (IsDominated(bounds.getHeader(), *blocks, DT)) {
-//    bounds = FindBounds(*blocks, DT, PDT);
-//  }
-}
+  listBlocks(bounds, blocks);
 
-void DivergentRegion::updateRegion() { listBlocks(bounds, blocks); }
-
-//------------------------------------------------------------------------------
-// Checks if the header of the region dominates all the blocks in the region.
-bool DivergentRegion::PerformHeaderCheck(DominatorTree *DT) {
-  return DominatesAll(bounds.getHeader(), blocks, DT);
+  // If H is dominated by a block in the region than recompute the bounds.
+  if (isDominated(bounds.getHeader(), blocks, dt)) {
+    updateBounds(dt, pdt);
+  }
 }
 
 //------------------------------------------------------------------------------
-bool DivergentRegion::IsStrict() { return condition == DivergentRegion::EQ; }
+void DivergentRegion::updateBounds(DominatorTree *dt, PostDominatorTree *pdt) {
+  for (BlockVector::iterator iter = blocks.begin(), iterEnd = blocks.end(); iter != iterEnd;
+       ++iter) {
+    BasicBlock *block = *iter;
+    if (dominatesAll(block, blocks, dt))
+      bounds.setHeader(block);
+    else if (postdominatesAll(block, blocks, pdt))
+      bounds.setExiting(block);
+  }
+}
+
+//------------------------------------------------------------------------------
+bool DivergentRegion::isStrict() { return condition == DivergentRegion::EQ; }
 
 //------------------------------------------------------------------------------
 void DivergentRegion::setCondition(DivergentRegion::BoundCheck condition) {
@@ -91,7 +105,7 @@ void DivergentRegion::dump() {
   errs() << "Blocks: ";
   for (DivergentRegion::iterator iter = begin(), iterEnd = end();
        iter != iterEnd; ++iter) {
-    errs() << (*iter)->getName() << " -- ";
+    errs() << (*iter)->getName() << ", ";
   }
   errs() << "\nCondition: ";
   switch (getCondition()) {

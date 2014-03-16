@@ -91,7 +91,9 @@ bool BranchExtraction::runOnFunction(Function &F) {
     Instruction *FirstNonPHI = Exiting->getFirstNonPHI();
     SplitBlock(Exiting, FirstNonPHI, this);
     R->setHeader(NewHeader);
-    R->updateRegion();
+    errs() << "FAILURE Update region!\n";
+    exit(1);
+    //R->updateRegion();
     isolateRegion(R);
   }
 
