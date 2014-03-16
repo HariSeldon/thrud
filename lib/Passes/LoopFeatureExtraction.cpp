@@ -10,7 +10,7 @@ cl::opt<std::string> loopKernelName("count-loop-kernel-name", cl::init(""),
                                     cl::Hidden,
                                     cl::desc("Name of the kernel to analyze"));
 
-extern int CoarseningDirection;
+extern cl::opt<unsigned int> CoarseningDirectionCL;
 
 char OpenCLLoopFeatureExtractor::ID = 0;
 static RegisterPass<OpenCLLoopFeatureExtractor>
@@ -83,7 +83,7 @@ void OpenCLLoopFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirection);
+  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------

@@ -203,3 +203,7 @@ Instruction *findOutermostBranch(InstSet &insts, const DominatorTree *dt) {
 //  }
 //  return Result;
 //}
+
+char DivergenceAnalysis::ID = 0;
+static RegisterPass<DivergenceAnalysis>
+    X("divergence-analysis", "OpenCL divergence analysis");

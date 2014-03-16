@@ -48,11 +48,13 @@ private:
   void replicateRegionClassic(DivergentRegion *R);
   void replicateRegionFalseMerging(DivergentRegion *R);
   void replicateRegionTrueMerging(DivergentRegion *R);
+  void replicateRegionMerging(DivergentRegion *R, unsigned int branch);
   void replicateRegionFullMerging(DivergentRegion *R);
+  void applyCoarseningMap(DivergentRegion &region, unsigned int index);
+  void applyCoarseningMap(BasicBlock *block, unsigned int index);
+  void applyCoarseningMap(Instruction *inst, unsigned int index);
   Instruction *getCoarsenedInstruction(Instruction *inst,
                                        unsigned int coarseningIndex);
-  void renameInst(Instruction *I, StringRef oldName, unsigned int index);
-
   // Manage placeholders.
   void replacePlaceholders(); 
 
@@ -73,8 +75,8 @@ private:
   LoopInfo *loopInfo;
 
   CoarseningMap cMap;
-  CoarseningMap PHMap;
-  Map PHReplacementMap;
+  CoarseningMap phMap;
+  Map phReplacementMap;
 };
 
 #endif

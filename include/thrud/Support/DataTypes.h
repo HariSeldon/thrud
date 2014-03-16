@@ -34,4 +34,5 @@ typedef std::vector<PHINode *> PHIVector;
 typedef std::pair<BranchInst *, BasicBlock *> Border;
 typedef std::vector<Border> BorderVector;
 typedef std::stack<BasicBlock *> BlockStack;
+typedef std::deque<Instruction *> InstDeque;
 typedef std::map<Instruction *, InstVector> CoarseningMap;

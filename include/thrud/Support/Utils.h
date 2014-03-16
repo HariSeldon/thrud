@@ -21,8 +21,8 @@ using namespace llvm;
 extern const char *BARRIER;
 
 // Loop management.
-bool IsInLoop(const Instruction *I, LoopInfo *LI);
-bool IsInLoop(const BasicBlock *BB, LoopInfo *LI);
+bool IsInLoop(const Instruction *inst, LoopInfo *loopInfo);
+bool IsInLoop(const BasicBlock *BB, LoopInfo *loopInfo);
 
 // OpenCL management.
 bool IsKernel(const Function *F);
@@ -32,12 +32,14 @@ void safeIncrement(std::map<std::string, unsigned int> &inputMap,
 
 // Map management.
 // Apply the given map to the given instruction.
-void ApplyMap(Instruction *Inst, Map &map);
-void ApplyMap(BasicBlock *BB, Map &map);
-void ApplyMapToPHIs(BasicBlock *BB, Map &map);
-void ApplyMapToPhiBlocks(PHINode *Phi, Map &map);
+void applyMap(Instruction *Inst, Map &map);
+void applyMap(BasicBlock *BB, Map &map);
+void applyMapToPHIs(BasicBlock *BB, Map &map);
+void applyMapToPhiBlocks(PHINode *Phi, Map &map);
 
-void ApplyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF);
+void applyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF);
+
+void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index);
 
 // Prints to stderr the given map. For debug only.
 void printMap(const Map &map);
@@ -46,31 +48,28 @@ void printMap(const Map &map);
 void replaceUses(Value *O, Value *N);
 void BuildExitingPhiMap(BasicBlock *OldExiting, BasicBlock *NewExiting,
                         Map &map);
-void RemapBlocksInPHIs(BasicBlock *Target, BasicBlock *OldBlock,
+void remapBlocksInPHIs(BasicBlock *Target, BasicBlock *OldBlock,
                        BasicBlock *NewBlock);
 void InitializeMap(Map &map, const InstVector &TIds, const InstVector &NewTIds,
                    unsigned int CI, unsigned int CF);
 
 // Instruction management.
-Function *GetFunctionOfInst(Instruction *I);
-const Function *GetFunctionOfInst(const Instruction *I);
+Function *GetFunctionOfInst(Instruction *inst);
+const Function *GetFunctionOfInst(const Instruction *inst);
 BranchVector FindBranches(Function &F);
 template <class InstructionType>
 std::vector<InstructionType *> getInsts(Function &F);
-unsigned int GetOperandPosition(User *U, Value *V);
+unsigned int GetOperandPosition(User *U, Value *value);
 void GetPHIs(BasicBlock *BB, PHIVector &Phis);
 
 // Function and module management.
-ValueVector GetMemoryValues(Function *F);
 ValueVector GetPointerArgs(Function *F);
 InstVector FindArgDepInst(Function *F);
-ValueVector GetLocalBuffers(Function *M);
-bool IsLocalBuffer(const Function *F, const GlobalVariable *GV);
 bool IsUsedInFunction(const Function *F, const GlobalVariable *GV);
 
 // Type management.
 // Build a constant from the given integer.
-unsigned int GetIntWidth(Value *V);
+unsigned int GetIntWidth(Value *value);
 ConstantInt *GetConstantInt(unsigned int value, unsigned int width,
                             LLVMContext &C);
 int GetInteger(const ConstantInt *CI);
@@ -80,12 +79,12 @@ bool IsByPointer(const Argument *A);
 // Container management.
 // Check if the given element is present in the given container.
 template <class T>
-bool IsPresent(const T *value, const std::vector<T *> &vector);
+bool isPresent(const T *value, const std::vector<T *> &vector);
 template <class T>
-bool IsPresent(const T *value, const std::vector<const T *> &vector);
-template <class T> bool IsPresent(const T *value, const std::set<T *> &vector);
+bool isPresent(const T *value, const std::vector<const T *> &vector);
+template <class T> bool isPresent(const T *value, const std::set<T *> &vector);
 template <class T>
-bool IsPresent(const T *value, const std::set<const T *> &vector);
+bool isPresent(const T *value, const std::set<const T *> &vector);
 
 // TODO: remove these and replace with std!!!
 InstVector intersection(const InstVector &A, const InstVector &B);
@@ -99,70 +98,61 @@ template <class T>
 std::vector<T *> difference(const std::vector<T *> &A,
                             const std::vector<T *> &B);
 
-bool IsPresent(const Instruction *I, const BlockVector &V);
-bool IsPresent(const Instruction *I, std::vector<BlockVector *> &V);
+bool isPresent(const Instruction *inst, const BlockVector &value);
+bool isPresent(const Instruction *inst, std::vector<BlockVector *> &value);
 
-BasicBlock *FindImmediatePostDom(BasicBlock *BB, const PostDominatorTree *PDT);
+BasicBlock *findImmediatePostDom(BasicBlock *BB, const PostDominatorTree *pdt);
 
 // Block management.
-void ChangeBlockTarget(BasicBlock *BB, BasicBlock *NewTarget);
+void changeBlockTarget(BasicBlock *bb, BasicBlock *newTarget);
 
 // Region analysis.
-BlockVector *ListBlocks(RegionBounds *Bounds);
-unsigned int getInstructionNumberInRegion(DivergentRegion *R);
-void ListBlocksImpl(const BasicBlock *End, BasicBlock *BB, BlockSet &Set);
 BlockVector InsertChildren(BasicBlock *BB, BlockSet &Set);
-BlockVector BuildPredList(RegionVector &Regions, LoopInfo *LI);
-BasicBlock *GetPred(DivergentRegion *R, LoopInfo *LI);
-std::vector<RegionBounds *> BuildInsertionPoints(RegionVector &Regions);
-RegionBounds *GetInsertionPoints(DivergentRegion *R);
 
 // Cloning support.
-void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *DT);
-RegionBounds CloneRegion(RegionBounds *Bounds, const Twine &suffix,
-                         DominatorTree *DT, Map &map, Map &ToApply);
+void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *dt);
 
 // Domination.
-//bool IsTopLevel(const Instruction *I, const PostDominatorTree *PDT);
+//bool IsTopLevel(const Instruction *inst, const PostDominatorTree *pdt);
 //BranchVector FindTopLevelBranches(BranchSet Branches,
-//                                  const PostDominatorTree *PDT);
-BranchVector FindOutermostBranches(BranchSet Branches, const DominatorTree *DT,
-                                   const PostDominatorTree *PDT);
-BranchInst *FindOutermostBranch(BranchSet &Bs, const DominatorTree *DT);
+//                                  const PostDominatorTree *pdt);
+BranchVector FindOutermostBranches(BranchSet Branches, const DominatorTree *dt,
+                                   const PostDominatorTree *pdt);
+BranchInst *FindOutermostBranch(BranchSet &Bs, const DominatorTree *dt);
 
 bool IsInRegion(BasicBlock *Top, BasicBlock *Bottom, BasicBlock *BB,
-                const DominatorTree *DT, const PostDominatorTree *PDT);
-bool IsDominated(const Instruction *I, BranchSet &Bs, const DominatorTree *DT);
-bool IsDominated(const Instruction *I, BranchVector &Bs,
-                 const DominatorTree *DT);
+                const DominatorTree *dt, const PostDominatorTree *pdt);
+bool IsDominated(const Instruction *inst, BranchSet &Bs, const DominatorTree *dt);
+bool IsDominated(const Instruction *inst, BranchVector &Bs,
+                 const DominatorTree *dt);
 bool IsDominated(const BasicBlock *BB, const BlockVector &Bs,
-                 const DominatorTree *DT);
+                 const DominatorTree *dt);
 bool Dominates(const BasicBlock *BB, const BranchVector &Bs,
-               const DominatorTree *DT);
+               const DominatorTree *dt);
 bool DominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
-                  const DominatorTree *DT);
+                  const DominatorTree *dt);
 bool PostDominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
-                      const PostDominatorTree *PDT);
-RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *DT,
-                         PostDominatorTree *PDT);
+                      const PostDominatorTree *pdt);
+RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *dt,
+                         PostDominatorTree *pdt);
 
 // Dependance analysis.
-// Return true if V depends on any of the values in Rs.
-bool DependsOn(const Value *V, const ValueVector &Rs);
+// Return true if value depends on any of the values in Rs.
+bool DependsOn(const Value *value, const ValueVector &Rs);
 
-// Return true is V depends on R.
-bool DependsOn(const Value *V, const Value *R);
+// Return true is value depends on R.
+bool DependsOn(const Value *value, const Value *R);
 
-// Recursive function that determines if V depends on R.
-bool DependsOnImpl(const Value *V, const Value *R, ConstValueVector &Trace);
+// Recursive function that determines if value depends on R.
+bool DependsOnImpl(const Value *value, const Value *R, ConstValueVector &Trace);
 
-// Recursive function that determines if V depends on R.
-bool DependsOnImpl(const Value *V, const ValueVector &Rs,
+// Recursive function that determines if value depends on R.
+bool DependsOnImpl(const Value *value, const ValueVector &Rs,
                    ConstValueVector &Trace);
 
 // List the predecessors of the given instruction: apply backward code slicing.
-InstSet ListPredecessors(Instruction *I);
-void ListPredecessorsImpl(Instruction *I, InstSet &Result);
+InstSet ListPredecessors(Instruction *inst);
+void ListPredecessorsImpl(Instruction *inst, InstSet &Result);
 
 InstVector ForwardCodeSlicing(InstVector &TIds);
 void ForwardCodeSlicingImpl(InstSet &Insts, InstSet NewInsts);
@@ -178,7 +168,7 @@ bool IsStrictBranch(const BranchInst *Branch);
 
 // Divergence Utils.
 
-Function* GetOpenCLFunctionByName(std::string calleeName, Function *caller);
+Function *GetOpenCLFunctionByName(std::string calleeName, Function *caller);
 
 // Find all the instructions which depend on the TId.
 InstVector FindThreadDepInst(Function *F, ValueVector &TIds);
@@ -188,11 +178,11 @@ BranchVector GetThreadDepBranches(BranchVector &Bs, ValueVector TIds);
 //------------------------------------------------------------------------------
 // Divergent regions analysis.
 std::vector<DivergentRegion *> GetDivergentRegions(BranchVector &BTId,
-                                                   DominatorTree *DT,
-                                                   PostDominatorTree *PDT,
-                                                   LoopInfo *LI);
-void FillRegions(std::vector<DivergentRegion *> &DRs, DominatorTree *DT,
-                 PostDominatorTree *PDT);
+                                                   DominatorTree *dt,
+                                                   PostDominatorTree *pdt,
+                                                   LoopInfo *loopInfo);
+void FillRegions(std::vector<DivergentRegion *> &DRs, DominatorTree *dt,
+                 PostDominatorTree *pdt);
 
 InstVector GetInstToReplicate(InstVector &TIdInsts, InstVector &TIds,
                               InstVector &AllTIds);
@@ -210,23 +200,23 @@ Value *GetTIdOperand(CmpInst *Cmp, ValueVector &TIds);
 
 //------------------------------------------------------------------------------
 // Instruction creation.
-Instruction *getMulInst(Value *V, unsigned int factor);
-Instruction *getAddInst(Value *V, unsigned int addend);
+Instruction *getMulInst(Value *value, unsigned int factor);
+Instruction *getAddInst(Value *value, unsigned int addend);
 Instruction *getAddInst(Value *V1, Value *V2);
-Instruction *getShiftInst(Value *V, unsigned int shift);
-Instruction *getAndInst(Value *V, unsigned int factor);
+Instruction *getShiftInst(Value *value, unsigned int shift);
+Instruction *getAndInst(Value *value, unsigned int factor);
 
 //------------------------------------------------------------------------------
-bool isBarrier(Instruction *I);
-bool isMathFunction(Instruction *I);
+bool isBarrier(Instruction *inst);
+bool isMathFunction(Instruction *inst);
 bool isMathName(std::string fName);
-bool isLocalMemoryAccess(Instruction *I);
-bool isLocalMemoryStore(Instruction *I);
-bool isLocalMemoryLoad(Instruction *I);
-bool IsIntCast(Instruction *I);
+bool isLocalMemoryAccess(Instruction *inst);
+bool isLocalMemoryStore(Instruction *inst);
+bool isLocalMemoryLoad(Instruction *inst);
+bool IsIntCast(Instruction *inst);
 
 //------------------------------------------------------------------------------
-bool isUsedOutsideOfDefiningBlock(const Instruction *I);
-Instruction *findFirstUser(Instruction *I);
-Instruction *findLastUser(Instruction *I);
+bool isUsedOutsideOfDefiningBlock(const Instruction *inst);
+Instruction *findFirstUser(Instruction *inst);
+Instruction *findLastUser(Instruction *inst);
 InstVector findUsers(llvm::Value *value);

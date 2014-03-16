@@ -63,7 +63,7 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
   if (cIter != cMap.end()) {
     InstVector &V = cIter->second;
     for (unsigned int index = 0; index < V.size(); ++index) {
-      PHReplacementMap[V[index]] = current[index];
+      phReplacementMap[V[index]] = current[index];
     }
   }
   
@@ -71,9 +71,13 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
 }
 
 //------------------------------------------------------------------------------
-void ThreadCoarsening::applyCoarseningMap(DivergentRegion *region, 
+void ThreadCoarsening::applyCoarseningMap(DivergentRegion &region, 
                                           unsigned int index) {
-    
+  for(DivergentRegion::iterator iter = region.begin(), iterEnd = region.end();
+      iter != iterEnd; ++iter) {
+    BasicBlock *block = *iter;
+    applyCoarseningMap(block, index);
+  }    
 }
 
 //------------------------------------------------------------------------------
@@ -114,9 +118,9 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
     if (sdda->IsThreadIdDependent(inst)) {
       // The instruction is divergent.
       // Look in placeholder map.
-      CoarseningMap::iterator PHIt = PHMap.find(inst);
+      CoarseningMap::iterator PHIt = phMap.find(inst);
       Instruction *result = NULL;
-      if (PHIt != PHMap.end()) {
+      if (PHIt != phMap.end()) {
         // The instruction is in the placeholder map.
         InstVector &entry = PHIt->second;
         result = entry[coarseningIndex];
@@ -130,7 +134,7 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
                                 coarseningIndex);
           newEntry.push_back(ph);
         }
-        PHMap.insert(std::pair<Instruction *, InstVector>(inst, newEntry));
+        phMap.insert(std::pair<Instruction *, InstVector>(inst, newEntry));
         // Return the appropriate placeholder.
         result = newEntry[coarseningIndex];
       }
@@ -143,14 +147,14 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replacePlaceholders() {
   // Iterate over placeholder map.
-  for (CoarseningMap::iterator mapIter = PHMap.begin(), mapEnd = PHMap.end();
+  for (CoarseningMap::iterator mapIter = phMap.begin(), mapEnd = phMap.end();
        mapIter != mapEnd; ++mapIter) {
     InstVector &phs = mapIter->second;
     // Iteate over placeholder vector.
     for (InstVector::iterator instIter = phs.begin(), instEnd = phs.end();
          instIter != instEnd; ++instIter) {
       Instruction *ph = *instIter;
-      Value *replacement = PHReplacementMap[ph];
+      Value *replacement = phReplacementMap[ph];
       assert(replacement != NULL && "Missing replacement value");
       ph->replaceAllUsesWith(replacement);
     }
@@ -186,6 +190,7 @@ void ThreadCoarsening::replicateRegion(DivergentRegion * region) {
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
   region->dump();
+  return;
 
   RegionBounds *bounds = getExtingExit(region);
   BasicBlock *pred = getPredecessor(region, loopInfo);
@@ -193,26 +198,30 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
   for (unsigned int index = 0; index < factor - 1; ++index) {
     // Clone the region and apply the new map.
     // CIMap is applied to all the blocks in the region.
-    RegionBounds newPair =
+    RegionBounds newBounds =
         cloneRegion(region->getBounds(), "..cf" + Twine(index + 2), dt);
 
-//    // Build the mapping for the phi nodes in the exiting block.
-//    BuildExitingPhiMap(R->getExiting(), NewPair.getExiting(), RegionsMap);
-//  
+    //    // Build the mapping for the phi nodes in the exiting block.
+    //    BuildExitingPhiMap(R->getExiting(), NewPair.getExiting(), RegionsMap);
+    //
     // Exiting -> NewPair.first
-    BasicBlock *exiting = bounds->getHeader();
-    llvm::errs() << "Exiting: " << exiting->getName() << "\n";
-    changeBlockTarget(exiting, newPair.getHeader());
-    // NewPair.second -> IP.second
-    llvm::errs() << "New pair: " << newPair.getExiting()->getName() << "\n";
-    changeBlockTarget(newPair.getExiting(), bounds->getExiting());
-    // IP.first -> NewPair.second
-    bounds->setHeader(newPair.getExiting());
-  
-    // Update the phi nodes of the newly inserted header.
-    remapBlocksInPHIs(newPair.getHeader(), pred, exiting);
-    // Update the phi nodes in the exit block.
-    remapBlocksInPHIs(bounds->getExiting(), region->getExiting(), newPair.getExiting());
+//    BasicBlock *exiting = bounds->getHeader();
+//    llvm::errs() << "Exiting: " << exiting->getName() << "\n";
+//    changeBlockTarget(exiting, newBounds.getHeader());
+//    // NewPair.second -> IP.second
+//    llvm::errs() << "New pair: " << newBounds.getExiting()->getName() << "\n";
+//    changeBlockTarget(newBounds.getExiting(), bounds->getExiting());
+//    // IP.first -> NewPair.second
+//    bounds->setHeader(newBounds.getExiting());
+//
+//    // Update the phi nodes of the newly inserted header.
+//    remapBlocksInPHIs(newBounds.getHeader(), pred, exiting);
+//    // Update the phi nodes in the exit block.
+//    remapBlocksInPHIs(bounds->getExiting(), region->getExiting(),
+//                      newBounds.getExiting());
+
+    //    DivergentRegion region(newBounds);
+    //    applyCoarseningMap(region, index);
   }
 }
 

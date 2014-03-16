@@ -42,11 +42,9 @@
 
 using namespace llvm;
 
-STATISTIC(NumExtracted, "Number of extracted branches");
+extern cl::opt<std::string> KernelNameCL;
 
-extern cl::opt<std::string> KernelName;
-
-BorderVector GetBorders(RegionVector &Rs);
+BorderVector GetBorders(RegionVector &regions);
 Border GetBorder(DivergentRegion *R);
 
 //------------------------------------------------------------------------------
@@ -59,20 +57,20 @@ bool BranchExtraction::runOnFunction(Function &F) {
     return false;
 
   std::string FunctionName = F.getName();
-  if (KernelName != "" && FunctionName != KernelName)
+  if (KernelNameCL != "" && FunctionName != KernelNameCL)
     return false;
 
   // Perform analysis.
   LoopInfo *LI = &getAnalysis<LoopInfo>();
   DivergentRegionAnalysis *DRA = &getAnalysis<DivergentRegionAnalysis>();
-  RegionVector Rs = DRA->getRegions();
+  RegionVector regions = DRA->getRegions();
 
-  BorderVector Bs = GetBorders(Rs);
+  BorderVector Bs = GetBorders(regions);
 
   unsigned int Size = Bs.size();
 
   for (unsigned int index = 0; index < Size; ++index) {
-    DivergentRegion *R = Rs[index];
+    DivergentRegion *R = regions[index];
     Border B = Bs[index];
 
     // The header of the region is the block parent of the branch instruction.
@@ -93,26 +91,23 @@ bool BranchExtraction::runOnFunction(Function &F) {
     Instruction *FirstNonPHI = Exiting->getFirstNonPHI();
     SplitBlock(Exiting, FirstNonPHI, this);
     R->setHeader(NewHeader);
-    R->UpdateRegion();
-    IsolateRegion(R);
-
+    R->updateRegion();
+    isolateRegion(R);
   }
 
-  NumExtracted = Rs.size();
-
-  return NumExtracted != 0;
+  return regions.size() != 0;
 }
 
 //------------------------------------------------------------------------------
 // Isolate the exiting block from the rest of the graph.
 // If it has incoming edges coming from outside the current region
 // create a new exiting block for the region.
-void BranchExtraction::IsolateRegion(DivergentRegion *Region) {
+void BranchExtraction::isolateRegion(DivergentRegion *Region) {
   BlockVector RegionBlocks;
   // FIXME: this can be substituted
   // If the header does not dominates the exiting it means that
   // there are other incoming edges.
-  bool HasExtBlock = FindRegionBlocks(Region, RegionBlocks);
+  bool HasExtBlock = findRegionBlocks(Region, RegionBlocks);
   BasicBlock *Exiting = Region->getExiting();
 
   // Split
@@ -152,7 +147,7 @@ void BranchExtraction::IsolateRegion(DivergentRegion *Region) {
       for (unsigned int index = 0; index < Phi->getNumIncomingValues();
            ++index) {
         BasicBlock *BB = Phi->getIncomingBlock(index);
-        if (IsPresent(BB, RegionBlocks))
+        if (isPresent(BB, RegionBlocks))
           NewPhi->addIncoming(Phi->getIncomingValue(index), BB);
         else
           ExitPhi->addIncoming(Phi->getIncomingValue(index), BB);
@@ -184,16 +179,16 @@ void BranchExtraction::IsolateRegion(DivergentRegion *Region) {
 }
 
 //------------------------------------------------------------------------------
-bool BranchExtraction::FindRegionBlocks(DivergentRegion *Region,
-                                        BlockVector &RegionBlocks) {
-  RegionBlocks.clear();
-  BasicBlock *Exiting = Region->getExiting();
+bool BranchExtraction::findRegionBlocks(DivergentRegion *region,
+                                        BlockVector &regionBlocks) {
+  regionBlocks.clear();
+  BasicBlock *Exiting = region->getExiting();
   bool HasExtBlock = false;
-  for (pred_iterator PI = pred_begin(Exiting), E = pred_end(Exiting); PI != E;
-       ++PI) {
-    BasicBlock *Pred = *PI;
-    if (Region->Contains(Pred))
-      RegionBlocks.push_back(Pred);
+  for (pred_iterator predIter = pred_begin(Exiting), predEnd = pred_end(Exiting); predIter != predEnd;
+       ++predIter) {
+    BasicBlock *pred = *predIter;
+    if(contains(*region, pred))
+      regionBlocks.push_back(pred);
     else
       HasExtBlock = true;
   }
@@ -206,7 +201,6 @@ void BranchExtraction::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LoopInfo>();
   AU.addRequired<DivergentRegionAnalysis>();
   AU.addPreserved<DivergentRegionAnalysis>();
-  //AU.addRequiredID(LoopSimplifyID);
 }
 
 //------------------------------------------------------------------------------
@@ -215,9 +209,9 @@ static RegisterPass<BranchExtraction>
     X("be", "Extract divergent branches from their blocks");
 
 //------------------------------------------------------------------------------
-BorderVector GetBorders(RegionVector &Rs) {
+BorderVector GetBorders(RegionVector &regions) {
   BorderVector Result;
-  for (RegionVector::iterator I = Rs.begin(), E = Rs.end(); I != E; ++I) {
+  for (RegionVector::iterator I = regions.begin(), E = regions.end(); I != E; ++I) {
     Result.push_back(GetBorder(*I));
   }
   return Result;

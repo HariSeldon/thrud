@@ -60,7 +60,7 @@ public:
 
 private:
   void Init();
-  bool IsPresentInDirection(Instruction *I,
+  bool isPresentInDirection(Instruction *I,
                             const std::string &FuncName,
                             int Dir);
   void FindOpenCLFunctionCallsByNameAllDirs(std::string CalleeName, Function *Caller);

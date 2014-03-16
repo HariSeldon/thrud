@@ -45,7 +45,6 @@ void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfo>();
   AU.addRequired<PostDominatorTree>();
   AU.addRequired<DominatorTree>();
-  AU.addRequired<ScalarEvolution>();
   AU.addRequired<NDRange>();
   AU.setPreservesAll();
 }
@@ -60,17 +59,11 @@ bool MultiDimDivAnalysis::runOnFunction(Function &F) {
 
   PDT = &getAnalysis<PostDominatorTree>();
   DT = &getAnalysis<DominatorTree>();
-  SE = &getAnalysis<ScalarEvolution>();
   LI = &getAnalysis<LoopInfo>();
   NDR = &getAnalysis<NDRange>();
 
   AllTIds = NDR->getTids();
   Sizes = NDR->getSizes();
-//  AllTIds = FindThreadIds(Func);
-//  Sizes = FindSpaceSizes(Func);
-//  GroupIds = FindGroupIds(Func);
-  Inputs = GetMemoryValues(Func);
-
   TIdInsts = ForwardCodeSlicing(AllTIds);
 
   // Find divergent regions.
@@ -106,7 +99,7 @@ InstVector MultiDimDivAnalysis::getSizes() const { return Sizes; }
 
 //------------------------------------------------------------------------------
 bool MultiDimDivAnalysis::IsThreadIdDependent(Instruction *I) const {
-  return IsPresent<Instruction>(I, TIdInsts);
+  return isPresent<Instruction>(I, TIdInsts);
 }
 
 //------------------------------------------------------------------------------

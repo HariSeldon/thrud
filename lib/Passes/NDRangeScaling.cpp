@@ -48,6 +48,7 @@ void ThreadCoarsening::scaleIds() {
     //    Mul->insertAfter(*I);
     cMap.insert(std::pair<Instruction*, InstVector>(inst, InstVector()));
     InstVector &current = cMap[inst];
+    current.reserve(factor - 1);
 
     Instruction *bookmark = base;
     for (unsigned int index = 1; index < factor; ++index) {

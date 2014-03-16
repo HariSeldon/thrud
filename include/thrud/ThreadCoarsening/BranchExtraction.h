@@ -18,8 +18,8 @@ public:
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
 
 private:
-  void IsolateRegion(DivergentRegion *Region);
-  bool FindRegionBlocks(DivergentRegion *Region, BlockVector &RegionBlocks);
+  void isolateRegion(DivergentRegion *Region);
+  bool findRegionBlocks(DivergentRegion *Region, BlockVector &RegionBlocks);
 
 private:
   SingleDimDivAnalysis *SDDA;

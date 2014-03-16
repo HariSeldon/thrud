@@ -12,28 +12,34 @@ class DominatorTree;
 class Instruction;
 }
 
-// Lightweigth couple of blocks enclosing a region.
 class RegionBounds {
 public:
-  RegionBounds(BasicBlock *Header, BasicBlock *Exiting);
+  RegionBounds(BasicBlock *header, BasicBlock *exiting);
   RegionBounds();
 
 public:
   BasicBlock *getHeader();
   BasicBlock *getExiting();
+  const BasicBlock *getHeader() const;
+  const BasicBlock *getExiting() const;
 
   void setHeader(BasicBlock *Header);
   void setExiting(BasicBlock *Exiting);
 
-  bool Contains(const BasicBlock *BB, const DominatorTree *DT,
-                const PostDominatorTree *PDT);
-  bool Contains(const Instruction *Inst, const DominatorTree *DT,
-                const PostDominatorTree *PDT);
-
 private:
-  BasicBlock *Header;
-  BasicBlock *Exiting;
+  BasicBlock *header;
+  BasicBlock *exiting;
 
 };
+
+// Non-member functions.
+//------------------------------------------------------------------------------
+void listBlocksImpl(const BasicBlock *end, BasicBlock *bb, BlockSet &blockSet);
+void listBlocks(RegionBounds &bounds, BlockVector &result);
+
+bool contains(const RegionBounds &bounds, const BasicBlock *bb,
+              const DominatorTree *dt, const PostDominatorTree *pdt);
+bool contains(const RegionBounds &bounds, const Instruction *inst,
+              const DominatorTree *dt, const PostDominatorTree *pdt);
 
 #endif

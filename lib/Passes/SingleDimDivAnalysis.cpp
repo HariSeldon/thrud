@@ -1,12 +1,3 @@
-//===- SingleDimDivAnalysis.cpp - Single Dimension Divergence Analysis ----===//
-//
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-
 #define DEBUG_TYPE "single_dim_div_analysis"
 
 #include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
@@ -47,7 +38,6 @@ void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfo>();
   AU.addRequired<PostDominatorTree>();
   AU.addRequired<DominatorTree>();
-  AU.addRequired<ScalarEvolution>();
   AU.addRequired<NDRange>();
   AU.setPreservesAll();
 }
@@ -61,24 +51,14 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
 
   PDT = &getAnalysis<PostDominatorTree>();
   DT = &getAnalysis<DominatorTree>();
-  SE = &getAnalysis<ScalarEvolution>();
   LI = &getAnalysis<LoopInfo>();
   NDR = &getAnalysis<NDRange>();
 
-//  TIds = FindThreadIds(Func, CoarseningDirection);
   TIds = NDR->getTids(CoarseningDirectionCL);
 
   AllTIds = NDR->getTids();
-  llvm::errs() << "-------------\n";
   Sizes = NDR->getSizes(CoarseningDirectionCL);
-//  AllTIds = FindThreadIds(Func);
-//  Sizes = FindSpaceSizes(Func, CoarseningDirection);
-//  GroupIds = FindGroupIds(Func);
-  Inputs = GetMemoryValues(Func);
-
   TIdInsts = ForwardCodeSlicing(TIds);
-
-  //TIdInsts = FindThreadDepInst(Func, TIdsV);
 
   // Find divergent regions.
   Branches = FindBranches(F);
@@ -88,7 +68,9 @@ bool SingleDimDivAnalysis::runOnFunction(Function &F) {
   for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
        ++I) {
     DivergentRegion *R = *I;
-    R->Analyze(SE, LI, TIdsV, Inputs);
+    R->analyze();
+  R->dump();
+  exit(1);
   }
 
   // Get instructions to replicate.
@@ -121,7 +103,7 @@ InstVector SingleDimDivAnalysis::getSizes() const { return Sizes; }
 
 //------------------------------------------------------------------------------
 bool SingleDimDivAnalysis::IsThreadIdDependent(Instruction *I) const {
-  return IsPresent<Instruction>(I, TIdInsts);
+  return isPresent<Instruction>(I, TIdInsts);
 }
 
 //------------------------------------------------------------------------------

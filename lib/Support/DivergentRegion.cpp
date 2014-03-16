@@ -8,70 +8,95 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
-//------------------------------------------------------------------------------
-DivergentRegion::DivergentRegion(BasicBlock *Header, BasicBlock *Exiting) {
-  Bounds = new RegionBounds(Header, Exiting);
-  this->Condition = DivergentRegion::ND;
+#include <numeric>
+
+DivergentRegion::DivergentRegion(BasicBlock *header, BasicBlock *exiting)
+    : condition(DivergentRegion::ND) {
+  bounds.setHeader(header);
+  bounds.setExiting(exiting);
+  updateRegion();
 }
 
-//------------------------------------------------------------------------------
-BasicBlock *DivergentRegion::getHeader() { return Bounds->getHeader(); }
+DivergentRegion::DivergentRegion(RegionBounds &bounds)
+    : bounds(bounds), condition(DivergentRegion::ND) {
+  updateRegion();
+}
 
-//------------------------------------------------------------------------------
-BasicBlock *DivergentRegion::getExiting() { return Bounds->getExiting(); }
+BasicBlock *DivergentRegion::getHeader() { return bounds.getHeader(); }
+BasicBlock *DivergentRegion::getExiting() { return bounds.getExiting(); }
+const BasicBlock *DivergentRegion::getHeader() const { return bounds.getHeader(); }
+const BasicBlock *DivergentRegion::getExiting() const { return bounds.getExiting(); }
 
-//------------------------------------------------------------------------------
 void DivergentRegion::setHeader(BasicBlock *Header) {
-  this->Bounds->setHeader(Header);
+  bounds.setHeader(Header);
 }
 
-//------------------------------------------------------------------------------
 void DivergentRegion::setExiting(BasicBlock *Exiting) {
-  this->Bounds->setExiting(Exiting);
+  bounds.setExiting(Exiting);
+}
+
+RegionBounds &DivergentRegion::getBounds() { return bounds; }
+
+BlockVector &DivergentRegion::getBlocks() { return blocks; }
+
+void DivergentRegion::fillRegion(DominatorTree *dt, PostDominatorTree *pdt) {
+//  blocks = listBlocks(bounds);
+//
+//  // If H is dominated by a block in the region than recompute the bounds.
+//  if (IsDominated(bounds.getHeader(), *blocks, DT)) {
+//    bounds = FindBounds(*blocks, DT, PDT);
+//  }
+}
+
+void DivergentRegion::updateRegion() { listBlocks(bounds, blocks); }
+
+//------------------------------------------------------------------------------
+// Checks if the header of the region dominates all the blocks in the region.
+bool DivergentRegion::PerformHeaderCheck(DominatorTree *DT) {
+  return DominatesAll(bounds.getHeader(), blocks, DT);
 }
 
 //------------------------------------------------------------------------------
-RegionBounds *DivergentRegion::getBounds() { return Bounds; }
+bool DivergentRegion::IsStrict() { return condition == DivergentRegion::EQ; }
 
 //------------------------------------------------------------------------------
-BlockVector *DivergentRegion::getBlocks() { return Blocks; }
+void DivergentRegion::setCondition(DivergentRegion::BoundCheck condition) {
+  this->condition = condition;
+}
 
 //------------------------------------------------------------------------------
-void DivergentRegion::FillRegion(DominatorTree *DT, PostDominatorTree *PDT) {
-  Blocks = ListBlocks(Bounds);
+DivergentRegion::BoundCheck DivergentRegion::getCondition() const {
+  return condition;
+}
 
-  // If H is dominated by a block in the region than recompute the bounds.
-  if (IsDominated(Bounds->getHeader(), *Blocks, DT)) {
-    Bounds = FindBounds(*Blocks, DT, PDT);
+//------------------------------------------------------------------------------
+void DivergentRegion::analyze() {
+  BasicBlock *header = getHeader();
+  if (BranchInst *Branch = dyn_cast<BranchInst>(header->getTerminator())) {
+    Value *Cond = Branch->getCondition();
+    if (CmpInst *Cmp = dyn_cast<CmpInst>(Cond)) {
+      setCondition(IsEquals(Cmp->getPredicate()) ? EQ : ND);
+      return;
+    }
   }
+  setCondition(ND);
 }
-
-//------------------------------------------------------------------------------
-void DivergentRegion::UpdateRegion() { Blocks = ListBlocks(Bounds); }
 
 //------------------------------------------------------------------------------
 void DivergentRegion::dump() {
-  errs() << "Bounds: " << getHeader()->getName() << " / "
+  errs() << "Bounds: " << getHeader()->getName() << " -- "
          << getExiting()->getName() << "\n";
-  errs() << "Blocks: \n";
-  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
-       ++I) {
-    errs() << (*I)->getName() << "\n";
+  errs() << "Blocks: ";
+  for (DivergentRegion::iterator iter = begin(), iterEnd = end();
+       iter != iterEnd; ++iter) {
+    errs() << (*iter)->getName() << " -- ";
   }
-  errs() << "----------\nCondition: ";
-  switch (Condition) {
-  case DivergentRegion::LB:
-    errs() << "LOWER BOUND\n";
-    break;
-  case DivergentRegion::UB:
-    errs() << "UPPER BOUND\n";
-    break;
+  errs() << "\nCondition: ";
+  switch (getCondition()) {
   case DivergentRegion::EQ:
     errs() << "EQUALS\n";
-    break;
-  case DivergentRegion::DATA:
-    errs() << "DATA\n";
     break;
   case DivergentRegion::ND:
     errs() << "ND\n";
@@ -80,141 +105,212 @@ void DivergentRegion::dump() {
 }
 
 //------------------------------------------------------------------------------
-bool DivergentRegion::Contains(const Instruction *I) {
-  const BasicBlock *BB = I->getParent();
-  return Contains(BB);
+unsigned int addSizes(unsigned int partialSum, BasicBlock *block) {
+//  if (block == bounds.getHeader() || block == bounds.getExiting())
+//    return;
+  return partialSum + block->size();
+}
+
+unsigned int DivergentRegion::size() {
+  return std::accumulate(blocks.begin(), blocks.end(), 0, addSizes);
 }
 
 //------------------------------------------------------------------------------
-bool DivergentRegion::ContainsInternally(const Instruction *I) {
-  const BasicBlock *BB = I->getParent();
-  return ContainsInternally(BB);
+DivergentRegion::iterator DivergentRegion::begin() {
+  return iterator(*this);  
+}
+
+DivergentRegion::iterator DivergentRegion::end() {
+  return DivergentRegion::iterator::end();
+}
+
+DivergentRegion::const_iterator DivergentRegion::begin() const {
+  return const_iterator(*this);  
+}
+
+DivergentRegion::const_iterator DivergentRegion::end() const {
+  return DivergentRegion::const_iterator::end();
+}
+
+// Iterator class.
+//------------------------------------------------------------------------------
+DivergentRegion::iterator::iterator() { currentBlock = 0; }
+DivergentRegion::iterator::iterator(const DivergentRegion &region) {
+  blocks = region.blocks;
+  currentBlock = (blocks.size() == 0) ? -1 : 0;
+}
+DivergentRegion::iterator::iterator(const iterator& original) {
+  blocks = original.blocks;
+  currentBlock = original.currentBlock;
+}
+
+// Pre-increment.
+DivergentRegion::iterator& DivergentRegion::iterator::operator++() {
+  toNext();
+  return *this;
+}
+// Post-increment.
+DivergentRegion::iterator DivergentRegion::iterator::operator++(int) {
+  iterator old(*this);
+  ++*this;
+  return old;
+}
+
+BasicBlock* DivergentRegion::iterator::operator*() const {
+  return blocks.at(currentBlock);
+}
+bool DivergentRegion::iterator::operator!=(const iterator& iter) const {
+  return iter.currentBlock != this->currentBlock;
+}
+
+void DivergentRegion::iterator::toNext() {
+  ++currentBlock;
+  if (currentBlock == blocks.size()) currentBlock = -1;
+}
+
+DivergentRegion::iterator DivergentRegion::iterator::end() {
+  iterator endIterator;
+  endIterator.currentBlock = -1;
+  return endIterator;
+}
+
+// Iterator class.
+//------------------------------------------------------------------------------
+DivergentRegion::const_iterator::const_iterator() { currentBlock = 0; }
+DivergentRegion::const_iterator::const_iterator(const DivergentRegion &region) {
+  blocks = region.blocks;
+  currentBlock = (blocks.size() == 0) ? -1 : 0;
+}
+DivergentRegion::const_iterator::const_iterator(const const_iterator& original) {
+  blocks = original.blocks;
+  currentBlock = original.currentBlock;
+}
+
+// Pre-increment.
+DivergentRegion::const_iterator& DivergentRegion::const_iterator::operator++() {
+  toNext();
+  return *this;
+}
+// Post-increment.
+DivergentRegion::const_iterator DivergentRegion::const_iterator::operator++(int) {
+  const_iterator old(*this);
+  ++*this;
+  return old;
+}
+
+const BasicBlock* DivergentRegion::const_iterator::operator*() const {
+  return blocks.at(currentBlock);
+}
+bool DivergentRegion::const_iterator::operator!=(const const_iterator& iter) const {
+  return iter.currentBlock != this->currentBlock;
+}
+
+void DivergentRegion::const_iterator::toNext() {
+  ++currentBlock;
+  if (currentBlock == blocks.size()) currentBlock = -1;
+}
+
+DivergentRegion::const_iterator DivergentRegion::const_iterator::end() {
+  const_iterator endIterator;
+  endIterator.currentBlock = -1;
+  return endIterator;
+}
+
+// Non member functions.
+//------------------------------------------------------------------------------
+RegionBounds *getExtingExit(DivergentRegion *region) {
+  BasicBlock *exiting = region->getExiting();
+  TerminatorInst *terminator = exiting->getTerminator();
+  assert(terminator->getNumSuccessors() == 1 &&
+         "Divergent region must have one successor only");
+  BasicBlock *exit = terminator->getSuccessor(0);
+  return new RegionBounds(exiting, exit);
 }
 
 //------------------------------------------------------------------------------
-bool DivergentRegion::Contains(const BasicBlock *BB) {
-  BlockVector::iterator Begin = Blocks->begin();
-  BlockVector::iterator End = Blocks->end();
-  BlockVector::iterator Result = std::find(Begin, End, BB);
-  return Result != End;
+BasicBlock *getPredecessor(DivergentRegion *region, LoopInfo *loopInfo) {
+  BasicBlock *header = region->getHeader();
+  BasicBlock *predecessor = header->getSinglePredecessor();
+  if (predecessor == NULL) {
+    Loop *loop = loopInfo->getLoopFor(header);
+    predecessor = loop->getLoopPredecessor();
+  }
+  assert(predecessor != NULL &&
+         "Region header does not have a single predecessor");
+  return predecessor;
 }
 
 //------------------------------------------------------------------------------
-bool DivergentRegion::ContainsInternally(const BasicBlock *BB) {
+// 'map' will contain the mapping between the old and the new instructions in
+// the region.
+// FIXME: iter might not need the whole map, but only the live values out of the
+// region.
+RegionBounds cloneRegion(RegionBounds &bounds, const Twine &suffix,
+                         DominatorTree *dt) {
+  RegionBounds newBounds;
+  BlockVector newBlocks;
+  BlockVector blocks;
 
-  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
-       ++I) {
-    BasicBlock *block = (*I);
+  listBlocks(bounds, blocks);
 
-    if (block == Bounds->getHeader() || block == Bounds->getExiting())
+  // Map used to update the branches inside the region.
+  Map regionBlockMap;
+  Map blocksMap;
+  Function *function = bounds.getHeader()->getParent();
+  for (BlockVector::iterator iter = blocks.begin(), iterEnd = blocks.end();
+       iter != iterEnd; ++iter) {
+
+    BasicBlock *bb = *iter;
+    BasicBlock *newBB = CloneBasicBlock(bb, blocksMap, suffix, function, 0);
+    regionBlockMap[bb] = newBB;
+    newBlocks.push_back(newBB);
+
+    // Save the head and the tail of the cloned block region.
+    if (bb == bounds.getHeader())
+      newBounds.setHeader(newBB);
+    if (bb == bounds.getExiting())
+      newBounds.setExiting(newBB);
+
+    CloneDominatorInfo(bb, regionBlockMap, dt);
+  }
+
+  // The remapping of the branches must be done at the end of the cloning
+  // process.
+  for (BlockVector::iterator iter = newBlocks.begin(),
+                             iterEnd = newBlocks.end();
+       iter != iterEnd; ++iter) {
+    applyMap(*iter, regionBlockMap);
+    //    applyMap(*iter, map);
+    //    applyMap(*iter, ToApply);
+  }
+  return newBounds;
+}
+
+// -----------------------------------------------------------------------------
+bool contains(const DivergentRegion &region, const Instruction *inst) {
+  return contains(region, inst->getParent());
+}
+
+bool containsInternally(const DivergentRegion &region, const Instruction *inst) {
+  return containsInternally(region, inst->getParent());
+}
+
+bool contains(const DivergentRegion &region, const BasicBlock *block) {
+  DivergentRegion::const_iterator result =
+      std::find(region.begin(), region.end(), block);
+  return result != region.end();
+}
+
+bool containsInternally(const DivergentRegion &region, const BasicBlock *block) {
+  for (DivergentRegion::const_iterator iter = region.begin(), iterEnd = region.end();
+       iter != iterEnd; ++iter) {
+    const BasicBlock *currentBlock = (*iter);
+
+    if (currentBlock == region.getHeader() || currentBlock == region.getExiting())
       continue;
 
-    if (block == BB)
+    if (block == currentBlock)
       return true;
   }
   return false;
-}
-
-//------------------------------------------------------------------------------
-// Checks if the header of the region dominates all the blocks in the region.
-bool DivergentRegion::PerformHeaderCheck(DominatorTree *DT) {
-  return DominatesAll(Bounds->getHeader(), *Blocks, DT);
-}
-
-//------------------------------------------------------------------------------
-bool DivergentRegion::IsStrict() { return Condition == DivergentRegion::EQ; }
-
-//------------------------------------------------------------------------------
-void DivergentRegion::setCondition(DivergentRegion::BoundCheck Condition) {
-  this->Condition = Condition;
-}
-
-//------------------------------------------------------------------------------
-DivergentRegion::BoundCheck DivergentRegion::getCondition() {
-  return Condition;
-}
-
-//------------------------------------------------------------------------------
-void DivergentRegion::Analyze(ScalarEvolution *SE, LoopInfo *LI,
-                              ValueVector &TIds, ValueVector &Inputs) {
-  BasicBlock *Header = getHeader();
-  if (BranchInst *Branch = dyn_cast<BranchInst>(Header->getTerminator())) {
-    if (DependsOn(Branch, Inputs)) {
-      setCondition(DivergentRegion::DATA);
-      return;
-    }
-    Value *Cond = Branch->getCondition();
-    if (CmpInst *Cmp = dyn_cast<CmpInst>(Cond))
-      setCondition(AnalyzeCmp(SE, LI, Cmp, TIds));
-    else
-      setCondition(DivergentRegion::ND);
-  } else {
-    setCondition(DivergentRegion::ND);
-  }
-}
-
-//------------------------------------------------------------------------------
-DivergentRegion::BoundCheck DivergentRegion::AnalyzeCmp(ScalarEvolution *SE,
-                                                        LoopInfo *LI,
-                                                        CmpInst *Cmp,
-                                                        ValueVector &TIds) {
-//  if (IsEquals(Cmp->getPredicate()))
-//    return DivergentRegion::EQ;
-//
-//  Value *TIdOp = GetTIdOperand(Cmp, TIds);
-//  if (TIdOp == NULL)
-//    return DivergentRegion::ND;
-//
-//  // Get the operand position.
-//  unsigned int position = GetOperandPosition(Cmp, TIdOp);
-//  bool isFirst = (position == 0);
-//  // Get the comparison sign.
-//  bool GT = IsGreaterThan(Cmp->getPredicate());
-//
-//  if (Loop *L = LI->getLoopFor(getHeader())) {
-//    if (PHINode *Phi = dyn_cast<PHINode>(TIdOp)) {
-//      BasicBlock *Latch = L->getLoopLatch();
-//      TIdOp = Phi->getIncomingValueForBlock(Latch);
-//    }
-//  }
-//
-//  // Check is the value is SCEVable.
-//  if (!SE->isSCEVable(TIdOp->getType()))
-//    return DivergentRegion::ND;
-//
-//  // Get the TID subscript sign.
-//  SmallPtrSet<const SCEV *, 8> Processed;
-//  const SCEV *Scev = SE->getSCEV(TIdOp);
-//  unsigned int result = AnalyzeSubscript(SE, Scev, TIds, Processed);
-//  if (result == 0)
-//    return DivergentRegion::ND;
-//  bool IsTIdPositive = (result == 1);
-//
-//  // Compare all of the previous.
-//  unsigned int sum = isFirst + GT + IsTIdPositive;
-//
-//  if (sum == 0)
-//    return DivergentRegion::UB;
-//
-//  if (sum % 2 == 0)
-//    return DivergentRegion::UB;
-//  else
-//    return DivergentRegion::LB;
-}
-
-//------------------------------------------------------------------------------
-// This could be done using "accumulate".
-unsigned int DivergentRegion::size() {
-  unsigned int result = 0;
-
-  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
-       ++I) {
-    BasicBlock *block = (*I);
-    if (block == Bounds->getHeader() || block == Bounds->getExiting())
-      continue;
-
-    result += block->size();
-  }
-
-  return result;
 }

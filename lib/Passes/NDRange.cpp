@@ -86,9 +86,9 @@ bool NDRange::IsTid(Instruction *I) {
 bool NDRange::IsTidInDirection(Instruction *I, unsigned int direction) {
   // No bound checking is needed.
   std::map<std::string, InstVector> &dirInsts = OCLInsts[direction];
-  bool isLocalId = IsPresent(I, dirInsts[GET_GLOBAL_ID]);
-  bool isGlobalId = IsPresent(I, dirInsts[GET_LOCAL_ID]);
-  bool isGroupId = IsPresent(I, dirInsts[GET_GROUP_ID]);
+  bool isLocalId = isPresent(I, dirInsts[GET_GLOBAL_ID]);
+  bool isGlobalId = isPresent(I, dirInsts[GET_LOCAL_ID]);
+  bool isGroupId = isPresent(I, dirInsts[GET_GROUP_ID]);
   return isLocalId || isGlobalId || isGroupId;
 }
 
@@ -168,27 +168,27 @@ bool NDRange::IsGroupsNum(Instruction *I) {
 }
 
 bool NDRange::IsGlobal(Instruction *I, int direction) {
-  return IsPresentInDirection(I, GET_GLOBAL_ID, direction);
+  return isPresentInDirection(I, GET_GLOBAL_ID, direction);
 }
 
 bool NDRange::IsLocal(Instruction *I, int direction) {
-  return IsPresentInDirection(I, GET_LOCAL_ID, direction);
+  return isPresentInDirection(I, GET_LOCAL_ID, direction);
 }
 
 bool NDRange::IsGlobalSize(Instruction *I, int direction) {
-  return IsPresentInDirection(I, GET_GLOBAL_SIZE, direction);
+  return isPresentInDirection(I, GET_GLOBAL_SIZE, direction);
 }
 
 bool NDRange::IsLocalSize(Instruction *I, int direction) {
-  return IsPresentInDirection(I, GET_LOCAL_SIZE, direction);
+  return isPresentInDirection(I, GET_LOCAL_SIZE, direction);
 }
 
 bool NDRange::IsGroupId(Instruction *I, int direction) {
-  return IsPresentInDirection(I, GET_GROUP_ID, direction);
+  return isPresentInDirection(I, GET_GROUP_ID, direction);
 }
 
 bool NDRange::IsGroupsNum(Instruction *I, int direction) {
-  return IsPresentInDirection(I, GET_GROUPS_NUMBER, direction);
+  return isPresentInDirection(I, GET_GROUPS_NUMBER, direction);
 }
 
 void NDRange::dump() {
@@ -229,11 +229,11 @@ void NDRange::Init() {
   }
 }
 
-bool NDRange::IsPresentInDirection(llvm::Instruction *I,
+bool NDRange::isPresentInDirection(llvm::Instruction *I,
                                    const std::string &FuncName, int Dir) {
   std::map<std::string, InstVector> &DirInsts = OCLInsts[Dir];
   const InstVector &Insts = DirInsts[FuncName];
-  return IsPresent(I, Insts);
+  return isPresent(I, Insts);
 }
 
 void NDRange::FindOpenCLFunctionCallsByNameAllDirs(std::string CalleeName,

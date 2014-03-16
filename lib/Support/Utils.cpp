@@ -8,8 +8,6 @@
 #include "llvm/Analysis/Dominators.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -57,7 +55,7 @@ bool IsKernel(const Function *F) {
 }
 
 //------------------------------------------------------------------------------
-void ApplyMapToPhiBlocks(PHINode *Phi, Map &map) {
+void applyMapToPhiBlocks(PHINode *Phi, Map &map) {
   // FIXME:
   for (unsigned int index = 0; index < Phi->getNumIncomingValues(); ++index) {
     BasicBlock *OldBlock = Phi->getIncomingBlock(index);
@@ -73,7 +71,7 @@ void ApplyMapToPhiBlocks(PHINode *Phi, Map &map) {
 }
 
 //------------------------------------------------------------------------------
-void ApplyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF) {
+void applyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF) {
   for (unsigned op = 0, opE = Inst->getNumOperands(); op != opE; ++op) {
     Instruction *Op = dyn_cast<Instruction>(Inst->getOperand(op));
     CoarseningMap::iterator It = map.find(Op);
@@ -86,11 +84,11 @@ void ApplyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF) {
   }
 
 //  if (PHINode *Phi = dyn_cast<PHINode>(Inst))
-//    ApplyMapToPhiBlocks(Phi, map);
+//    applyMapToPhiBlocks(Phi, map);
 }
 
 //------------------------------------------------------------------------------
-void ApplyMap(Instruction *Inst, Map &map) {
+void applyMap(Instruction *Inst, Map &map) {
   for (unsigned op = 0, opE = Inst->getNumOperands(); op != opE; ++op) {
     Value *Op = Inst->getOperand(op);
 
@@ -100,19 +98,19 @@ void ApplyMap(Instruction *Inst, Map &map) {
   }
 
   if (PHINode *Phi = dyn_cast<PHINode>(Inst))
-    ApplyMapToPhiBlocks(Phi, map);
+    applyMapToPhiBlocks(Phi, map);
 }
 
 //------------------------------------------------------------------------------
-void ApplyMapToPHIs(BasicBlock *BB, Map &map) {
+void applyMapToPHIs(BasicBlock *BB, Map &map) {
   for (BasicBlock::iterator I = BB->begin(); isa<PHINode>(I); ++I)
-    ApplyMap(I, map);
+    applyMap(I, map);
 }
 
 //------------------------------------------------------------------------------
-void ApplyMap(BasicBlock *BB, Map &map) {
+void applyMap(BasicBlock *BB, Map &map) {
   for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-    ApplyMap(I, map);
+    applyMap(I, map);
 }
 
 //------------------------------------------------------------------------------
@@ -202,54 +200,54 @@ bool IsByPointer(const Argument *A) {
 }
 
 //------------------------------------------------------------------------------
-template <class T> bool IsPresent(const T *V, const std::vector<T *> &Vs) {
+template <class T> bool isPresent(const T *V, const std::vector<T *> &Vs) {
   typename std::vector<T *>::const_iterator R =
       std::find(Vs.begin(), Vs.end(), V);
   return R != Vs.end();
 }
 
-template bool IsPresent(const Instruction *V, const InstVector &Vs);
-template bool IsPresent(const Value *V, const ValueVector &Vs);
+template bool isPresent(const Instruction *V, const InstVector &Vs);
+template bool isPresent(const Value *V, const ValueVector &Vs);
 
 //------------------------------------------------------------------------------
 template <class T>
-bool IsPresent(const T *V, const std::vector<const T *> &Vs) {
+bool isPresent(const T *V, const std::vector<const T *> &Vs) {
   typename std::vector<const T *>::const_iterator R =
       std::find(Vs.begin(), Vs.end(), V);
   return R != Vs.end();
 }
 
-template bool IsPresent(const Instruction *V, const ConstInstVector &Vs);
-template bool IsPresent(const Value *V, const ConstValueVector &Vs);
+template bool isPresent(const Instruction *V, const ConstInstVector &Vs);
+template bool isPresent(const Value *V, const ConstValueVector &Vs);
 
 //------------------------------------------------------------------------------
-template <class T> bool IsPresent(const T *V, const std::set<T *> &Vs) {
+template <class T> bool isPresent(const T *V, const std::set<T *> &Vs) {
   typename std::set<T *>::iterator R = std::find(Vs.begin(), Vs.end(), V);
   return R != Vs.end();
 }
 
-template bool IsPresent(const Instruction *V, const InstSet &Vs);
+template bool isPresent(const Instruction *V, const InstSet &Vs);
 
 //------------------------------------------------------------------------------
-template <class T> bool IsPresent(const T *V, const std::set<const T *> &Vs) {
+template <class T> bool isPresent(const T *V, const std::set<const T *> &Vs) {
   typename std::set<const T *>::const_iterator R =
       std::find(Vs.begin(), Vs.end(), V);
   return R != Vs.end();
 }
 
-template bool IsPresent(const Instruction *V, const ConstInstSet &Vs);
+template bool isPresent(const Instruction *V, const ConstInstSet &Vs);
 
 //------------------------------------------------------------------------------
-bool IsPresent(const Instruction *I, const BlockVector &V) {
+bool isPresent(const Instruction *I, const BlockVector &V) {
   const BasicBlock *BB = I->getParent();
-  return IsPresent<BasicBlock>(BB, V);
+  return isPresent<BasicBlock>(BB, V);
 }
 
 //------------------------------------------------------------------------------
-bool IsPresent(const Instruction *I, std::vector<BlockVector *> &V) {
+bool isPresent(const Instruction *I, std::vector<BlockVector *> &V) {
   for (std::vector<BlockVector *>::iterator Iter = V.begin(), E = V.end();
        Iter != E; ++Iter)
-    if (IsPresent(I, **Iter))
+    if (isPresent(I, **Iter))
       return true;
   return false;
 }
@@ -284,7 +282,7 @@ std::vector<T *> difference(const std::vector<T *> &A,
   std::vector<T *> Result;
   for (typename std::vector<T *>::const_iterator IA = A.begin(), EA = A.end();
        IA != EA; ++IA)
-    if (!IsPresent(*IA, B))
+    if (!isPresent(*IA, B))
       Result.push_back(*IA);
   return Result;
 }
@@ -298,52 +296,8 @@ template std::vector<BranchInst *>
                const std::vector<BranchInst *> &B);
 
 //------------------------------------------------------------------------------
-BasicBlock *FindImmediatePostDom(BasicBlock *BB, const PostDominatorTree *PDT) {
-  return PDT->getNode(BB)->getIDom()->getBlock();
-}
-
-//------------------------------------------------------------------------------
-BlockVector *ListBlocks(RegionBounds *Bounds) {
-  BlockSet Set;
-  Set.insert(Bounds->getHeader());
-  ListBlocksImpl(Bounds->getExiting(), Bounds->getHeader(), Set);
-  //Set.erase(Bounds.second);
-
-  return new BlockVector(Set.begin(), Set.end());
-}
-
-//------------------------------------------------------------------------------
-unsigned int getInstructionNumberInRegion(DivergentRegion *R) {
-  BlockVector *Blocks = R->getBlocks();
-  unsigned int number = 0;
-  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
-       ++I) {
-    BasicBlock *BB = *I;
-    number += BB->getInstList().size();
-  }
-  return number;
-}
-
-//------------------------------------------------------------------------------
-void ListBlocksImpl(const BasicBlock *End, BasicBlock *BB, BlockSet &Set) {
-  if (BB == End)
-    return;
-
-  BlockVector Added = InsertChildren(BB, Set);
-
-  for (BlockVector::iterator I = Added.begin(), E = Added.end(); I != E; ++I)
-    ListBlocksImpl(End, *I, Set);
-}
-
-//------------------------------------------------------------------------------
-BlockVector InsertChildren(BasicBlock *BB, BlockSet &Set) {
-  BlockVector Result;
-  for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; I++) {
-    BasicBlock *Child = *I;
-    if (Set.insert(Child).second)
-      Result.push_back(Child);
-  }
-  return Result;
+BasicBlock *findImmediatePostDom(BasicBlock *block, const PostDominatorTree *pdt) {
+  return pdt->getNode(block)->getIDom()->getBlock();
 }
 
 //------------------------------------------------------------------------------
@@ -383,50 +337,7 @@ template void dumpVector(const std::vector<PHINode *> &toDump);
 template void dumpVector(const std::vector<Value *> &toDump);
 
 //-----------------------------------------------------------------------------
-// 'map' will contain the mapping between the old and the new instructions in
-// the region.
-// FIXME: I might not need the whole map, but only the live values out of the
-// region.
-RegionBounds CloneRegion(RegionBounds *Bounds, const Twine &suffix,
-                         DominatorTree *DT, Map &map, Map &ToApply) {
-  RegionBounds NewBounds;
-  BlockVector NewBlocks;
-
-  BlockVector *Blocks = ListBlocks(Bounds);
-
-  // Map used to update the branches inside the region.
-  Map BlockMap;
-  Function *F = Bounds->getHeader()->getParent();
-  for (BlockVector::iterator I = Blocks->begin(), E = Blocks->end(); I != E;
-       ++I) {
-
-    BasicBlock *BB = *I;
-    BasicBlock *NewBB = CloneBasicBlock(BB, map, suffix, F, 0);
-    BlockMap[BB] = NewBB;
-    NewBlocks.push_back(NewBB);
-
-    // Save the head and the tail of the cloned block region.
-    if (BB == Bounds->getHeader())
-      NewBounds.setHeader(NewBB);
-    if (BB == Bounds->getExiting())
-      NewBounds.setExiting(NewBB);
-
-    CloneDominatorInfo(BB, BlockMap, DT);
-  }
-
-  // The remapping of the branches must be done at the end of the cloning
-  // process.
-  for (BlockVector::iterator I = NewBlocks.begin(), E = NewBlocks.end(); I != E;
-       ++I) {
-    ApplyMap(*I, BlockMap);
-    ApplyMap(*I, map);
-    ApplyMap(*I, ToApply);
-  }
-  delete Blocks;
-  return NewBounds;
-}
-
-//-----------------------------------------------------------------------------
+// This is black magic. Don't touch it.
 void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *DT) {
   assert(DT && "DominatorTree is not available");
   Map::iterator BI = map.find(BB);
@@ -486,7 +397,7 @@ BranchVector FindOutermostBranches(BranchSet Branches, const DominatorTree *DT,
     Result.push_back(Top);
     Remove(Branches, Top);
     BasicBlock *TopBlock = Top->getParent();
-    BasicBlock *Exiting = FindImmediatePostDom(TopBlock, PDT);
+    BasicBlock *Exiting = findImmediatePostDom(TopBlock, PDT);
     BranchSet ToRemove;
     for (BranchSet::iterator I = Branches.begin(), E = Branches.end(); I != E;
          ++I) {
@@ -515,48 +426,6 @@ BranchInst *FindOutermostBranch(BranchSet &Bs, const DominatorTree *DT) {
 bool IsInRegion(BasicBlock *Top, BasicBlock *Bottom, BasicBlock *BB,
                 const DominatorTree *DT, const PostDominatorTree *PDT) {
   return DT->dominates(Top, BB) && PDT->dominates(Bottom, BB);
-}
-
-//------------------------------------------------------------------------------
-BlockVector BuildPredList(RegionVector &Regions, LoopInfo *LI) {
-  BlockVector Preds;
-  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
-       ++I) 
-    Preds.push_back(GetPred(*I, LI));
-
-  return Preds;
-}
-
-//------------------------------------------------------------------------------
-BasicBlock *GetPred(DivergentRegion *R, LoopInfo *LI) {
-  BasicBlock *H = R->getHeader();
-  BasicBlock *P = H->getSinglePredecessor();
-  if (P == NULL) {
-    Loop *L = LI->getLoopFor(H);
-    P = L->getLoopPredecessor();
-  }
-  assert(P != NULL && "Region header does not have a single predecessor");
-  return P;  
-}
-
-//------------------------------------------------------------------------------
-std::vector<RegionBounds *> BuildInsertionPoints(RegionVector &Regions) {
-  std::vector<RegionBounds *> InsertionPoints;
-  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
-       ++I) {
-    InsertionPoints.push_back(GetInsertionPoints(*I));
-  }
-  return InsertionPoints;
-}
-
-//------------------------------------------------------------------------------
-RegionBounds *GetInsertionPoints(DivergentRegion *R) {
-  BasicBlock *Exiting = R->getExiting();
-  TerminatorInst *T = Exiting->getTerminator();
-  assert(T->getNumSuccessors() == 1 &&
-         "Divergent region must have one successor only");
-  BasicBlock *Exit = T->getSuccessor(0);
-  return new RegionBounds(Exiting, Exit);
 }
 
 //------------------------------------------------------------------------------
@@ -638,7 +507,7 @@ RegionBounds *FindBounds(BlockVector &Blocks, DominatorTree *DT,
 }
 
 //------------------------------------------------------------------------------
-void ChangeBlockTarget(BasicBlock *BB, BasicBlock *NewTarget) {
+void changeBlockTarget(BasicBlock *BB, BasicBlock *NewTarget) {
   TerminatorInst *T = BB->getTerminator();
   assert(T->getNumSuccessors() &&
          "The target can be change only if it is unique");
@@ -668,7 +537,7 @@ bool DependsOnImpl(const Value *V, const Value *R, ConstValueVector &Trace) {
     for (User::const_op_iterator UI = U->op_begin(), UE = U->op_end(); UI != UE;
          ++UI) {
       if (const Instruction *I = dyn_cast<Instruction>(UI)) {
-        if (!IsPresent<Value>(I, Trace)) {
+        if (!isPresent<Value>(I, Trace)) {
           Trace.push_back(I);
           isDependent |= DependsOnImpl(I, R, Trace);
         }
@@ -688,7 +557,7 @@ bool DependsOnImpl(const Value *V, const Value *R, ConstValueVector &Trace) {
 //------------------------------------------------------------------------------
 bool DependsOnImpl(const Value *V, const ValueVector &Rs,
                    ConstValueVector &Trace) {
-  if (IsPresent<Value>(V, Rs))
+  if (isPresent<Value>(V, Rs))
     return true;
 
   if (const User *U = dyn_cast<User>(V)) {
@@ -697,7 +566,7 @@ bool DependsOnImpl(const Value *V, const ValueVector &Rs,
     for (User::const_op_iterator UI = U->op_begin(), UE = U->op_end(); UI != UE;
          ++UI) {
       if (Instruction *I = dyn_cast<Instruction>(UI)) {
-        if (!IsPresent<Value>(I, Trace)) {
+        if (!isPresent<Value>(I, Trace)) {
           Trace.push_back(I);
           isDependent |= DependsOnImpl(I, Rs, Trace);
         }
@@ -769,34 +638,6 @@ ValueVector ToValueVector(InstVector &Insts) {
     Result.push_back(*I);
 
   return Result;
-}
-
-//------------------------------------------------------------------------------
-ValueVector GetMemoryValues(Function *F) {
-  ValueVector V = GetPointerArgs(F);
-  ValueVector LB = GetLocalBuffers(F);
-  V.insert(V.end(), LB.begin(), LB.end());
-  return V;
-}
-
-//------------------------------------------------------------------------------
-ValueVector GetLocalBuffers(Function *F) {
-  Module *M = F->getParent();
-  ValueVector Result;
-  for (Module::global_iterator I = M->global_begin(), E = M->global_end();
-       I != E; ++I) {
-    GlobalVariable *GV = I;
-    if (IsLocalBuffer(F, GV))
-      Result.push_back(GV);
-  }
-  return Result;
-}
-
-//------------------------------------------------------------------------------
-bool IsLocalBuffer(const Function *F, const GlobalVariable *GV) {
-  return GV->getType()->getAddressSpace() == LOCAL_AS &&
-         GV->getLinkage() == GlobalValue::InternalLinkage &&
-         IsUsedInFunction(F, GV);
 }
 
 //------------------------------------------------------------------------------
@@ -875,11 +716,11 @@ void BuildExitingPhiMap(BasicBlock *OldExiting, BasicBlock *NewExiting,
 }
 
 //------------------------------------------------------------------------------
-void RemapBlocksInPHIs(BasicBlock *Target, BasicBlock *OldBlock,
+void remapBlocksInPHIs(BasicBlock *Target, BasicBlock *OldBlock,
                        BasicBlock *NewBlock) {
   Map PhiMap;
   PhiMap[OldBlock] = NewBlock;
-  ApplyMapToPHIs(Target, PhiMap);
+  applyMapToPHIs(Target, PhiMap);
 }
 
 //------------------------------------------------------------------------------
@@ -925,36 +766,27 @@ BranchVector GetThreadDepBranches(BranchVector &Bs, ValueVector TIds) {
 //------------------------------------------------------------------------------
 RegionVector GetDivergentRegions(BranchVector &BTId, DominatorTree *DT,
                                  PostDominatorTree *PDT, LoopInfo *LI) {
-  BranchSet AllBranches(BTId.begin(), BTId.end());
-
-  BranchVector Bs = FindOutermostBranches(AllBranches, DT, PDT);
-  std::vector<DivergentRegion *> DRs;
-
-  for (BranchVector::iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
-    BasicBlock *BB = (*I)->getParent();
-    BasicBlock *PDom = FindImmediatePostDom(BB, PDT);
-
-    if (LI->isLoopHeader(BB)) {
-      Loop *L = LI->getLoopFor(BB);
-      if (L == LI->getLoopFor(PDom))
-        PDom = L->getExitBlock();
-    }
-
-    DRs.push_back(new DivergentRegion(BB, PDom));
-  }
-
-  FillRegions(DRs, DT, PDT);
-
-  return DRs;
-}
-
-//------------------------------------------------------------------------------
-void FillRegions(std::vector<DivergentRegion *> &DRs, DominatorTree *DT,
-                 PostDominatorTree *PDT) {
-  for (std::vector<DivergentRegion *>::iterator R = DRs.begin(), E = DRs.end();
-       R != E; ++R) {
-    (*R)->FillRegion(DT, PDT);
-  }
+//  BranchSet AllBranches(BTId.begin(), BTId.end());
+//
+//  BranchVector Bs = FindOutermostBranches(AllBranches, DT, PDT);
+//  std::vector<DivergentRegion *> DRs;
+//
+//  for (BranchVector::iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
+//    BasicBlock *BB = (*I)->getParent();
+//    BasicBlock *PDom = findImmediatePostDom(BB, PDT);
+//
+//    if (LI->isLoopHeader(BB)) {
+//      Loop *L = LI->getLoopFor(BB);
+//      if (L == LI->getLoopFor(PDom))
+//        PDom = L->getExitBlock();
+//    }
+//
+//    DRs.push_back(new DivergentRegion(BB, PDom));
+//  }
+//
+//  FillRegions(DRs, DT, PDT);
+//
+//  return DRs;
 }
 
 //------------------------------------------------------------------------------
@@ -981,10 +813,11 @@ InstVector GetInstToReplicateOutsideRegionCores(InstVector &TIdInsts,
   InstSet ToRemove;
 
   for (InstVector::iterator I = Insts.begin(), E = Insts.end(); I != E; ++I) {
-    for (std::vector<DivergentRegion *>::iterator DRI = DRs.begin(),
-                                                  DRE = DRs.end();
-         DRI != DRE; ++DRI) {
-      if ((*DRI)->ContainsInternally(*I))
+    for (std::vector<DivergentRegion *>::iterator regionIter = DRs.begin(),
+                                                  regionEnd = DRs.end();
+         regionIter != regionEnd; ++regionIter) {
+      DivergentRegion *region = *regionIter;
+      if(containsInternally(*region, *I))
         ToRemove.insert(*I);
     }
   }
@@ -1007,10 +840,11 @@ InstVector GetInstToReplicateOutsideRegions(InstVector &TIdInsts,
   InstSet ToRemove;
 
   for (InstVector::iterator I = Insts.begin(), E = Insts.end(); I != E; ++I) {
-    for (std::vector<DivergentRegion *>::iterator DRI = DRs.begin(),
-                                                  DRE = DRs.end();
-         DRI != DRE; ++DRI) {
-      if ((*DRI)->Contains(*I))
+    for (std::vector<DivergentRegion *>::iterator regionIter = DRs.begin(),
+                                                  regionEnd = DRs.end();
+         regionIter != regionEnd; ++regionIter) {
+      DivergentRegion *region = *regionIter;
+      if(containsInternally(*region, *I))
         ToRemove.insert(*I);
     }
   }
@@ -1278,4 +1112,10 @@ bool IsIntCast(Instruction *I) {
     return begin && value;
   }
   return false;
+}
+
+//------------------------------------------------------------------------------
+void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index) {
+  if (!oldName.empty())
+    value->setName(oldName + "..cf" + Twine(index + 2));
 }

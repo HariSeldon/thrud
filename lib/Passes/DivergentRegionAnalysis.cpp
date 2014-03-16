@@ -64,13 +64,9 @@ bool DivergentRegionAnalysis::runOnFunction(Function &F) {
   DominatorTree *DT = &getAnalysis<DominatorTree>();
   LoopInfo *LI = &getAnalysis<LoopInfo>();
   NDRange *NDR = &getAnalysis<NDRange>();
-  unsigned int CD = CoarseningDirectionCL;
 
-  // Find all branches.
   BranchVector Branches = FindBranches(F);
-  // Find TIds.
-//  InstVector TIds = FindThreadIds((Function *)&F, CD);
-  InstVector TIds = NDR->getTids(CD); 
+  InstVector TIds = NDR->getTids(CoarseningDirectionCL); 
 
   // Find the branches that depend on the thread Id.
   ValueVector VTIds = ToValueVector(TIds);

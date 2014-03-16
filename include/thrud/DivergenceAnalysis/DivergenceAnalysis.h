@@ -18,7 +18,7 @@ class DivergenceAnalysis : public FunctionPass {
 public:
   static char ID;
   DivergenceAnalysis();
-  ~DivergenceAnalysis() = 0;
+  ~DivergenceAnalysis();
 
   virtual bool runOnFunction(Function &F);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
@@ -29,8 +29,8 @@ protected:
   virtual InstVector getTids();
   void performAnalysis();
 
-  void findRegions();
   void findBranches();
+  void findRegions();
   void findExternalInsts();
 
 protected:

@@ -10,7 +10,7 @@
 cl::opt<std::string> kernelName("count-kernel-name", cl::init(""), cl::Hidden,
                                 cl::desc("Name of the kernel to analyze"));
 
-extern cl::opt<int> CoarseningDirection;
+extern cl::opt<unsigned int> CoarseningDirectionCL;
 
 char OpenCLFeatureExtractor::ID = 0;
 static RegisterPass<OpenCLFeatureExtractor> X("opencl-instcount",
@@ -74,7 +74,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirection);
+  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------
