@@ -1,27 +1,23 @@
-#include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+#include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
 #include "llvm/Pass.h"
 using namespace llvm;
 
 class DivergentRegion;
-class DivergenceInfo;
 
 class BranchExtraction : public FunctionPass {
-  void operator=(const BranchExtraction &);   // Do not implement.
-  BranchExtraction(const BranchExtraction &); // Do not implement.
-
 public:
   static char ID;
   BranchExtraction();
 
-  virtual bool runOnFunction(Function &F);
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
+  virtual bool runOnFunction(Function &function);
+  virtual void getAnalysisUsage(AnalysisUsage &au) const;
 
 private:
-  void isolateRegion(DivergentRegion *Region);
-  bool findRegionBlocks(DivergentRegion *Region, BlockVector &RegionBlocks);
+  void isolateRegion(DivergentRegion *region);
 
 private:
-  SingleDimDivAnalysis *SDDA;
+  LoopInfo *loopInfo;
+
 
 };

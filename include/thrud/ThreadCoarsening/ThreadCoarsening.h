@@ -1,9 +1,10 @@
 #ifndef THREAD_COARSENING_H
 #define THREAD_COARSENING_H
 
-#include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+#include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
 #include "thrud/Support/DataTypes.h"
+#include "thrud/Support/DivergentRegion.h"
 
 #include "llvm/Pass.h"
 
@@ -17,9 +18,6 @@ class BasicBlock;
 }
 
 class ThreadCoarsening : public FunctionPass {
-  void operator=(const ThreadCoarsening &);   // Do not implement.
-  ThreadCoarsening(const ThreadCoarsening &); // Do not implement.
-
 public:
   enum DivRegionOption {
     FullReplication,
@@ -56,23 +54,25 @@ private:
   Instruction *getCoarsenedInstruction(Instruction *inst,
                                        unsigned int coarseningIndex);
   // Manage placeholders.
-  void replacePlaceholders(); 
+  void replacePlaceholders();
 
-//  void InsertReplicatedInst(InstPairs &IP, Map &map);
-//  void PerformDuplication();
-//  void BuildPhiNodeMap(BasicBlock *OldBlock, BasicBlock *NewBlock, Map &map);
+  //  void InsertReplicatedInst(InstPairs &IP, Map &map);
+  //  void PerformDuplication();
+  //  void BuildPhiNodeMap(BasicBlock *OldBlock, BasicBlock *NewBlock, Map
+  // &map);
 
 private:
   unsigned int direction;
   unsigned int factor;
   unsigned int stride;
-  DivRegionOption divRegionOption; 
+  DivRegionOption divRegionOption;
 
   PostDominatorTree *pdt;
   DominatorTree *dt;
   RegionInfo *regionInfo;
   SingleDimDivAnalysis *sdda;
   LoopInfo *loopInfo;
+  NDRange *ndr;
 
   CoarseningMap cMap;
   CoarseningMap phMap;

@@ -27,6 +27,8 @@
 
 using namespace llvm;
 
+extern cl::opt<unsigned int> CoarseningDirectionCL;
+
 // Support functions.
 // -----------------------------------------------------------------------------
 void findUsesOf(Instruction *inst, InstSet &result);
@@ -34,37 +36,34 @@ bool isExternal(Instruction *inst, RegionVector &regions);
 
 // DivergenceAnalysis.
 // -----------------------------------------------------------------------------
-DivergenceAnalysis::DivergenceAnalysis() : FunctionPass(ID) {}
-DivergenceAnalysis::~DivergenceAnalysis() {}
-
-void DivergenceAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
-  au.addRequired<LoopInfo>();
-  au.addRequired<PostDominatorTree>();
-  au.addRequired<DominatorTree>();
-  au.addRequired<NDRange>();
-  au.addRequired<ControlDependenceAnalysis>();
-  au.setPreservesAll();
-}
-
-bool DivergenceAnalysis::runOnFunction(Function &functionRef) {
-  Function *function = (Function *)&functionRef;
-  // Apply the pass to kernels only.
-  if (!IsKernel(function))
-    return false;
-
-  pdt = &getAnalysis<PostDominatorTree>();
-  dt = &getAnalysis<DominatorTree>();
-  loopInfo = &getAnalysis<LoopInfo>();
-  ndr = &getAnalysis<NDRange>();
-  cda = &getAnalysis<ControlDependenceAnalysis>();
-
-  performAnalysis();
-  findBranches();
-  findRegions();
-  findExternalInsts();
-
-  return false;
-}
+//void DivergenceAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
+//  au.addRequired<LoopInfo>();
+//  au.addRequired<PostDominatorTree>();
+//  au.addRequired<DominatorTree>();
+//  au.addRequired<NDRange>();
+//  au.addRequired<ControlDependenceAnalysis>();
+//  au.setPreservesAll();
+//}
+//
+//bool DivergenceAnalysis::runOnFunction(Function &functionRef) {
+//  Function *function = (Function *)&functionRef;
+//  // Apply the pass to kernels only.
+//  if (!IsKernel(function))
+//    return false;
+//
+//  pdt = &getAnalysis<PostDominatorTree>();
+//  dt = &getAnalysis<DominatorTree>();
+//  loopInfo = &getAnalysis<LoopInfo>();
+//  ndr = &getAnalysis<NDRange>();
+//  cda = &getAnalysis<ControlDependenceAnalysis>();
+//
+//  performAnalysis();
+//  findBranches();
+//  findRegions();
+//  findExternalInsts();
+//
+//  return false;
+//}
 
 InstVector DivergenceAnalysis::getTids() {
   // This must be overriden by all subclasses.
@@ -149,6 +148,24 @@ void DivergenceAnalysis::findExternalInsts() {
   }
 }
 
+// Public functions.
+//------------------------------------------------------------------------------
+InstVector &DivergenceAnalysis::getDivInsts() {
+  return divInsts;
+}
+
+InstVector &DivergenceAnalysis::getDivInstsOutsideRegions() {
+  return externalDivInsts;
+}
+
+RegionVector &DivergenceAnalysis::getDivRegions() {
+  return regions;
+}
+
+bool DivergenceAnalysis::isDivergent(Instruction *inst) {
+  return isPresent(inst, divInsts);
+}
+
 // Support functions.
 //------------------------------------------------------------------------------
 void findUsesOf(Instruction *inst, InstSet &result) {
@@ -161,6 +178,7 @@ void findUsesOf(Instruction *inst, InstSet &result) {
   }
 }
 
+// FIXME: inst is external if is not control dependent on any div branch.
 bool isExternal(Instruction *inst, RegionVector &regions) {
   bool result = false;
   for (RegionVector::const_iterator iter = regions.begin(),
@@ -171,3 +189,83 @@ bool isExternal(Instruction *inst, RegionVector &regions) {
   }
   return !result;
 }
+
+// SingleDimDivAnalysis
+//------------------------------------------------------------------------------
+SingleDimDivAnalysis::SingleDimDivAnalysis() : FunctionPass(ID) {}
+
+void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
+  au.addRequired<LoopInfo>();
+  au.addRequired<PostDominatorTree>();
+  au.addRequired<DominatorTree>();
+  au.addRequired<NDRange>();
+  au.addRequired<ControlDependenceAnalysis>();
+  au.setPreservesAll();
+}
+
+bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
+  Function *function = (Function *)&functionRef;
+  // Apply the pass to kernels only.
+  if (!IsKernel(function))
+    return false;
+
+  pdt = &getAnalysis<PostDominatorTree>();
+  dt = &getAnalysis<DominatorTree>();
+  loopInfo = &getAnalysis<LoopInfo>();
+  ndr = &getAnalysis<NDRange>();
+  cda = &getAnalysis<ControlDependenceAnalysis>();
+
+  performAnalysis();
+  findBranches();
+  findRegions();
+  findExternalInsts();
+
+  return false;
+}
+
+InstVector SingleDimDivAnalysis::getTids() {
+  return ndr->getTids(CoarseningDirectionCL);
+}
+
+char SingleDimDivAnalysis::ID = 0;
+static RegisterPass<SingleDimDivAnalysis> X("sdda", "Single divergence analysis");
+
+// MultiDimDivAnalysis
+//------------------------------------------------------------------------------
+MultiDimDivAnalysis::MultiDimDivAnalysis() : FunctionPass(ID) {}
+
+void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
+  au.addRequired<LoopInfo>();
+  au.addRequired<PostDominatorTree>();
+  au.addRequired<DominatorTree>();
+  au.addRequired<NDRange>();
+  au.addRequired<ControlDependenceAnalysis>();
+  au.setPreservesAll();
+}
+
+bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {
+  Function *function = (Function *)&functionRef;
+  // Apply the pass to kernels only.
+  if (!IsKernel(function))
+    return false;
+
+  pdt = &getAnalysis<PostDominatorTree>();
+  dt = &getAnalysis<DominatorTree>();
+  loopInfo = &getAnalysis<LoopInfo>();
+  ndr = &getAnalysis<NDRange>();
+  cda = &getAnalysis<ControlDependenceAnalysis>();
+
+  performAnalysis();
+  findBranches();
+  findRegions();
+  findExternalInsts();
+
+  return false;
+}
+
+InstVector MultiDimDivAnalysis::getTids() {
+  return ndr->getTids();
+}
+
+char MultiDimDivAnalysis::ID = 0;
+static RegisterPass<MultiDimDivAnalysis> Y("mdda", "Multidimensional divergence analysis");

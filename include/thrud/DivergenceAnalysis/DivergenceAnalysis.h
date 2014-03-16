@@ -13,19 +13,12 @@
 
 using namespace llvm;
 
-class DivergenceAnalysis : public FunctionPass {
-  void operator=(const DivergenceAnalysis &);    // Do not implement.
-  DivergenceAnalysis(const DivergenceAnalysis &); // Do not implement.
-
+class DivergenceAnalysis {
 public:
-  static char ID;
-  DivergenceAnalysis();
-  ~DivergenceAnalysis();
-
-  virtual bool runOnFunction(Function &F);
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
-
-  // FIXME: add accessor methods for instructions and regions.
+  InstVector &getDivInsts();
+  InstVector &getDivInstsOutsideRegions();
+  RegionVector &getDivRegions();
+  bool isDivergent(Instruction *inst);
 
 protected:
   virtual InstVector getTids();
@@ -47,7 +40,30 @@ protected:
   DominatorTree *dt;
   LoopInfo *loopInfo;
   ControlDependenceAnalysis *cda;
-  
+};
+
+class SingleDimDivAnalysis : public FunctionPass, public DivergenceAnalysis {
+public:
+  static char ID;
+  SingleDimDivAnalysis();
+
+  virtual bool runOnFunction(Function &F);
+  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
+
+public:
+  virtual InstVector getTids();
+};
+
+class MultiDimDivAnalysis : public FunctionPass, public DivergenceAnalysis {
+public:
+  static char ID;
+  MultiDimDivAnalysis();
+
+  virtual bool runOnFunction(Function &F);
+  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
+
+public:
+  virtual InstVector getTids();
 };
 
 #endif

@@ -12,7 +12,7 @@ void ThreadCoarsening::scaleNDRange() {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::scaleSizes() {
-  InstVector sizeInsts = sdda->getSizes();
+  InstVector sizeInsts = ndr->getSizes(direction);
   for (InstVector::iterator iter = sizeInsts.begin(), iterEnd = sizeInsts.end();
        iter != iterEnd; ++iter) {
     // Scale size.
@@ -30,7 +30,7 @@ void ThreadCoarsening::scaleIds() {
   unsigned int cfst = factor * stride;
   unsigned int st1 = stride - 1;
 
-  InstVector tids = sdda->getThreadIds();
+  InstVector tids = ndr->getTids(direction);
   for (InstVector::iterator instIter = tids.begin(), instEnd = tids.end();
        instIter != instEnd; ++instIter) {
     Instruction *inst = *instIter;

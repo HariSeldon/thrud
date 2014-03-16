@@ -10,19 +10,19 @@ unsigned int NDRange::DIRECTION_NUMBER = 3;
 
 NDRange::NDRange() : FunctionPass(ID) {}
 
-void NDRange::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
+void NDRange::getAnalysisUsage(AnalysisUsage &au) const {
+  au.setPreservesAll();
 }
 
-bool NDRange::runOnFunction(Function &Func) {
-  Function *F = (Function *)&Func;
-  Init();
-  FindOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_ID, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_ID, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_SIZE, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_SIZE, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_GROUP_ID, F);
-  FindOpenCLFunctionCallsByNameAllDirs(GET_GROUPS_NUMBER, F);
+bool NDRange::runOnFunction(Function &function) {
+  Function *functionPtr = (Function *)&function;
+  init();
+  findOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_ID, functionPtr);
+  findOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_ID, functionPtr);
+  findOpenCLFunctionCallsByNameAllDirs(GET_GLOBAL_SIZE, functionPtr);
+  findOpenCLFunctionCallsByNameAllDirs(GET_LOCAL_SIZE, functionPtr);
+  findOpenCLFunctionCallsByNameAllDirs(GET_GROUP_ID, functionPtr);
+  findOpenCLFunctionCallsByNameAllDirs(GET_GROUPS_NUMBER, functionPtr);
   return false;
 }
 
@@ -30,9 +30,9 @@ bool NDRange::runOnFunction(Function &Func) {
 InstVector NDRange::getTids() {
   InstVector result;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
-    InstVector globalIds = DirInsts[GET_GLOBAL_ID];
-    InstVector localIds = DirInsts[GET_LOCAL_ID];
+    std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+    InstVector globalIds = dirInsts[GET_GLOBAL_ID];
+    InstVector localIds = dirInsts[GET_LOCAL_ID];
     result.insert(result.end(), globalIds.begin(), globalIds.end());
     result.insert(result.end(), localIds.begin(), localIds.end());
   }
@@ -42,10 +42,10 @@ InstVector NDRange::getTids() {
 InstVector NDRange::getSizes() {
   InstVector result;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
-    InstVector globalSizes = DirInsts[GET_GLOBAL_SIZE];
-    InstVector localSizes = DirInsts[GET_LOCAL_SIZE];
-    InstVector numGroups = DirInsts[GET_GROUPS_NUMBER];
+    std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+    InstVector globalSizes = dirInsts[GET_GLOBAL_SIZE];
+    InstVector localSizes = dirInsts[GET_LOCAL_SIZE];
+    InstVector numGroups = dirInsts[GET_GROUPS_NUMBER];
     result.insert(result.end(), globalSizes.begin(), globalSizes.end());
     result.insert(result.end(), localSizes.begin(), localSizes.end());
     result.insert(result.end(), numGroups.begin(), numGroups.end());
@@ -55,9 +55,9 @@ InstVector NDRange::getSizes() {
 
 InstVector NDRange::getTids(unsigned int direction) {
   InstVector result;
-  std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
-  InstVector globalIds = DirInsts[GET_GLOBAL_ID];
-  InstVector localIds = DirInsts[GET_LOCAL_ID];
+  std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+  InstVector globalIds = dirInsts[GET_GLOBAL_ID];
+  InstVector localIds = dirInsts[GET_LOCAL_ID];
   result.insert(result.end(), globalIds.begin(), globalIds.end());
   result.insert(result.end(), localIds.begin(), localIds.end());
   return result;
@@ -65,200 +65,201 @@ InstVector NDRange::getTids(unsigned int direction) {
 
 InstVector NDRange::getSizes(unsigned int direction) {
   InstVector result;
-  std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
-  InstVector globalSizes = DirInsts[GET_GLOBAL_SIZE];
-  InstVector localSizes = DirInsts[GET_LOCAL_SIZE];
-  InstVector numGroups = DirInsts[GET_GROUPS_NUMBER];
+  std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+  InstVector globalSizes = dirInsts[GET_GLOBAL_SIZE];
+  InstVector localSizes = dirInsts[GET_LOCAL_SIZE];
+  InstVector numGroups = dirInsts[GET_GROUPS_NUMBER];
   result.insert(result.end(), globalSizes.begin(), globalSizes.end());
   result.insert(result.end(), localSizes.begin(), localSizes.end());
   result.insert(result.end(), numGroups.begin(), numGroups.begin());
   return result;
 }
 
-bool NDRange::IsTid(Instruction *I) {
+bool NDRange::isTid(Instruction *inst) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    result |= IsTidInDirection(I, direction);
+    result |= isTidInDirection(inst, direction);
   }
   return result;
 }
 
-bool NDRange::IsTidInDirection(Instruction *I, unsigned int direction) {
+bool NDRange::isTidInDirection(Instruction *inst, unsigned int direction) {
   // No bound checking is needed.
-  std::map<std::string, InstVector> &dirInsts = OCLInsts[direction];
-  bool isLocalId = isPresent(I, dirInsts[GET_GLOBAL_ID]);
-  bool isGlobalId = isPresent(I, dirInsts[GET_LOCAL_ID]);
-  bool isGroupId = isPresent(I, dirInsts[GET_GROUP_ID]);
+  std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+  bool isLocalId = isPresent(inst, dirInsts[GET_GLOBAL_ID]);
+  bool isGlobalId = isPresent(inst, dirInsts[GET_LOCAL_ID]);
+  bool isGroupId = isPresent(inst, dirInsts[GET_GROUP_ID]);
   return isLocalId || isGlobalId || isGroupId;
 }
 
-std::string NDRange::getType(Instruction *I) {
-  if (IsGlobal(I))
+std::string NDRange::getType(Instruction *inst) {
+  if (isGlobal(inst))
     return GET_GLOBAL_ID;
-  if (IsLocal(I))
+  if (isLocal(inst))
     return GET_LOCAL_ID;
-  if (IsGroupId(I))
+  if (isGroupId(inst))
     return GET_GROUP_ID;
-  if (IsGlobalSize(I))
+  if (isGlobalSize(inst))
     return GET_GLOBAL_SIZE;
-  if (IsLocalSize(I))
+  if (isLocalSize(inst))
     return GET_LOCAL_SIZE;
-  if (IsGroupsNum(I))
+  if (isGroupsNum(inst))
     return GET_GROUPS_NUMBER;
   return "";
 }
 
-unsigned int NDRange::getDirection(Instruction *I) {
+unsigned int NDRange::getDirection(Instruction *inst) {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    bool result = IsGlobal(I, direction) || IsLocal(I, direction) ||
-                  IsGlobalSize(I, direction) || IsLocalSize(I, direction) ||
-                  IsGroupId(I, direction) || IsGroupsNum(I, direction);
+    bool result =
+        isGlobal(inst, direction) || isLocal(inst, direction) ||
+        isGlobalSize(inst, direction) || isLocalSize(inst, direction) ||
+        isGroupId(inst, direction) || isGroupsNum(inst, direction);
     if (result == true)
       return direction;
   }
   return -1;
 }
 
-bool NDRange::IsGlobal(Instruction *I) {
+bool NDRange::isGlobal(Instruction *inst) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    result |= IsGlobal(I, direction);
+    result |= isGlobal(inst, direction);
   }
   return result;
 }
 
-bool NDRange::IsLocal(Instruction *I) {
+bool NDRange::isLocal(Instruction *inst) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    result |= IsLocal(I, direction);
+    result |= isLocal(inst, direction);
   }
   return result;
 }
 
-bool NDRange::IsGlobalSize(Instruction *I) {
+bool NDRange::isGlobalSize(Instruction *inst) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    result |= IsGlobalSize(I, direction);
+    result |= isGlobalSize(inst, direction);
   }
   return result;
 }
 
-bool NDRange::IsLocalSize(Instruction *I) {
+bool NDRange::isLocalSize(Instruction *inst) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    result |= IsLocalSize(I, direction);
+    result |= isLocalSize(inst, direction);
   }
   return result;
 }
 
-bool NDRange::IsGroupId(Instruction *I) {
+bool NDRange::isGroupId(Instruction *inst) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    result |= IsGroupId(I, direction);
+    result |= isGroupId(inst, direction);
   }
   return result;
 }
 
-bool NDRange::IsGroupsNum(Instruction *I) {
+bool NDRange::isGroupsNum(Instruction *inst) {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    result |= IsGroupsNum(I, direction);
+    result |= isGroupsNum(inst, direction);
   }
   return result;
 }
 
-bool NDRange::IsGlobal(Instruction *I, int direction) {
-  return isPresentInDirection(I, GET_GLOBAL_ID, direction);
+bool NDRange::isGlobal(Instruction *inst, unsigned int direction) {
+  return isPresentInDirection(inst, GET_GLOBAL_ID, direction);
 }
 
-bool NDRange::IsLocal(Instruction *I, int direction) {
-  return isPresentInDirection(I, GET_LOCAL_ID, direction);
+bool NDRange::isLocal(Instruction *inst, unsigned int direction) {
+  return isPresentInDirection(inst, GET_LOCAL_ID, direction);
 }
 
-bool NDRange::IsGlobalSize(Instruction *I, int direction) {
-  return isPresentInDirection(I, GET_GLOBAL_SIZE, direction);
+bool NDRange::isGlobalSize(Instruction *inst, unsigned int direction) {
+  return isPresentInDirection(inst, GET_GLOBAL_SIZE, direction);
 }
 
-bool NDRange::IsLocalSize(Instruction *I, int direction) {
-  return isPresentInDirection(I, GET_LOCAL_SIZE, direction);
+bool NDRange::isLocalSize(Instruction *inst, unsigned int direction) {
+  return isPresentInDirection(inst, GET_LOCAL_SIZE, direction);
 }
 
-bool NDRange::IsGroupId(Instruction *I, int direction) {
-  return isPresentInDirection(I, GET_GROUP_ID, direction);
+bool NDRange::isGroupId(Instruction *inst, unsigned int direction) {
+  return isPresentInDirection(inst, GET_GROUP_ID, direction);
 }
 
-bool NDRange::IsGroupsNum(Instruction *I, int direction) {
-  return isPresentInDirection(I, GET_GROUPS_NUMBER, direction);
+bool NDRange::isGroupsNum(Instruction *inst, unsigned int direction) {
+  return isPresentInDirection(inst, GET_GROUPS_NUMBER, direction);
 }
 
 void NDRange::dump() {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
+    std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
     llvm::errs() << "Direction: " << direction << " ========= \n";
     llvm::errs() << GET_GLOBAL_ID << "\n";
-    dumpVector(DirInsts[GET_GLOBAL_ID]);
+    dumpVector(dirInsts[GET_GLOBAL_ID]);
     llvm::errs() << GET_LOCAL_ID << "\n";
-    dumpVector(DirInsts[GET_LOCAL_ID]);
+    dumpVector(dirInsts[GET_LOCAL_ID]);
     llvm::errs() << GET_GROUP_ID << "\n";
-    dumpVector(DirInsts[GET_GROUP_ID]);
+    dumpVector(dirInsts[GET_GROUP_ID]);
     llvm::errs() << GET_GLOBAL_SIZE << "\n";
-    dumpVector(DirInsts[GET_GLOBAL_SIZE]);
+    dumpVector(dirInsts[GET_GLOBAL_SIZE]);
     llvm::errs() << GET_LOCAL_SIZE << "\n";
-    dumpVector(DirInsts[GET_LOCAL_SIZE]);
+    dumpVector(dirInsts[GET_LOCAL_SIZE]);
     llvm::errs() << GET_GROUPS_NUMBER << "\n";
-    dumpVector(DirInsts[GET_GROUPS_NUMBER]);
+    dumpVector(dirInsts[GET_GROUPS_NUMBER]);
   }
 }
 
 // -----------------------------------------------------------------------------
-void NDRange::Init() {
+void NDRange::init() {
   // A vector per dimension.
-  OCLInsts.reserve(DIRECTION_NUMBER);
+  oclInsts.reserve(DIRECTION_NUMBER);
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    OCLInsts.push_back(std::map<std::string, InstVector>());
+    oclInsts.push_back(std::map<std::string, InstVector>());
   }
   // Init the maps in every direction.
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
-    DirInsts[GET_GLOBAL_ID] = InstVector();
-    DirInsts[GET_LOCAL_ID] = InstVector();
-    DirInsts[GET_GLOBAL_SIZE] = InstVector();
-    DirInsts[GET_LOCAL_SIZE] = InstVector();
-    DirInsts[GET_GROUP_ID] = InstVector();
-    DirInsts[GET_GROUPS_NUMBER] = InstVector();
+    std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+    dirInsts[GET_GLOBAL_ID] = InstVector();
+    dirInsts[GET_LOCAL_ID] = InstVector();
+    dirInsts[GET_GLOBAL_SIZE] = InstVector();
+    dirInsts[GET_LOCAL_SIZE] = InstVector();
+    dirInsts[GET_GROUP_ID] = InstVector();
+    dirInsts[GET_GROUPS_NUMBER] = InstVector();
   }
 }
 
-bool NDRange::isPresentInDirection(llvm::Instruction *I,
-                                   const std::string &FuncName, int Dir) {
-  std::map<std::string, InstVector> &DirInsts = OCLInsts[Dir];
-  const InstVector &Insts = DirInsts[FuncName];
-  return isPresent(I, Insts);
+bool NDRange::isPresentInDirection(llvm::Instruction *inst,
+                                   const std::string &functionName, unsigned int direction) {
+  std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+  const InstVector &insts = dirInsts[functionName];
+  return isPresent(inst, insts);
 }
 
-void NDRange::FindOpenCLFunctionCallsByNameAllDirs(std::string CalleeName,
-                                                   Function *Caller) {
+void NDRange::findOpenCLFunctionCallsByNameAllDirs(std::string calleeName,
+                                                   Function *caller) {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
-    std::map<std::string, InstVector> &DirInsts = OCLInsts[direction];
-    InstVector &Insts = DirInsts[CalleeName];
-    FindOpenCLFunctionCallsByName(CalleeName, Caller, direction, Insts);
+    std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+    InstVector &insts = dirInsts[calleeName];
+    findOpenCLFunctionCallsByName(calleeName, caller, direction, insts);
   }
 }
 
 // -----------------------------------------------------------------------------
-void FindOpenCLFunctionCallsByName(std::string calleeName, Function *caller,
-                                   int direction, InstVector &Target) {
+void findOpenCLFunctionCallsByName(std::string calleeName, Function *caller,
+                                   unsigned int direction, InstVector &target) {
   // Get function value.
-  Function *callee = GetOpenCLFunctionByName(calleeName, caller);
+  Function *callee = getOpenCLFunctionByName(calleeName, caller);
   if (callee == NULL)
     return;
   // Find calls to the function.
-  FindOpenCLFunctionCalls(callee, caller, direction, Target);
+  findOpenCLFunctionCalls(callee, caller, direction, target);
 }
 
 // -----------------------------------------------------------------------------
-void FindOpenCLFunctionCalls(Function *callee, Function *caller, int direction,
-                             InstVector &Target) {
+void findOpenCLFunctionCalls(Function *callee, Function *caller, unsigned int direction,
+                             InstVector &target) {
   // Iterate over the uses of the function.
   for (Value::use_iterator iter = callee->use_begin(), end = callee->use_end();
        iter != end; ++iter) {
@@ -268,7 +269,7 @@ void FindOpenCLFunctionCalls(Function *callee, Function *caller, int direction,
                 dyn_cast<ConstantInt>(inst->getArgOperand(0))) {
           int ArgumentValue = GetInteger(ci);
           if (direction == -1 || ArgumentValue == direction)
-            Target.push_back(inst);
+            target.push_back(inst);
         }
   }
 }

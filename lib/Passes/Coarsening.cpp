@@ -19,8 +19,8 @@
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
-  InstVector TIds = sdda->getThreadIds();
-  InstVector Insts = sdda->getInstToRepOutsideRegions();
+//  InstVector TIds = sdda->getThreadIds();
+  InstVector &Insts = sdda->getDivInstsOutsideRegions();
 
   // Replicate instructions.
   for (InstVector::iterator instIter = Insts.begin(), instEnd = Insts.end();
@@ -29,7 +29,7 @@ void ThreadCoarsening::coarsenFunction() {
     replicateInst(inst);
   }
 
-  RegionVector regions = sdda->getDivergentRegions();
+  RegionVector &regions = sdda->getDivRegions();
   // Replicate regions.
   for (RegionVector::iterator regionIter = regions.begin(),
                               regionEnd = regions.end();
@@ -115,7 +115,7 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
     return result;
   } else {
     // The instruction is not in the map.
-    if (sdda->IsThreadIdDependent(inst)) {
+    if (sdda->isDivergent(inst)) {
       // The instruction is divergent.
       // Look in placeholder map.
       CoarseningMap::iterator PHIt = phMap.find(inst);

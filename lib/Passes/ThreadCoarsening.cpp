@@ -1,12 +1,3 @@
-//===- ThreadCoarsening.cpp - Merge many OpenCL threads into one ----------===//
-//
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See loopInfoCENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-
 // Required passes: -mem2reg and -instnamer
 // At the end perform CSE / DCE.
 
@@ -14,7 +5,7 @@
 
 #include "thrud/ThreadCoarsening/ThreadCoarsening.h"
 
-#include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+#include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/Utils.h"
@@ -47,21 +38,26 @@ using namespace llvm;
 
 // Command line options.
 extern cl::opt<unsigned int> CoarseningDirectionCL;
-cl::opt<unsigned int> CoarseningFactorCL("coarsening-factor", cl::init(1), cl::Hidden,
-                              cl::desc("The coarsening factor"));
-cl::opt<unsigned int> CoarseningStrideCL("coarsening-stride", cl::init(1), cl::Hidden,
-                    cl::desc("The coarsening stride"));
+cl::opt<unsigned int> CoarseningFactorCL("coarsening-factor", cl::init(1),
+                                         cl::Hidden,
+                                         cl::desc("The coarsening factor"));
+cl::opt<unsigned int> CoarseningStrideCL("coarsening-stride", cl::init(1),
+                                         cl::Hidden,
+                                         cl::desc("The coarsening stride"));
 cl::opt<std::string> KernelNameCL("kernel-name", cl::init(""), cl::Hidden,
-                                cl::desc("Name of the kernel to coarsen"));
+                                  cl::desc("Name of the kernel to coarsen"));
 cl::opt<ThreadCoarsening::DivRegionOption> DivRegionOptionCL(
     "div-region-mgt", cl::init(ThreadCoarsening::FullReplication), cl::Hidden,
     cl::desc("Divergent region management"),
-    cl::values(
-        clEnumValN(ThreadCoarsening::FullReplication, "classic", "Replicate full region"),
-        clEnumValN(ThreadCoarsening::TrueBranchMerging, "merge-true", "Merge true branch"),
-        clEnumValN(ThreadCoarsening::FalseBranchMerging, "merge-false", "Merge false branch"),
-        clEnumValN(ThreadCoarsening::FullMerging, "merge", "Merge both true and false branches"),
-        clEnumValEnd));
+    cl::values(clEnumValN(ThreadCoarsening::FullReplication, "classic",
+                          "Replicate full region"),
+               clEnumValN(ThreadCoarsening::TrueBranchMerging, "merge-true",
+                          "Merge true branch"),
+               clEnumValN(ThreadCoarsening::FalseBranchMerging, "merge-false",
+                          "Merge false branch"),
+               clEnumValN(ThreadCoarsening::FullMerging, "merge",
+                          "Merge both true and false branches"),
+               clEnumValEnd));
 
 //------------------------------------------------------------------------------
 ThreadCoarsening::ThreadCoarsening() : FunctionPass(ID) {}
@@ -89,13 +85,14 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   direction = CoarseningDirectionCL;
   factor = CoarseningFactorCL;
   stride = CoarseningStrideCL;
-  divRegionOption = DivRegionOptionCL; 
+  divRegionOption = DivRegionOptionCL;
 
   // Perform analysis.
   loopInfo = &getAnalysis<LoopInfo>();
   pdt = &getAnalysis<PostDominatorTree>();
   dt = &getAnalysis<DominatorTree>();
   sdda = &getAnalysis<SingleDimDivAnalysis>();
+  ndr = &getAnalysis<NDRange>();
 
   // Trasnform the kernel.
   scaleNDRange();
@@ -141,7 +138,8 @@ static RegisterPass<ThreadCoarsening>
 //  // This replaces tid with 2 * tid.
 //  Map map;
 //  InitializeMap(map, TIds, newTIds, 0, CF);
-//  for (RegionVector::iterator regionInfo = Regions.begin(), RE = Regions.end();
+//  for (RegionVector::iterator regionInfo = Regions.begin(), RE =
+// Regions.end();
 //       regionInfo != RE; ++regionInfo) {
 //    DivergentRegion *R = *regionInfo;
 //    BlockVector *Blocks = R->getBlocks();

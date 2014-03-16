@@ -166,7 +166,7 @@ bool IsStrictBranch(const BranchInst *Branch);
 
 // Divergence Utils.
 
-Function *GetOpenCLFunctionByName(std::string calleeName, Function *caller);
+Function *getOpenCLFunctionByName(std::string calleeName, Function *caller);
 
 // Find all the instructions which depend on the TId.
 InstVector FindThreadDepInst(Function *F, ValueVector &TIds);

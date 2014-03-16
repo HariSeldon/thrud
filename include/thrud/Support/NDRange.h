@@ -19,8 +19,8 @@ public:
   static char ID;
   NDRange();
 
-  virtual bool runOnFunction(Function &F);
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
+  virtual bool runOnFunction(Function &function);
+  virtual void getAnalysisUsage(AnalysisUsage &au) const;
 
 public:
   InstVector getTids();
@@ -28,24 +28,24 @@ public:
   InstVector getTids(unsigned int direction);
   InstVector getSizes(unsigned int direction);
 
-  bool IsTid(Instruction *I);
-  bool IsTidInDirection(Instruction *I, unsigned int direction);
-  std::string getType(Instruction *I);
-  unsigned int getDirection(Instruction *I);
+  bool isTid(Instruction *inst);
+  bool isTidInDirection(Instruction *inst, unsigned int direction);
+  std::string getType(Instruction *inst);
+  unsigned int getDirection(Instruction *inst);
 
-  bool IsGlobal(Instruction *I);
-  bool IsLocal(Instruction *I);
-  bool IsGlobalSize(Instruction *I);
-  bool IsLocalSize(Instruction *I);
-  bool IsGroupId(Instruction *I);
-  bool IsGroupsNum(Instruction *I);
+  bool isGlobal(Instruction *inst);
+  bool isLocal(Instruction *inst);
+  bool isGlobalSize(Instruction *inst);
+  bool isLocalSize(Instruction *inst);
+  bool isGroupId(Instruction *inst);
+  bool isGroupsNum(Instruction *inst);
   
-  bool IsGlobal(Instruction *I, int direction);
-  bool IsLocal(Instruction *I, int direction);
-  bool IsGlobalSize(Instruction *I, int direction);
-  bool IsLocalSize(Instruction *I, int direction);
-  bool IsGroupId(Instruction *I, int direction);
-  bool IsGroupsNum(Instruction *I, int dimension);
+  bool isGlobal(Instruction *inst, unsigned int direction);
+  bool isLocal(Instruction *inst, unsigned int direction);
+  bool isGlobalSize(Instruction *inst, unsigned int direction);
+  bool isLocalSize(Instruction *inst, unsigned int direction);
+  bool isGroupId(Instruction *inst, unsigned int direction);
+  bool isGroupsNum(Instruction *inst, unsigned int dimension);
 
   void dump();
 
@@ -59,22 +59,22 @@ public:
   static unsigned int DIRECTION_NUMBER;
 
 private:
-  void Init();
-  bool isPresentInDirection(Instruction *I,
-                            const std::string &FuncName,
-                            int Dir);
-  void FindOpenCLFunctionCallsByNameAllDirs(std::string CalleeName, Function *Caller);
+  void init();
+  bool isPresentInDirection(Instruction *inst,
+                            const std::string &functionName,
+                            unsigned int direction);
+  void findOpenCLFunctionCallsByNameAllDirs(std::string calleeName, Function *caller);
 
 
 private:
   Function *kernel;
-  std::vector<std::map<std::string, InstVector> > OCLInsts;
+  std::vector<std::map<std::string, InstVector> > oclInsts;
 };
 
 // Non-member functions.
-void FindOpenCLFunctionCallsByName(std::string calleeName,
-                                   Function *caller, int dimension, InstVector& Target);
-void FindOpenCLFunctionCalls(Function *callee, Function *caller,
-                                   int dimension, InstVector& Target);
+void findOpenCLFunctionCallsByName(std::string calleeName, Function *caller,
+                                   unsigned int dimension, InstVector &target);
+void findOpenCLFunctionCalls(Function *callee, Function *caller,
+                             unsigned int dimension, InstVector &target);
 
 #endif

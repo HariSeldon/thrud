@@ -1,8 +1,8 @@
 #ifndef FEATURE_COLLECTOR_H
 #define FEATURE_COLLECTOR_H
 
-#include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
-#include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+#include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
+#include "thrud/Support/NDRange.h"
 
 // Try to remove these two.
 #include "llvm/Analysis/Dominators.h"

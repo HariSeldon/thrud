@@ -105,9 +105,7 @@ template <> struct SequenceTraits<std::vector<unsigned int> > {
 //------------------------------------------------------------------------------
 // Sequence of ints.
 template <> struct SequenceTraits<std::vector<int> > {
-  static size_t size(IO &io, std::vector<int> &seq) {
-    return seq.size();
-  }
+  static size_t size(IO &io, std::vector<int> &seq) { return seq.size(); }
   static int &element(IO &, std::vector<int> &seq, size_t index) {
     if (index >= seq.size())
       seq.resize(index + 1);
@@ -282,11 +280,11 @@ void FeatureCollector::countConstants(const BasicBlock &block) {
         if (constInt->getBitWidth() == 32)
           ++fourB;
 
-        if (constInt->getBitWidth() == 64) 
+        if (constInt->getBitWidth() == 64)
           ++eightB;
       }
 
-      if (isa<ConstantFP>(operand)) 
+      if (isa<ConstantFP>(operand))
         ++fps;
     }
   }
@@ -348,25 +346,25 @@ void FeatureCollector::countLocalMemoryUsage(const BasicBlock &block) {
 void FeatureCollector::countDivInsts(Function &function,
                                      MultiDimDivAnalysis *mdda,
                                      SingleDimDivAnalysis *sdda) {
-  instTypes["divRegions"] = mdda->getDivergentRegions().size();
-  instTypes["divInsts"] = mdda->getToRep().size();
+  instTypes["divRegions"] = mdda->getDivRegions().size();
+  instTypes["divInsts"] = mdda->getDivInsts().size();
 
   // Insts in divergent regions.
   unsigned int divRegionInsts = 0;
-  RegionVector Regions = mdda->getDivergentRegions();
-  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
-       ++I) {
-    divRegionInsts += (*I)->size();
+  RegionVector &Regions = mdda->getDivRegions();
+  for (RegionVector::iterator iter = Regions.begin(), iterEnd = Regions.end();
+       iter != iterEnd; ++iter) {
+    divRegionInsts += (*iter)->size();
   }
 
   instTypes["divRegionInsts"] = divRegionInsts;
 
   // Count uniform loads.
   unsigned int uniformLoads = 0;
-  for (inst_iterator I = inst_begin(function), E = inst_end(function); I != E;
-       ++I) {
-    Instruction *inst = &*I;
-    uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
+  for (inst_iterator iter = inst_begin(function), iterEnd = inst_end(function);
+       iter != iterEnd; ++iter) {
+    Instruction *inst = &*iter;
+    uniformLoads += isa<LoadInst>(inst) && !sdda->isDivergent(inst);
   }
 
   instTypes["uniformLoads"] = uniformLoads;
@@ -425,19 +423,19 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
     llvm::Instruction *inst = iter;
-    if(LoadInst *LI = dyn_cast<LoadInst>(inst)) {
+    if (LoadInst *LI = dyn_cast<LoadInst>(inst)) {
       Value *pointer = LI->getOperand(0);
-      if(GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if(gep->getPointerAddressSpace() == LOCAL_AS)
+      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+        if (gep->getPointerAddressSpace() == LOCAL_AS)
           continue;
       }
 
       memoryStrides.push_back(SA.GetThreadStride(pointer));
     }
-    if(StoreInst *SI = dyn_cast<StoreInst>(inst)) {
+    if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
-      if(GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if(gep->getPointerAddressSpace() == LOCAL_AS)
+      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+        if (gep->getPointerAddressSpace() == LOCAL_AS)
           continue;
       }
       memoryStrides.push_back(SA.GetThreadStride(pointer));
@@ -469,7 +467,7 @@ void FeatureCollector::loopCountEdges(const Function &function, LoopInfo *LI) {
   unsigned int criticalEdges = 0;
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
-    if(!IsInLoop(block, LI))
+    if (!IsInLoop(block, LI))
       continue;
     edges += block->getTerminator()->getNumSuccessors();
   }
@@ -477,7 +475,7 @@ void FeatureCollector::loopCountEdges(const Function &function, LoopInfo *LI) {
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
 
-    if(!IsInLoop(block, LI))
+    if (!IsInLoop(block, LI))
       continue;
 
     const TerminatorInst *termInst = block->getTerminator();
@@ -500,7 +498,7 @@ void FeatureCollector::loopCountBranches(const Function &function,
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
 
-    if(!IsInLoop(block, LI))
+    if (!IsInLoop(block, LI))
       continue;
 
     const TerminatorInst *term = block->getTerminator();
@@ -521,25 +519,25 @@ void FeatureCollector::loopCountDivInsts(Function &function,
                                          SingleDimDivAnalysis *sdda,
                                          LoopInfo *LI) {
   // Count divergent regions.
-  RegionVector Regions = mdda->getDivergentRegions();
-  InstVector DivInsts = mdda->getToRep(); 
+  RegionVector &Regions = mdda->getDivRegions();
+  InstVector DivInsts = mdda->getDivInsts();
   unsigned int divRegions = 0;
   unsigned int divInsts = 0;
 
-  for (InstVector::iterator I = DivInsts.begin(), E = DivInsts.end(); I != E; ++I) {
-    if(!IsInLoop(*I, LI))
+  for (InstVector::iterator iter = DivInsts.begin(), iterEnd = DivInsts.end();
+       iter != iterEnd; ++iter) {
+    if (!IsInLoop(*iter, LI))
       continue;
     ++divInsts;
-  } 
-
+  }
 
   // Insts in divergent regions.
   unsigned int divRegionInsts = 0;
-  for (RegionVector::iterator I = Regions.begin(), E = Regions.end(); I != E;
-       ++I) {
-    if(!IsInLoop((*I)->getHeader(), LI))
+  for (RegionVector::iterator iter = Regions.begin(), iterEnd = Regions.end();
+       iter != iterEnd; ++iter) {
+    if (!IsInLoop((*iter)->getHeader(), LI))
       continue;
-    divRegionInsts += (*I)->size();
+    divRegionInsts += (*iter)->size();
     ++divRegions;
   }
 
@@ -547,14 +545,14 @@ void FeatureCollector::loopCountDivInsts(Function &function,
 
   // Count uniform loads.
   unsigned int uniformLoads = 0;
-  for (inst_iterator I = inst_begin(function), E = inst_end(function); I != E;
-       ++I) {
-    Instruction *inst = &*I;
+  for (inst_iterator iter = inst_begin(function), iterEnd = inst_end(function);
+       iter != iterEnd; ++iter) {
+    Instruction *inst = &*iter;
 
-    if(!IsInLoop(inst, LI))
+    if (!IsInLoop(inst, LI))
       continue;
 
-    uniformLoads += isa<LoadInst>(inst) && !sdda->IsThreadIdDependent(inst);
+    uniformLoads += isa<LoadInst>(inst) && !sdda->isDivergent(inst);
   }
 
   instTypes["uniformLoads"] = uniformLoads;

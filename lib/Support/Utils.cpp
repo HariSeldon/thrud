@@ -423,12 +423,6 @@ BranchInst *FindOutermostBranch(BranchSet &Bs, const DominatorTree *DT) {
 }
 
 //------------------------------------------------------------------------------
-bool IsInRegion(BasicBlock *Top, BasicBlock *Bottom, BasicBlock *BB,
-                const DominatorTree *DT, const PostDominatorTree *PDT) {
-  return DT->dominates(Top, BB) && PDT->dominates(Bottom, BB);
-}
-
-//------------------------------------------------------------------------------
 bool isDominated(const Instruction *I, BranchVector &Bs,
                  const DominatorTree *DT) {
   bool isDominated = false;
@@ -722,7 +716,7 @@ void InitializeMap(Map &map, const InstVector &TIds, const InstVector &NewTIds,
 }
 
 //------------------------------------------------------------------------------
-Function *GetOpenCLFunctionByName(std::string calleeName, Function *caller) {
+Function *getOpenCLFunctionByName(std::string calleeName, Function *caller) {
   Module &module = *caller->getParent();
   Function *callee = module.getFunction(calleeName);
 
