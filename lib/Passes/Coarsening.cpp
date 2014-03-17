@@ -164,7 +164,12 @@ void ThreadCoarsening::replacePlaceholders() {
 }
 
 //------------------------------------------------------------------------------
-void ThreadCoarsening::replicateRegion(DivergentRegion * region) {
+void ThreadCoarsening::replicateRegion(DivergentRegion *region) {
+  assert(dt->dominates(region->getHeader(), region->getExiting()) &&
+         "Header does not dominates Exiting");
+  assert(pdt->dominates(region->getExiting(), region->getHeader()) &&
+         "Exiting does not post dominate Header");
+
   region->dump();
 
   // Do not replicate if the region is strict.
@@ -227,9 +232,6 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
     //    DivergentRegion region(newBounds);
     //    applyCoarseningMap(region, index);
   }
-
-//  pred->getParent()->getParent()->dump();
-//  exit(1);
 }
 
 //------------------------------------------------------------------------------
