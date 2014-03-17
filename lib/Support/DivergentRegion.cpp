@@ -52,12 +52,13 @@ RegionBounds &DivergentRegion::getBounds() { return bounds; }
 BlockVector &DivergentRegion::getBlocks() { return blocks; }
 
 void DivergentRegion::fillRegion(DominatorTree *dt, PostDominatorTree *pdt) {
-  listBlocks(bounds, blocks);
+  blocks.clear();
+  bounds.listBlocks(blocks);
 
-  // If H is dominated by a block in the region than recompute the bounds.
-  if (isDominated(bounds.getHeader(), blocks, dt)) {
-    updateBounds(dt, pdt);
-  }
+//  // If H is dominated by a block in the region then recompute the bounds.
+//  if (isDominated(bounds.getHeader(), blocks, dt)) {
+//    updateBounds(dt, pdt);
+//  }
 }
 
 //------------------------------------------------------------------------------
@@ -265,7 +266,7 @@ RegionBounds cloneRegion(RegionBounds &bounds, const Twine &suffix,
   BlockVector newBlocks;
   BlockVector blocks;
 
-  listBlocks(bounds, blocks);
+  bounds.listBlocks(blocks);
 
   // Map used to update the branches inside the region.
   Map regionBlockMap;

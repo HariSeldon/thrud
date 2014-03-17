@@ -3,13 +3,8 @@
 
 #include "thrud/Support/DataTypes.h"
 
-#include "llvm/Analysis/Dominators.h"
-#include "llvm/Analysis/PostDominators.h"
-
 namespace llvm {
 class BasicBlock;
-class DominatorTree;
-class Instruction;
 }
 
 class RegionBounds {
@@ -26,20 +21,12 @@ public:
   void setHeader(BasicBlock *Header);
   void setExiting(BasicBlock *Exiting);
 
+  void listBlocks(BlockVector &result) const;
+
 private:
   BasicBlock *header;
   BasicBlock *exiting;
 
 };
-
-// Non-member functions.
-//------------------------------------------------------------------------------
-void listBlocksImpl(const BasicBlock *end, BasicBlock *bb, BlockSet &blockSet);
-void listBlocks(RegionBounds &bounds, BlockVector &result);
-
-bool contains(const RegionBounds &bounds, const BasicBlock *bb,
-              const DominatorTree *dt, const PostDominatorTree *pdt);
-bool contains(const RegionBounds &bounds, const Instruction *inst,
-              const DominatorTree *dt, const PostDominatorTree *pdt);
 
 #endif

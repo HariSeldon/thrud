@@ -258,8 +258,8 @@ void findOpenCLFunctionCallsByName(std::string calleeName, Function *caller,
 }
 
 // -----------------------------------------------------------------------------
-void findOpenCLFunctionCalls(Function *callee, Function *caller, unsigned int direction,
-                             InstVector &target) {
+void findOpenCLFunctionCalls(Function *callee, Function *caller,
+                             unsigned int direction, InstVector &target) {
   // Iterate over the uses of the function.
   for (Value::use_iterator iter = callee->use_begin(), end = callee->use_end();
        iter != end; ++iter) {
@@ -267,8 +267,7 @@ void findOpenCLFunctionCalls(Function *callee, Function *caller, unsigned int di
       if (caller == GetFunctionOfInst(inst))
         if (const ConstantInt *ci =
                 dyn_cast<ConstantInt>(inst->getArgOperand(0))) {
-          int ArgumentValue = GetInteger(ci);
-          if (direction == -1 || ArgumentValue == direction)
+          if (ci->equalsInt(direction))
             target.push_back(inst);
         }
   }

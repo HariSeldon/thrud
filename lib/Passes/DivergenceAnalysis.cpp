@@ -36,35 +36,6 @@ bool isExternal(Instruction *inst, RegionVector &regions);
 
 // DivergenceAnalysis.
 // -----------------------------------------------------------------------------
-//void DivergenceAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
-//  au.addRequired<LoopInfo>();
-//  au.addRequired<PostDominatorTree>();
-//  au.addRequired<DominatorTree>();
-//  au.addRequired<NDRange>();
-//  au.addRequired<ControlDependenceAnalysis>();
-//  au.setPreservesAll();
-//}
-//
-//bool DivergenceAnalysis::runOnFunction(Function &functionRef) {
-//  Function *function = (Function *)&functionRef;
-//  // Apply the pass to kernels only.
-//  if (!IsKernel(function))
-//    return false;
-//
-//  pdt = &getAnalysis<PostDominatorTree>();
-//  dt = &getAnalysis<DominatorTree>();
-//  loopInfo = &getAnalysis<LoopInfo>();
-//  ndr = &getAnalysis<NDRange>();
-//  cda = &getAnalysis<ControlDependenceAnalysis>();
-//
-//  performAnalysis();
-//  findBranches();
-//  findRegions();
-//  findExternalInsts();
-//
-//  return false;
-//}
-
 InstVector DivergenceAnalysis::getTids() {
   // This must be overriden by all subclasses.
   return InstVector();
@@ -178,7 +149,8 @@ void findUsesOf(Instruction *inst, InstSet &result) {
   }
 }
 
-// FIXME: inst is external if is not control dependent on any div branch.
+// FIXME: IN THEORY inst is external if is not control dependent on any div
+// branch.
 bool isExternal(Instruction *inst, RegionVector &regions) {
   bool result = false;
   for (RegionVector::const_iterator iter = regions.begin(),
@@ -196,11 +168,12 @@ SingleDimDivAnalysis::SingleDimDivAnalysis() : FunctionPass(ID) {}
 
 void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<LoopInfo>();
+  au.addPreserved<LoopInfo>();
   au.addRequired<PostDominatorTree>();
   au.addRequired<DominatorTree>();
   au.addRequired<NDRange>();
   au.addRequired<ControlDependenceAnalysis>();
-  au.setPreservesAll();
+//  au.setPreservesAll();
 }
 
 bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
@@ -240,7 +213,7 @@ void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<DominatorTree>();
   au.addRequired<NDRange>();
   au.addRequired<ControlDependenceAnalysis>();
-  au.setPreservesAll();
+//  au.setPreservesAll();
 }
 
 bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {

@@ -191,65 +191,9 @@ ConstantInt *GetConstantInt(unsigned int value, unsigned int width,
 }
 
 //------------------------------------------------------------------------------
-int GetInteger(const ConstantInt *CI) { return CI->getSExtValue(); }
-
-//------------------------------------------------------------------------------
 bool IsByPointer(const Argument *A) {
   const Type *Ty = A->getType();
   return (Ty->isPointerTy() && !A->hasByValAttr());
-}
-
-//------------------------------------------------------------------------------
-template <class T> bool isPresent(const T *V, const std::vector<T *> &Vs) {
-  typename std::vector<T *>::const_iterator R =
-      std::find(Vs.begin(), Vs.end(), V);
-  return R != Vs.end();
-}
-
-template bool isPresent(const Instruction *V, const InstVector &Vs);
-template bool isPresent(const Value *V, const ValueVector &Vs);
-
-//------------------------------------------------------------------------------
-template <class T>
-bool isPresent(const T *V, const std::vector<const T *> &Vs) {
-  typename std::vector<const T *>::const_iterator R =
-      std::find(Vs.begin(), Vs.end(), V);
-  return R != Vs.end();
-}
-
-template bool isPresent(const Instruction *V, const ConstInstVector &Vs);
-template bool isPresent(const Value *V, const ConstValueVector &Vs);
-
-//------------------------------------------------------------------------------
-template <class T> bool isPresent(const T *V, const std::set<T *> &Vs) {
-  typename std::set<T *>::iterator R = std::find(Vs.begin(), Vs.end(), V);
-  return R != Vs.end();
-}
-
-template bool isPresent(const Instruction *V, const InstSet &Vs);
-
-//------------------------------------------------------------------------------
-template <class T> bool isPresent(const T *V, const std::set<const T *> &Vs) {
-  typename std::set<const T *>::const_iterator R =
-      std::find(Vs.begin(), Vs.end(), V);
-  return R != Vs.end();
-}
-
-template bool isPresent(const Instruction *V, const ConstInstSet &Vs);
-
-//------------------------------------------------------------------------------
-bool isPresent(const Instruction *I, const BlockVector &V) {
-  const BasicBlock *BB = I->getParent();
-  return isPresent<BasicBlock>(BB, V);
-}
-
-//------------------------------------------------------------------------------
-bool isPresent(const Instruction *I, std::vector<BlockVector *> &V) {
-  for (std::vector<BlockVector *>::iterator Iter = V.begin(), E = V.end();
-       Iter != E; ++Iter)
-    if (isPresent(I, **Iter))
-      return true;
-  return false;
 }
 
 //------------------------------------------------------------------------------
@@ -452,7 +396,7 @@ bool isDominated(const Instruction *I, BranchSet &Bs, const DominatorTree *DT) {
 }
 
 //------------------------------------------------------------------------------
-bool derderisDominated(const BasicBlock *BB, const BlockVector &Bs,
+bool isDominated(const BasicBlock *BB, const BlockVector &Bs,
                  const DominatorTree *DT) {
   bool isDominated = false;
   for (BlockVector::const_iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
@@ -739,32 +683,6 @@ BranchVector GetThreadDepBranches(BranchVector &Bs, ValueVector TIds) {
       Result.push_back(BInst);
   }
   return Result;
-}
-
-//------------------------------------------------------------------------------
-RegionVector GetDivergentRegions(BranchVector &BTId, DominatorTree *DT,
-                                 PostDominatorTree *PDT, LoopInfo *LI) {
-//  BranchSet AllBranches(BTId.begin(), BTId.end());
-//
-//  BranchVector Bs = FindOutermostBranches(AllBranches, DT, PDT);
-//  std::vector<DivergentRegion *> DRs;
-//
-//  for (BranchVector::iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
-//    BasicBlock *BB = (*I)->getParent();
-//    BasicBlock *PDom = findImmediatePostDom(BB, PDT);
-//
-//    if (LI->isLoopHeader(BB)) {
-//      Loop *L = LI->getLoopFor(BB);
-//      if (L == LI->getLoopFor(PDom))
-//        PDom = L->getExitBlock();
-//    }
-//
-//    DRs.push_back(new DivergentRegion(BB, PDom));
-//  }
-//
-//  FillRegions(DRs, DT, PDT);
-//
-//  return DRs;
 }
 
 //------------------------------------------------------------------------------
@@ -1097,3 +1015,61 @@ void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index) 
   if (!oldName.empty())
     value->setName(oldName + "..cf" + Twine(index + 2));
 }
+
+// isPresent.
+//------------------------------------------------------------------------------
+template <class T> bool isPresent(const T *V, const std::vector<T *> &Vs) {
+  typename std::vector<T *>::const_iterator R =
+      std::find(Vs.begin(), Vs.end(), V);
+  return R != Vs.end();
+}
+
+template bool isPresent(const Instruction *V, const InstVector &Vs);
+template bool isPresent(const Value *V, const ValueVector &Vs);
+
+template <class T>
+bool isPresent(const T *V, const std::vector<const T *> &Vs) {
+  typename std::vector<const T *>::const_iterator R =
+      std::find(Vs.begin(), Vs.end(), V);
+  return R != Vs.end();
+}
+
+template bool isPresent(const Instruction *V, const ConstInstVector &Vs);
+template bool isPresent(const Value *V, const ConstValueVector &Vs);
+
+template <class T> bool isPresent(const T *V, const std::set<T *> &Vs) {
+  typename std::set<T *>::iterator R = std::find(Vs.begin(), Vs.end(), V);
+  return R != Vs.end();
+}
+
+template bool isPresent(const Instruction *V, const InstSet &Vs);
+
+template <class T> bool isPresent(const T *V, const std::set<const T *> &Vs) {
+  typename std::set<const T *>::const_iterator R =
+      std::find(Vs.begin(), Vs.end(), V);
+  return R != Vs.end();
+}
+
+template bool isPresent(const Instruction *V, const ConstInstSet &Vs);
+
+template <class T> bool isPresent(const T *value, const std::deque<T*> &d) {
+  typename std::deque<T *>::const_iterator iter =
+      std::find(d.begin(), d.end(), value);
+  return iter != d.end();
+}
+
+template bool isPresent(const BasicBlock *value, const BlockDeque &deque);
+
+bool isPresent(const Instruction *I, const BlockVector &V) {
+  const BasicBlock *BB = I->getParent();
+  return isPresent<BasicBlock>(BB, V);
+}
+
+bool isPresent(const Instruction *I, std::vector<BlockVector *> &V) {
+  for (std::vector<BlockVector *>::iterator Iter = V.begin(), E = V.end();
+       Iter != E; ++Iter)
+    if (isPresent(I, **Iter))
+      return true;
+  return false;
+}
+

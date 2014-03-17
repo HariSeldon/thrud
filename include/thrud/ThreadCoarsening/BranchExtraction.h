@@ -18,6 +18,6 @@ private:
 
 private:
   LoopInfo *loopInfo;
-
-
+  DominatorTree *dt;
+  PostDominatorTree *pdt;
 };

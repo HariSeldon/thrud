@@ -19,7 +19,8 @@
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
-//  InstVector TIds = sdda->getThreadIds();
+  
+
   InstVector &Insts = sdda->getDivInstsOutsideRegions();
 
   // Replicate instructions.
@@ -35,7 +36,8 @@ void ThreadCoarsening::coarsenFunction() {
                               regionEnd = regions.end();
        regionIter != regionEnd; ++regionIter) {
     DivergentRegion *region = *regionIter;
-    replicateRegion(region);
+    region->dump();
+//    replicateRegion(region);
   }
 }
 
@@ -189,6 +191,7 @@ void ThreadCoarsening::replicateRegion(DivergentRegion * region) {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
+  errs() << "ThreadCoarsening::replicateRegionClassic\n";
   region->dump();
   return;
 

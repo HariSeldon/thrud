@@ -33,4 +33,5 @@ typedef std::pair<int, int> IntPair;
 typedef std::vector<PHINode *> PHIVector;
 typedef std::stack<BasicBlock *> BlockStack;
 typedef std::deque<Instruction *> InstDeque;
+typedef std::deque<BasicBlock *> BlockDeque;
 typedef std::map<Instruction *, InstVector> CoarseningMap;

@@ -8,6 +8,7 @@
 #include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
 #include "thrud/Support/DataTypes.h"
+#include "thrud/Support/NDRange.h"
 #include "thrud/Support/Utils.h"
 
 #include "llvm/IR/Constants.h"
@@ -63,11 +64,12 @@ cl::opt<ThreadCoarsening::DivRegionOption> DivRegionOptionCL(
 ThreadCoarsening::ThreadCoarsening() : FunctionPass(ID) {}
 
 //------------------------------------------------------------------------------
-void ThreadCoarsening::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfo>();
-  AU.addRequired<SingleDimDivAnalysis>();
-  AU.addRequired<PostDominatorTree>();
-  AU.addRequired<DominatorTree>();
+void ThreadCoarsening::getAnalysisUsage(AnalysisUsage &au) const {
+  au.addRequired<LoopInfo>();
+  au.addRequired<SingleDimDivAnalysis>();
+  au.addRequired<PostDominatorTree>();
+  au.addRequired<DominatorTree>();
+  au.addRequired<NDRange>();
 }
 
 //------------------------------------------------------------------------------
@@ -94,12 +96,12 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   ndr = &getAnalysis<NDRange>();
 
-  // Trasnform the kernel.
+  // Transform the kernel.
   scaleNDRange();
   coarsenFunction();
   replacePlaceholders();
 
-  F.getParent()->dump();
+//  F.getParent()->dump();
 
   return true;
 }

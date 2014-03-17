@@ -11,6 +11,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
+#include <deque>
 #include <set>
 #include <vector>
 
@@ -72,7 +73,6 @@ bool IsUsedInFunction(const Function *F, const GlobalVariable *GV);
 unsigned int GetIntWidth(Value *value);
 ConstantInt *GetConstantInt(unsigned int value, unsigned int width,
                             LLVMContext &C);
-int GetInteger(const ConstantInt *CI);
 // Verify if the given value is a constant integer and equals the given number.
 bool IsByPointer(const Argument *A);
 
@@ -85,6 +85,8 @@ bool isPresent(const T *value, const std::vector<const T *> &vector);
 template <class T> bool isPresent(const T *value, const std::set<T *> &vector);
 template <class T>
 bool isPresent(const T *value, const std::set<const T *> &vector);
+template <class T>
+bool isPresent(const T *value, const std::deque<T*> &deque);
 
 // TODO: remove these and replace with std!!!
 InstVector intersection(const InstVector &A, const InstVector &B);

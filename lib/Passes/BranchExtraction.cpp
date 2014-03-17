@@ -38,8 +38,9 @@ BranchExtraction::BranchExtraction() : FunctionPass(ID) {}
 //------------------------------------------------------------------------------
 void BranchExtraction::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<LoopInfo>();
-  au.addPreserved<LoopInfo>();
   au.addRequired<SingleDimDivAnalysis>();
+  au.addRequired<PostDominatorTree>();
+  au.addRequired<DominatorTree>();
   au.addPreserved<SingleDimDivAnalysis>();
 }
 
@@ -53,23 +54,26 @@ bool BranchExtraction::runOnFunction(Function &F) {
   if (KernelNameCL != "" && FunctionName != KernelNameCL)
     return false;
 
-  // Perform analysis.
-  LoopInfo *loopInfo = &getAnalysis<LoopInfo>();
-  SingleDimDivAnalysis *sdda = &getAnalysis<SingleDimDivAnalysis>();
-  RegionVector &regions = sdda->getDivRegions();
+  // Perform analyses.
+  loopInfo = &getAnalysis<LoopInfo>();
+  dt = &getAnalysis<DominatorTree>();
+  pdt = &getAnalysis<PostDominatorTree>();
 
+  SingleDimDivAnalysis *sdda = &getAnalysis<SingleDimDivAnalysis>();
+
+  // Isolate regions.
+  RegionVector &regions = sdda->getDivRegions();
   for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
        iter != iterEnd; ++iter) {
     DivergentRegion *region = *iter;
-    RegionBounds &bounds = region->getBounds();
-
     isolateRegion(region);
+    // Update region.
+    region->fillRegion(dt, pdt);
   }
 
   return regions.size() != 0;
 }
 
-// Support functions.
 //------------------------------------------------------------------------------
 // Isolate the exiting block from the rest of the graph.
 // If it has incoming edges coming from outside the current region
@@ -79,19 +83,30 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
   BasicBlock *exiting = region->getExiting();
   BasicBlock *newHeader = NULL;
 
-  if (!loopInfo->isLoopHeader(header))
-    newHeader = SplitBlock(header, header->getTerminator(), NULL);
-  else {
-    newHeader = header;
-    Loop *loop = loopInfo->getLoopFor(header);
-    if (loop == loopInfo->getLoopFor(exiting)) {
-      exiting = loop->getExitBlock();
-      region->setExiting(exiting);
-    }
+  if(loopInfo->getLoopFor(header) == NULL && loopInfo->getLoopFor(exiting) == NULL) {
+    // Split Header.
+    BasicBlock *newHeader = SplitBlock(header, header->getTerminator(), this);
+    region->setHeader(newHeader);
+
+    // Split Exiting.
+    Instruction *firstNonPHI = exiting->getFirstNonPHI();
+    BasicBlock *newExit = SplitBlock(exiting, firstNonPHI, this);
   }
-  Instruction *firstNonPHI = exiting->getFirstNonPHI();
-  SplitBlock(exiting, firstNonPHI, this);
-  region->setHeader(newHeader);
+
+//  if (!loopInfo->isLoopHeader(header)) {
+//    newHeader = SplitBlock(header, header->getTerminator(), this);
+//  }
+//  else {
+//    newHeader = header;
+//    Loop *loop = loopInfo->getLoopFor(header);
+//    if (loop == loopInfo->getLoopFor(exiting)) {
+//      exiting = loop->getExitBlock();
+//      region->setExiting(exiting);
+//    }
+//  }
+//  Instruction *firstNonPHI = exiting->getFirstNonPHI();
+//  SplitBlock(exiting, firstNonPHI, this);
+//  region->setHeader(newHeader);
 
   // Try to do without this.
 
