@@ -14,6 +14,7 @@ public:
   virtual void getAnalysisUsage(AnalysisUsage &au) const;
 
 private:
+  void extractBranches(DivergentRegion *region);
   void isolateRegion(DivergentRegion *region);
 
 private:

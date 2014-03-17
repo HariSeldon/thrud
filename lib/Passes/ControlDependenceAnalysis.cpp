@@ -19,12 +19,16 @@ void ControlDependenceAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
 bool ControlDependenceAnalysis::runOnFunction(Function &function) {
   pdt = &getAnalysis<PostDominatorTree>();
 
+  pdt->dump();
+
   findS(function);
   findLs();
   buildGraph();
   fillGraph(function);
   transitiveClosure();
   buildBackwardGraph();
+
+  dump();
 
   return false;
 }
@@ -37,6 +41,7 @@ void ControlDependenceAnalysis::findS(Function &function) {
          succIter != succEnd; ++succIter) {
       BasicBlock *child = *succIter;
       if (!pdt->dominates(child, block)) {
+        llvm::errs() << block->getName() << " -- " << child->getName() << "\n";
         s.push_back(std::pair<BasicBlock *, BasicBlock *>(block, child));
       }
     }
@@ -102,24 +107,18 @@ void ControlDependenceAnalysis::transitiveClosure() {
   for (GraphMap::iterator iter = forwardGraph.begin(),
                           iterEnd = forwardGraph.end();
        iter != iterEnd; ++iter) {
+
     BlockVector &seeds = iter->second;
     // This implements a traversal of the tree starting from block.
-
-    BlockVector worklist(seeds.begin(), seeds.end());
+    BlockSet worklist(seeds.begin(), seeds.end());
     BlockVector result;
-    result.reserve(worklist.size());
     while (!worklist.empty()) {
-      BasicBlock *current = worklist.back();
-      worklist.pop_back();
+      BlockSet::iterator iter = worklist.begin();
+      BasicBlock *current = *iter;
+      worklist.erase(iter);
       result.push_back(current);
-
       BlockVector &children = forwardGraph[current];
-
-      // Add new children to the worklist.
-      std::sort(children.begin(), children.end());
-      std::sort(worklist.begin(), worklist.end());
-      std::set_difference(worklist.begin(), worklist.end(), children.begin(),
-                          children.end(), back_inserter(worklist));
+      std::copy(children.begin(), children.end(), std::inserter(worklist, worklist.end()));
     }
 
     // Update block vector.
@@ -175,11 +174,8 @@ bool ControlDependenceAnalysis::dependsOnAny(BasicBlock *block,
 bool ControlDependenceAnalysis::dependsOnAny(Instruction *inst, InstVector &insts) {
   BlockVector blocks;
   blocks.resize(insts.size());
-//  std::transform(instVector.begin(), instVector.end(), blockVector.begin(),
-//                 std::bind1st(std::mem_fun(&Instruction::getParent), this));
-//  std::bind1st((reinterpret_cast<BasicBlock*(Instruction::*)()>(&Instruction::getParent)), this));
-
-  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
+  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end();
+       iter != iterEnd; ++iter) {
     blocks.push_back((*iter)->getParent());
   }
 

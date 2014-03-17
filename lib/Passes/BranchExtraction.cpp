@@ -23,6 +23,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include <functional>
 #include <utility>
 
 using namespace llvm;
@@ -46,6 +47,7 @@ void BranchExtraction::getAnalysisUsage(AnalysisUsage &au) const {
 
 //------------------------------------------------------------------------------
 bool BranchExtraction::runOnFunction(Function &F) {
+  llvm::errs() << "BranchExtraction::runOnFunction\n";
   // Apply the pass to kernels only.
   if (!IsKernel((const Function *)&F))
     return false;
@@ -66,8 +68,9 @@ bool BranchExtraction::runOnFunction(Function &F) {
   for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
        iter != iterEnd; ++iter) {
     DivergentRegion *region = *iter;
+    extractBranches(region);
+    region->fillRegion(dt, pdt);
     isolateRegion(region);
-    // Update region.
     region->fillRegion(dt, pdt);
   }
 
@@ -78,11 +81,11 @@ bool BranchExtraction::runOnFunction(Function &F) {
 // Isolate the exiting block from the rest of the graph.
 // If it has incoming edges coming from outside the current region
 // create a new exiting block for the region.
-void BranchExtraction::isolateRegion(DivergentRegion *region) {
+void BranchExtraction::extractBranches(DivergentRegion *region) {
   BasicBlock *header = region->getHeader();
   BasicBlock *exiting = region->getExiting();
-  BasicBlock *newHeader = NULL;
 
+  // No loops.
   if(loopInfo->getLoopFor(header) == NULL && loopInfo->getLoopFor(exiting) == NULL) {
     // Split Header.
     BasicBlock *newHeader = SplitBlock(header, header->getTerminator(), this);
@@ -90,97 +93,98 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
 
     // Split Exiting.
     Instruction *firstNonPHI = exiting->getFirstNonPHI();
-    BasicBlock *newExit = SplitBlock(exiting, firstNonPHI, this);
+    SplitBlock(exiting, firstNonPHI, this);
   }
 
-//  if (!loopInfo->isLoopHeader(header)) {
-//    newHeader = SplitBlock(header, header->getTerminator(), this);
-//  }
-//  else {
-//    newHeader = header;
-//    Loop *loop = loopInfo->getLoopFor(header);
-//    if (loop == loopInfo->getLoopFor(exiting)) {
-//      exiting = loop->getExitBlock();
-//      region->setExiting(exiting);
-//    }
-//  }
-//  Instruction *firstNonPHI = exiting->getFirstNonPHI();
-//  SplitBlock(exiting, firstNonPHI, this);
-//  region->setHeader(newHeader);
+  // Loops.
+  Loop *loop = loopInfo->getLoopFor(header);
+  if(loop != NULL) {
+    if (loop == loopInfo->getLoopFor(exiting)) {
+      exiting = loop->getExitBlock();
+      region->setExiting(exiting);
+    }
 
-  // Try to do without this.
+    // Split Exiting.
+    Instruction *firstNonPHI = exiting->getFirstNonPHI();
+    SplitBlock(exiting, firstNonPHI, this);
+  }
+}
 
-//  BlockVector RegionBlocks;
-//  // FIXME: this can be substituted
-//  // If the header does not dominates the exiting it means that
-//  // there are other incoming edges.
-//  bool HasExtBlock = findRegionBlocks(Region, RegionBlocks);
-//  BasicBlock *Exiting = Region->getExiting();
-//
-//  // Split
-//  if (HasExtBlock) {
-//    BasicBlock *New = BasicBlock::Create(
-//        Exiting->getContext(), Exiting->getName() + Twine(".be_split"),
-//        Exiting->getParent(), Exiting);
-//    BranchInst::Create(Exiting, New);
-//    for (BlockVector::iterator I = RegionBlocks.begin(), E = RegionBlocks.end();
-//         I != E; ++I) {
-//      TerminatorInst *Term = (*I)->getTerminator();
-//      for (unsigned int index = 0; index < Term->getNumSuccessors(); ++index) {
-//        if (Term->getSuccessor(index) == Exiting)
-//          Term->setSuccessor(index, New);
-//      }
-//    }
-//
-//    // 'New' will contain the phi working on the values from the blocks
-//    // in the region.
-//    // 'Exiting' will contain the phi working on the values from the blocks
-//    // outside and in the region.
-//    PHIVector OldPhis;
-//    GetPHIs(Exiting, OldPhis);
-//
-//    PHIVector NewPhis;
-//    PHIVector ExitPhis;
-//
-//    for (PHIVector::iterator I = OldPhis.begin(), E = OldPhis.end(); I != E;
-//         ++I) {
-//      PHINode *Phi = *I;
-//      PHINode *NewPhi =
-//          PHINode::Create(Phi->getType(), 0,
-//                          Phi->getName() + Twine(".new_exiting"), New->begin());
-//      PHINode *ExitPhi = PHINode::Create(Phi->getType(), 0,
-//                                         Phi->getName() + Twine(".old_exiting"),
-//                                         Exiting->begin());
-//      for (unsigned int index = 0; index < Phi->getNumIncomingValues();
-//           ++index) {
-//        BasicBlock *BB = Phi->getIncomingBlock(index);
-//        if (isPresent(BB, RegionBlocks))
-//          NewPhi->addIncoming(Phi->getIncomingValue(index), BB);
-//        else
-//          ExitPhi->addIncoming(Phi->getIncomingValue(index), BB);
-//      }
-//      NewPhis.push_back(NewPhi);
-//      ExitPhis.push_back(ExitPhi);
-//    }
-//
-//    unsigned int PhiNumber = NewPhis.size();
-//    for (unsigned int PhiIndex = 0; PhiIndex < PhiNumber; ++PhiIndex) {
-//      // Add the edge coming from the 'New' block to the phi nodes in Exiting.
-//      PHINode *ExitPhi = ExitPhis[PhiIndex];
-//      PHINode *NewPhi = NewPhis[PhiIndex];
-//      ExitPhi->addIncoming(NewPhi, New);
-//
-//      // Update all the references to the old Phis to the new ones.
-//      OldPhis[PhiIndex]->replaceAllUsesWith(ExitPhi);
-//    }
-//
-//    // Delete the old phi nodes.
-//    for (PHIVector::iterator I = OldPhis.begin(), E = OldPhis.end(); I != E;
-//         ++I) {
-//      PHINode *ToDelete = *I;
-//      ToDelete->eraseFromParent();
-//    }
-//  }
+// Remember to update the DT / PDT.
+void BranchExtraction::isolateRegion(DivergentRegion *region) {
+  BasicBlock *exiting = region->getExiting();
+
+  // The header does not dominate the exiting.
+  if (dt->dominates(region->getHeader(), region->getExiting()))
+    return;
+
+  // Create a new exiting block.
+  BasicBlock *newExiting = BasicBlock::Create(
+      exiting->getContext(), exiting->getName() + Twine(".be_split"),
+      exiting->getParent(), exiting);
+  BranchInst::Create(exiting, newExiting);
+
+  // All the blocks in the region pointing to the exiting are redirected to the new exiting.
+  for (DivergentRegion::iterator iter = region->begin(), iterEnd = region->end();
+       iter != iterEnd; ++iter) {
+    TerminatorInst *terminator = (*iter)->getTerminator();
+    for (unsigned int index = 0; index < terminator->getNumSuccessors(); ++index) {
+      if (terminator->getSuccessor(index) == exiting) {
+        terminator->setSuccessor(index, newExiting);
+      }
+    }
+  }
+
+  // 'newExiting' will contain the phi working on the values from the blocks
+  // in the region.
+  // 'Exiting' will contain the phi working on the values from the blocks
+  // outside and in the region.
+  PHIVector oldPhis;
+  GetPHIs(exiting, oldPhis);
+
+  PHIVector newPhis;
+  PHIVector exitPhis;
+
+  for (PHIVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
+       ++I) {
+    PHINode *phi = *I;
+    PHINode *newPhi = PHINode::Create(phi->getType(), 0,
+                                      phi->getName() + Twine(".new_exiting"),
+                                      newExiting->begin());
+    PHINode *exitPhi = PHINode::Create(phi->getType(), 0,
+                                       phi->getName() + Twine(".old_exiting"),
+                                       exiting->begin());
+    for (unsigned int index = 0; index < phi->getNumIncomingValues(); ++index) {
+      BasicBlock *BB = phi->getIncomingBlock(index);
+      if (contains(*region, BB))
+        newPhi->addIncoming(phi->getIncomingValue(index), BB);
+      else
+        exitPhi->addIncoming(phi->getIncomingValue(index), BB);
+    }
+    newPhis.push_back(newPhi);
+    exitPhis.push_back(exitPhi);
+  }
+
+  unsigned int phiNumber = newPhis.size();
+  for (unsigned int phiIndex = 0; phiIndex < phiNumber; ++phiIndex) {
+    // Add the edge coming from the 'newExiting' block to the phi nodes in
+    // Exiting.
+    PHINode *exitPhi = exitPhis[phiIndex];
+    PHINode *newPhi = newPhis[phiIndex];
+    exitPhi->addIncoming(newPhi, newExiting);
+
+    // Update all the references to the old Phis to the new ones.
+    oldPhis[phiIndex]->replaceAllUsesWith(exitPhi);
+  }
+
+  // Delete the old phi nodes.
+  for (PHIVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
+       ++I) {
+    PHINode *ToDelete = *I;
+    ToDelete->eraseFromParent();
+  }
+
+  region->setExiting(newExiting);
 }
 
 //------------------------------------------------------------------------------

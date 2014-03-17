@@ -1,7 +1,6 @@
 #include "thrud/FeatureExtraction/LoopFeatureExtraction.h"
 
-#include "thrud/DivergenceAnalysis/MultiDimDivAnalysis.h"
-#include "thrud/DivergenceAnalysis/SingleDimDivAnalysis.h"
+#include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
 #include "thrud/Support/NDRange.h"
 #include "thrud/Support/Utils.h"

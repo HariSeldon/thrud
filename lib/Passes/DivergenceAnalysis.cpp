@@ -42,15 +42,13 @@ InstVector DivergenceAnalysis::getTids() {
 }
 
 void DivergenceAnalysis::performAnalysis() {
-  InstDeque workQueue;
   InstVector seeds = getTids();
+  InstSet worklist(seeds.begin(), seeds.end());
 
-  workQueue.assign(seeds.begin(), seeds.end());
-
-  while (!workQueue.empty()) {
-    Instruction *inst = workQueue.front();
-    workQueue.pop_front();
-
+  while (!worklist.empty()) {
+    InstSet::iterator iter = worklist.begin();
+    Instruction *inst = *iter;
+    worklist.erase(iter);
     divInsts.push_back(inst);
 
     InstSet users;
@@ -64,9 +62,12 @@ void DivergenceAnalysis::performAnalysis() {
       }
     }
 
-    // Add users of the current instruction to the work list.
     findUsesOf(inst, users);
-    workQueue.insert(workQueue.end(), users.begin(), users.end());
+    // Add users of the current instruction to the work list.
+    for (InstSet::iterator iter = users.begin(), iterEnd = users.end(); iter != iterEnd; ++iter) {
+      if(!isPresent(*iter, divInsts)) 
+        worklist.insert(*iter);
+    }
   }
 }
 
@@ -110,6 +111,9 @@ void DivergenceAnalysis::findRegions() {
   }
 }
 
+// This is called only when the external instructions are acutally requrested,
+// ie. duting coarsening. This is done to be sure that this instructions are
+// computed after the extraction of divergent regions from the CFG.
 void DivergenceAnalysis::findExternalInsts() {
   for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();
        iter != iterEnd; ++iter) {
@@ -126,6 +130,9 @@ InstVector &DivergenceAnalysis::getDivInsts() {
 }
 
 InstVector &DivergenceAnalysis::getDivInstsOutsideRegions() {
+  // Use memoization.
+  if(externalDivInsts.empty())
+    findExternalInsts();
   return externalDivInsts;
 }
 
@@ -191,7 +198,6 @@ bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
   performAnalysis();
   findBranches();
   findRegions();
-  findExternalInsts();
 
   return false;
 }
@@ -231,7 +237,6 @@ bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {
   performAnalysis();
   findBranches();
   findRegions();
-  findExternalInsts();
 
   return false;
 }

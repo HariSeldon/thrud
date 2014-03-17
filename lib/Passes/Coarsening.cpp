@@ -3,6 +3,8 @@
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/Utils.h"
 
+#include "llvm/IR/Module.h"
+
 //void dumpCoarseningMap(CoarseningMap &cMap) {
 //  llvm::errs() << "------------------------------\n";
 //  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end(); iter != end; ++iter) {
@@ -19,25 +21,22 @@
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
-  
-
-  InstVector &Insts = sdda->getDivInstsOutsideRegions();
+  RegionVector &regions = sdda->getDivRegions();
+  InstVector &insts = sdda->getDivInstsOutsideRegions();
 
   // Replicate instructions.
-  for (InstVector::iterator instIter = Insts.begin(), instEnd = Insts.end();
+  for (InstVector::iterator instIter = insts.begin(), instEnd = insts.end();
        instIter != instEnd; ++instIter) {
     Instruction *inst = *instIter;
     replicateInst(inst);
   }
 
-  RegionVector &regions = sdda->getDivRegions();
   // Replicate regions.
   for (RegionVector::iterator regionIter = regions.begin(),
                               regionEnd = regions.end();
        regionIter != regionEnd; ++regionIter) {
     DivergentRegion *region = *regionIter;
-    region->dump();
-//    replicateRegion(region);
+    replicateRegion(region);
   }
 }
 
@@ -68,8 +67,6 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
       phReplacementMap[V[index]] = current[index];
     }
   }
-  
-//  dumpCoarseningMap(cMap);
 }
 
 //------------------------------------------------------------------------------
@@ -157,6 +154,9 @@ void ThreadCoarsening::replacePlaceholders() {
          instIter != instEnd; ++instIter) {
       Instruction *ph = *instIter;
       Value *replacement = phReplacementMap[ph];
+      if(replacement == NULL) {
+        ph->dump();
+      }
       assert(replacement != NULL && "Missing replacement value");
       ph->replaceAllUsesWith(replacement);
     }
@@ -165,6 +165,8 @@ void ThreadCoarsening::replacePlaceholders() {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegion(DivergentRegion * region) {
+  region->dump();
+
   // Do not replicate if the region is strict.
   if (region->isStrict())
     return;
@@ -192,8 +194,6 @@ void ThreadCoarsening::replicateRegion(DivergentRegion * region) {
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
   errs() << "ThreadCoarsening::replicateRegionClassic\n";
-  region->dump();
-  return;
 
   RegionBounds *bounds = getExtingExit(region);
   BasicBlock *pred = getPredecessor(region, loopInfo);
@@ -201,19 +201,20 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
   for (unsigned int index = 0; index < factor - 1; ++index) {
     // Clone the region and apply the new map.
     // CIMap is applied to all the blocks in the region.
-    RegionBounds newBounds =
-        cloneRegion(region->getBounds(), "..cf" + Twine(index + 2), dt);
+    DivergentRegion newRegion = region->clone("..cf" + Twine(index + 2), dt, pdt);
+    applyCoarseningMap(newRegion, index);
+
 
     //    // Build the mapping for the phi nodes in the exiting block.
     //    BuildExitingPhiMap(R->getExiting(), NewPair.getExiting(), RegionsMap);
     //
-    // Exiting -> NewPair.first
-//    BasicBlock *exiting = bounds->getHeader();
-//    llvm::errs() << "Exiting: " << exiting->getName() << "\n";
-//    changeBlockTarget(exiting, newBounds.getHeader());
-//    // NewPair.second -> IP.second
-//    llvm::errs() << "New pair: " << newBounds.getExiting()->getName() << "\n";
-//    changeBlockTarget(newBounds.getExiting(), bounds->getExiting());
+
+    // Connect the region to the CFG.
+    BasicBlock *exiting = bounds->getHeader();
+    changeBlockTarget(exiting, newRegion.getHeader());
+    changeBlockTarget(newRegion.getExiting(), bounds->getExiting());
+
+
 //    // IP.first -> NewPair.second
 //    bounds->setHeader(newBounds.getExiting());
 //
@@ -226,6 +227,9 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
     //    DivergentRegion region(newBounds);
     //    applyCoarseningMap(region, index);
   }
+
+//  pred->getParent()->getParent()->dump();
+//  exit(1);
 }
 
 //------------------------------------------------------------------------------

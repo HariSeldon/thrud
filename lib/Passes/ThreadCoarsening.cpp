@@ -96,12 +96,12 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   ndr = &getAnalysis<NDRange>();
 
+  errs() << "ThreadCoarsening::runOnFunction\n";
+    
   // Transform the kernel.
   scaleNDRange();
   coarsenFunction();
   replacePlaceholders();
-
-//  F.getParent()->dump();
 
   return true;
 }

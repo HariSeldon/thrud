@@ -50,8 +50,11 @@ public:
   void analyze();
   bool isStrict();
 
+  DivergentRegion clone(const Twine &suffix, DominatorTree *dt, PostDominatorTree *pdt);
+
   unsigned int size();
   void dump();
+ 
 
 private:
   void updateBounds(DominatorTree *dt, PostDominatorTree *pdt); 
