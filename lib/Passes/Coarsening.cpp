@@ -5,22 +5,25 @@
 
 #include "llvm/IR/Module.h"
 
-//void dumpCoarseningMap(CoarseningMap &cMap) {
-//  llvm::errs() << "------------------------------\n";
-//  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end(); iter != end; ++iter) {
-//    InstVector &entry = iter->second;
-//    Instruction *inst = iter->first;
-//    llvm::errs() << "Key: ";
-//    inst->dump();
-//    llvm::errs() << " ";
-//    entry[0]->dump();
-//    llvm::errs() << "\n";
-//  }
-//  llvm::errs() << "------------------------------\n";
-//}
+void dumpCoarseningMap(CoarseningMap &cMap) {
+  llvm::errs() << "------------------------------\n";
+  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end(); iter != end; ++iter) {
+    InstVector &entry = iter->second;
+    Instruction *inst = iter->first;
+    llvm::errs() << "Key: ";
+    inst->dump();
+    llvm::errs() << " ";
+    dumpVector(entry);
+    llvm::errs() << "\n";
+  }
+  llvm::errs() << "------------------------------\n";
+}
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
+
+  dumpCoarseningMap(cMap);
+
   RegionVector &regions = sdda->getDivRegions();
   InstVector &insts = sdda->getDivInstsOutsideRegions();
 
@@ -200,37 +203,36 @@ void ThreadCoarsening::replicateRegion(DivergentRegion *region) {
 void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
   errs() << "ThreadCoarsening::replicateRegionClassic\n";
 
-  RegionBounds *bounds = getExtingExit(region);
   BasicBlock *pred = getPredecessor(region, loopInfo);
+  RegionBounds *bookmark = getExitingAndExit(*region);
 
   for (unsigned int index = 0; index < factor - 1; ++index) {
     // Clone the region and apply the new map.
     // CIMap is applied to all the blocks in the region.
     DivergentRegion newRegion = region->clone("..cf" + Twine(index + 2), dt, pdt);
     applyCoarseningMap(newRegion, index);
-
-
-    //    // Build the mapping for the phi nodes in the exiting block.
-    //    BuildExitingPhiMap(R->getExiting(), NewPair.getExiting(), RegionsMap);
-    //
+    //// Build the mapping for the phi nodes in the exiting block.
+    //BuildExitingPhiMap(R->getExiting(), NewPair.getExiting(), RegionsMap);
 
     // Connect the region to the CFG.
-    BasicBlock *exiting = bounds->getHeader();
+    BasicBlock *exiting = bookmark->getHeader();
     changeBlockTarget(exiting, newRegion.getHeader());
-    changeBlockTarget(newRegion.getExiting(), bounds->getExiting());
+    changeBlockTarget(newRegion.getExiting(), bookmark->getExiting());
+
+    bookmark = getExitingAndExit(newRegion);
 
 
-//    // IP.first -> NewPair.second
-//    bounds->setHeader(newBounds.getExiting());
-//
-//    // Update the phi nodes of the newly inserted header.
-//    remapBlocksInPHIs(newBounds.getHeader(), pred, exiting);
-//    // Update the phi nodes in the exit block.
-//    remapBlocksInPHIs(bounds->getExiting(), region->getExiting(),
-//                      newBounds.getExiting());
+    //// IP.first -> NewPair.second
+    //bounds->setHeader(newBounds.getExiting());
+    //
+    //// Update the phi nodes of the newly inserted header.
+    //remapBlocksInPHIs(newBounds.getHeader(), pred, exiting);
+    //// Update the phi nodes in the exit block.
+    //remapBlocksInPHIs(bounds->getExiting(), region->getExiting(),
+    //                  newBounds.getExiting());
 
-    //    DivergentRegion region(newBounds);
-    //    applyCoarseningMap(region, index);
+    //DivergentRegion region(newBounds);
+    //applyCoarseningMap(region, index);
   }
 }
 

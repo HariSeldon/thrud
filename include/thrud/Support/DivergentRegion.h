@@ -132,7 +132,7 @@ typedef std::vector<DivergentRegion *> RegionVector;
 
 // Non member functions.
 // -----------------------------------------------------------------------------
-RegionBounds *getExtingExit(DivergentRegion *region);
+RegionBounds *getExitingAndExit(DivergentRegion &region);
 BasicBlock *getPredecessor(DivergentRegion *region, LoopInfo *loopInfo);
 RegionBounds cloneRegion(RegionBounds &bounds, const Twine &suffix,
                          DominatorTree *dt);

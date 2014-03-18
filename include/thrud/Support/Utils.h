@@ -68,11 +68,6 @@ ValueVector GetPointerArgs(Function *F);
 InstVector FindArgDepInst(Function *F);
 bool IsUsedInFunction(const Function *F, const GlobalVariable *GV);
 
-// Type management.
-// Build a constant from the given integer.
-unsigned int GetIntWidth(Value *value);
-ConstantInt *GetConstantInt(unsigned int value, unsigned int width,
-                            LLVMContext &C);
 // Verify if the given value is a constant integer and equals the given number.
 bool IsByPointer(const Argument *A);
 
@@ -90,15 +85,6 @@ bool isPresent(const T *value, const std::deque<T*> &deque);
 
 // TODO: remove these and replace with std!!!
 InstVector intersection(const InstVector &A, const InstVector &B);
-InstVector difference(const InstVector &A, const InstVector &B);
-
-template <class T>
-std::vector<T *> intersection(const std::vector<T *> &A,
-                              const std::vector<T *> &B);
-
-template <class T>
-std::vector<T *> difference(const std::vector<T *> &A,
-                            const std::vector<T *> &B);
 
 bool isPresent(const Instruction *inst, const BlockVector &value);
 bool isPresent(const Instruction *inst, std::vector<BlockVector *> &value);
@@ -184,8 +170,8 @@ std::vector<DivergentRegion *> GetDivergentRegions(BranchVector &BTId,
 void FillRegions(std::vector<DivergentRegion *> &DRs, DominatorTree *dt,
                  PostDominatorTree *pdt);
 
-InstVector GetInstToReplicate(InstVector &TIdInsts, InstVector &TIds,
-                              InstVector &AllTIds);
+void GetInstToReplicate(InstVector &TIdInsts, InstVector &TIds,
+                        InstVector &AllTIds);
 
 InstVector GetInstToReplicateOutsideRegions(InstVector &TIdInsts,
                                             InstVector &TIds, RegionVector &DRs,
@@ -197,14 +183,6 @@ InstVector GetInstToReplicateOutsideRegionCores(InstVector &TIdInsts,
                                                 InstVector &AllTIds);
 
 Value *GetTIdOperand(CmpInst *Cmp, ValueVector &TIds);
-
-//------------------------------------------------------------------------------
-// Instruction creation.
-Instruction *getMulInst(Value *value, unsigned int factor);
-Instruction *getAddInst(Value *value, unsigned int addend);
-Instruction *getAddInst(Value *V1, Value *V2);
-Instruction *getShiftInst(Value *value, unsigned int shift);
-Instruction *getAndInst(Value *value, unsigned int factor);
 
 //------------------------------------------------------------------------------
 bool isBarrier(Instruction *inst);

@@ -122,14 +122,15 @@ void printMap(const Map &map) {
 }
 
 //------------------------------------------------------------------------------
-void replaceUses(Value *O, Value *N) {
-  std::vector<User *> Uses;
-  for (Value::use_iterator I = O->use_begin(), E = O->use_end(); I != E; ++I)
-    Uses.push_back(*I);
-  for (std::vector<User *>::iterator I = Uses.begin(), E = Uses.end(); I != E;
+void replaceUses(Value *oldValue, Value *newValue) {
+  std::vector<User *> uses;
+  std::copy(oldValue->use_begin(), oldValue->use_end(),
+            std::back_inserter(uses));
+
+  for (std::vector<User *>::iterator I = uses.begin(), E = uses.end(); I != E;
        ++I) {
-    if (*I != N)
-      (*I)->replaceUsesOfWith(O, N);
+    if (*I != newValue)
+      (*I)->replaceUsesOfWith(oldValue, newValue);
   }
 }
 
@@ -176,14 +177,6 @@ unsigned int GetOperandPosition(User *U, Value *V) {
 }
 
 //------------------------------------------------------------------------------
-unsigned int GetIntWidth(Value *V) {
-  Type *Ty = V->getType();
-  IntegerType *IntTy = dyn_cast<IntegerType>(Ty);
-  assert(IntTy && "Value type is not integer");
-  return IntTy->getBitWidth();
-}
-
-//------------------------------------------------------------------------------
 ConstantInt *GetConstantInt(unsigned int value, unsigned int width,
                             LLVMContext &C) {
   IntegerType *Integer = IntegerType::get(C, width);
@@ -195,49 +188,6 @@ bool IsByPointer(const Argument *A) {
   const Type *Ty = A->getType();
   return (Ty->isPointerTy() && !A->hasByValAttr());
 }
-
-//------------------------------------------------------------------------------
-template <class T>
-std::vector<T *> intersection(const std::vector<T *> &A,
-                              const std::vector<T *> &B) {
-  std::vector<T *> Result;
-  for (typename std::vector<T *>::const_iterator IA = A.begin(), EA = A.end();
-       IA != EA; ++IA)
-    for (typename std::vector<T *>::const_iterator IB = B.begin(), EB = B.end();
-         IB != EB; ++IB)
-      if (*IA == *IB)
-        Result.push_back(*IA);
-
-  return Result;
-}
-
-template std::vector<Instruction *>
-    intersection(const std::vector<Instruction *> &A,
-                 const std::vector<Instruction *> &B);
-
-template std::vector<BranchInst *>
-    intersection(const std::vector<BranchInst *> &A,
-                 const std::vector<BranchInst *> &B);
-
-//------------------------------------------------------------------------------
-template <class T>
-std::vector<T *> difference(const std::vector<T *> &A,
-                            const std::vector<T *> &B) {
-  std::vector<T *> Result;
-  for (typename std::vector<T *>::const_iterator IA = A.begin(), EA = A.end();
-       IA != EA; ++IA)
-    if (!isPresent(*IA, B))
-      Result.push_back(*IA);
-  return Result;
-}
-
-template std::vector<Instruction *>
-    difference(const std::vector<Instruction *> &A,
-               const std::vector<Instruction *> &B);
-
-template std::vector<BranchInst *>
-    difference(const std::vector<BranchInst *> &A,
-               const std::vector<BranchInst *> &B);
 
 //------------------------------------------------------------------------------
 BasicBlock *findImmediatePostDom(BasicBlock *block, const PostDominatorTree *pdt) {
@@ -253,8 +203,16 @@ template <class type> void dumpSet(const std::set<type *> &toDump) {
   }
 }
 
-template void dumpSet(const std::set<Instruction *> &toDump);
+template <> void dumpSet(const BlockSet &toDump) {
+  for (BlockSet::iterator iter = toDump.begin(), iterEnd = toDump.end(); iter != iterEnd; ++iter) {
+    errs() << (*iter)->getName() << " ";
+  }
+  errs() << "\n";
+} 
+
+template void dumpSet(const InstSet &toDump);
 template void dumpSet(const std::set<BranchInst *> &toDump);
+template void dumpSet(const BlockSet &toDump);
 
 //------------------------------------------------------------------------------
 template <class type> void dumpVector(const std::vector<type *> &toDump) {
@@ -267,9 +225,8 @@ template <class type> void dumpVector(const std::vector<type *> &toDump) {
 
 // Template specialization for BasicBlock.
 template <> void dumpVector(const BlockVector &toDump) {
-  for (std::vector<BasicBlock *>::const_iterator I = toDump.begin(),
-                                                 E = toDump.end();
-       I != E; ++I) {
+  for (BlockVector::const_iterator I = toDump.begin(), E = toDump.end(); I != E;
+       ++I) {
     llvm::errs() << "  " << (*I)->getName() << "\n";
   }
 }
@@ -686,16 +643,19 @@ BranchVector GetThreadDepBranches(BranchVector &Bs, ValueVector TIds) {
 }
 
 //------------------------------------------------------------------------------
-InstVector GetInstToReplicate(InstVector &TIdInsts, InstVector &TIds,
-                              InstVector &AllTIds) {
-  InstSet Result(TIdInsts.begin(), TIdInsts.end());
+void GetInstToReplicate(InstVector &divInsts, InstVector &tids,
+                        InstVector &result) {
+  InstSet preds(divInsts.begin(), divInsts.end());
+  for (InstVector::iterator inst = divInsts.begin(), instEnd = divInsts.end();
+       inst != instEnd; ++inst)
+    ListPredecessorsImpl(*inst, preds);
 
-  for (InstVector::iterator I = TIdInsts.begin(), E = TIdInsts.end(); I != E;
-       ++I)
-    ListPredecessorsImpl(*I, Result);
+  InstVector tmp(preds.begin(), preds.end());
+  std::sort(tmp.begin(), tmp.end());
+  std::sort(tids.begin(), tmp.end());
 
-  InstVector Tmp(Result.begin(), Result.end());
-  return difference<Instruction>(Tmp, AllTIds);
+  std::set_difference(tmp.begin(), tmp.end(), tids.begin(), tids.end(),
+                      std::back_inserter(result));
 }
 
 // Compiler optimizations.
@@ -704,7 +664,8 @@ InstVector GetInstToReplicateOutsideRegionCores(InstVector &TIdInsts,
                                                 InstVector &TIds,
                                                 RegionVector &DRs,
                                                 InstVector &AllTIds) {
-  InstVector Insts = GetInstToReplicate(TIdInsts, TIds, AllTIds);
+  InstVector Insts;
+  GetInstToReplicate(TIdInsts, AllTIds, Insts);
   InstSet InstsSet(Insts.begin(), Insts.end());
   InstSet ToRemove;
 
@@ -731,7 +692,8 @@ InstVector GetInstToReplicateOutsideRegionCores(InstVector &TIdInsts,
 InstVector GetInstToReplicateOutsideRegions(InstVector &TIdInsts,
                                             InstVector &TIds, RegionVector &DRs,
                                             InstVector &AllTIds) {
-  InstVector Insts = GetInstToReplicate(TIdInsts, TIds, AllTIds);
+  InstVector Insts;
+  GetInstToReplicate(TIdInsts, AllTIds, Insts);
   InstSet InstsSet(Insts.begin(), Insts.end());
   InstSet ToRemove;
 
@@ -772,49 +734,6 @@ Value *GetTIdOperand(CmpInst *Cmp, ValueVector &TIds) {
     }
   }
   return Result;
-}
-
-//------------------------------------------------------------------------------
-Instruction *getMulInst(Value *V, unsigned int CoarseningFactor) {
-  unsigned int width = GetIntWidth(V);
-  ConstantInt *CF = GetConstantInt(CoarseningFactor, width, V->getContext());
-  Instruction *Mul = BinaryOperator::Create(Instruction::Mul, V, CF);
-  Mul->setName(V->getName() + ".." + Twine(CoarseningFactor));
-  return Mul;
-}
-
-//------------------------------------------------------------------------------
-Instruction *getAddInst(Value *V, unsigned int CoarseningIndex) {
-  unsigned int width = GetIntWidth(V);
-  ConstantInt *I = GetConstantInt(CoarseningIndex, width, V->getContext());
-  Instruction *Add = BinaryOperator::Create(Instruction::Add, V, I);
-  Add->setName(V->getName() + ".." + Twine(CoarseningIndex));
-  return Add;
-}
-
-//------------------------------------------------------------------------------
-Instruction *getAddInst(Value *V1, Value *V2) {
-  Instruction *Add = BinaryOperator::Create(Instruction::Add, V1, V2);
-  Add->setName(V1->getName() + "..Add");
-  return Add;
-}
-
-//------------------------------------------------------------------------------
-Instruction *getShiftInst(Value *V, unsigned int shift) {
-  unsigned int width = GetIntWidth(V);
-  ConstantInt *I = GetConstantInt(shift, width, V->getContext());
-  Instruction *Shift = BinaryOperator::Create(Instruction::LShr, V, I);
-  Shift->setName(Twine(V->getName()) + "..Shift");
-  return Shift;
-}
-
-//------------------------------------------------------------------------------
-Instruction *getAndInst(Value *V, unsigned int factor) {
-  unsigned int width = GetIntWidth(V);
-  ConstantInt *I = GetConstantInt(factor, width, V->getContext());
-  Instruction *And = BinaryOperator::Create(Instruction::And, V, I);
-  And->setName(Twine(V->getName()) + "..And");
-  return And;
 }
 
 //------------------------------------------------------------------------------
@@ -1072,4 +991,3 @@ bool isPresent(const Instruction *I, std::vector<BlockVector *> &V) {
       return true;
   return false;
 }
-

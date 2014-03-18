@@ -270,8 +270,8 @@ DivergentRegion::const_iterator DivergentRegion::const_iterator::end() {
 
 // Non member functions.
 //------------------------------------------------------------------------------
-RegionBounds *getExtingExit(DivergentRegion *region) {
-  BasicBlock *exiting = region->getExiting();
+RegionBounds *getExitingAndExit(DivergentRegion &region) {
+  BasicBlock *exiting = region.getExiting();
   TerminatorInst *terminator = exiting->getTerminator();
   assert(terminator->getNumSuccessors() == 1 &&
          "Divergent region must have one successor only");

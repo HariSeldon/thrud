@@ -118,7 +118,13 @@ void ControlDependenceAnalysis::transitiveClosure() {
       worklist.erase(iter);
       result.push_back(current);
       BlockVector &children = forwardGraph[current];
-      std::copy(children.begin(), children.end(), std::inserter(worklist, worklist.end()));
+
+      for (BlockVector::iterator iter = children.begin(), iterEnd = children.end(); iter != iterEnd; ++iter) {
+        BasicBlock *block = *iter;
+        if(!isPresent(block, result)) 
+          worklist.insert(block);
+      } 
+      dumpSet(worklist);
     }
 
     // Update block vector.

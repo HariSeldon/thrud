@@ -23,6 +23,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -183,6 +184,8 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
     PHINode *ToDelete = *I;
     ToDelete->eraseFromParent();
   }
+//  std::for_each(oldPhis.begin(), oldPhis.end(), std::mem_fun_ref(&PHINode::eraseFromParent));
+
 
   region->setExiting(newExiting);
 }

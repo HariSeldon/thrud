@@ -3,6 +3,13 @@
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/Utils.h"
 
+// Support functions.
+Instruction *getMulInst(Value *value, unsigned int factor);
+Instruction *getAddInst(Value *value, unsigned int addend);
+Instruction *getAddInst(Value *V1, Value *V2);
+Instruction *getShiftInst(Value *value, unsigned int shift);
+Instruction *getAndInst(Value *value, unsigned int factor);
+
 //------------------------------------------------------------------------------
 void ThreadCoarsening::scaleNDRange() {
   InstVector InstTids;
@@ -44,14 +51,18 @@ void ThreadCoarsening::scaleIds() {
     Instruction *base = getAddInst(andOp, mul);
     base->insertAfter(andOp);
 
-    //    Instruction* Mul = getMulInst(*I, CF);
-    //    Mul->insertAfter(*I);
+    // Replace uses of the threadId with the new base.
+    replaceUses(inst, base);
+    andOp->setOperand(0, inst);
+    shift->setOperand(0, inst);
+
+    // Compute the remaining thread ids.
     cMap.insert(std::pair<Instruction*, InstVector>(inst, InstVector()));
-    InstVector &current = cMap[inst];
+    InstVector &current = cMap[base];
     current.reserve(factor - 1);
 
     Instruction *bookmark = base;
-    for (unsigned int index = 1; index < factor; ++index) {
+    for (unsigned int index = 2; index <= factor; ++index) {
       Instruction *add = getAddInst(base, (index - 1) * stride);
       add->insertAfter(bookmark);
       current.push_back(add);
@@ -59,3 +70,57 @@ void ThreadCoarsening::scaleIds() {
     }
   }
 }
+
+// Support functions.
+//------------------------------------------------------------------------------
+unsigned int getIntWidth(Value *value) {
+  Type *type = value->getType();
+  IntegerType *intType = dyn_cast<IntegerType>(type);
+  assert(intType && "Value type is not integer");
+  return intType->getBitWidth();
+}
+
+ConstantInt *getConstantInt(unsigned int value, unsigned int width,
+                            LLVMContext &context) {
+  IntegerType *integer = IntegerType::get(context, width);
+  return ConstantInt::get(integer, value);
+}
+
+Instruction *getMulInst(Value *value, unsigned int factor) {
+  unsigned int width = getIntWidth(value);
+  ConstantInt *factorValue = getConstantInt(factor, width, value->getContext());
+  Instruction *mul = BinaryOperator::Create(Instruction::Mul, value, factorValue);
+  mul->setName(value->getName() + ".." + Twine(factor));
+  return mul;
+}
+
+Instruction *getAddInst(Value *value, unsigned int addend) {
+  unsigned int width = getIntWidth(value);
+  ConstantInt *addendValue = getConstantInt(addend, width, value->getContext());
+  Instruction *add = BinaryOperator::Create(Instruction::Add, value, addendValue);
+  add->setName(value->getName() + ".." + Twine(addend));
+  return add;
+}
+
+Instruction *getAddInst(Value *firstValue, Value *secondValue) {
+  Instruction *add = BinaryOperator::Create(Instruction::Add, firstValue, secondValue);
+  add->setName(firstValue->getName() + "..Add");
+  return add;
+}
+
+Instruction *getShiftInst(Value *value, unsigned int shift) {
+  unsigned int width = getIntWidth(value);
+  ConstantInt *intValue = getConstantInt(shift, width, value->getContext());
+  Instruction *shiftInst = BinaryOperator::Create(Instruction::LShr, value, intValue);
+  shiftInst->setName(Twine(value->getName()) + "..Shift");
+  return shiftInst;
+}
+
+Instruction *getAndInst(Value *value, unsigned int factor) {
+  unsigned int width = getIntWidth(value);
+  ConstantInt *intValue = getConstantInt(factor, width, value->getContext());
+  Instruction *andInst = BinaryOperator::Create(Instruction::And, value, intValue);
+  andInst->setName(Twine(value->getName()) + "..And");
+  return andInst;
+}
+
