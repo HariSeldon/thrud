@@ -63,6 +63,7 @@ private:
   RegionBounds bounds;
   BlockVector blocks;
   BoundCheck condition;
+  // Add alive values.
 
 public:
   // Iterator class.

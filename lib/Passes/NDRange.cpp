@@ -45,10 +45,8 @@ InstVector NDRange::getSizes() {
     std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
     InstVector globalSizes = dirInsts[GET_GLOBAL_SIZE];
     InstVector localSizes = dirInsts[GET_LOCAL_SIZE];
-    InstVector numGroups = dirInsts[GET_GROUPS_NUMBER];
     result.insert(result.end(), globalSizes.begin(), globalSizes.end());
     result.insert(result.end(), localSizes.begin(), localSizes.end());
-    result.insert(result.end(), numGroups.begin(), numGroups.end());
   }
   return result;
 }
@@ -68,10 +66,8 @@ InstVector NDRange::getSizes(unsigned int direction) {
   std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
   InstVector globalSizes = dirInsts[GET_GLOBAL_SIZE];
   InstVector localSizes = dirInsts[GET_LOCAL_SIZE];
-  InstVector numGroups = dirInsts[GET_GROUPS_NUMBER];
   result.insert(result.end(), globalSizes.begin(), globalSizes.end());
   result.insert(result.end(), localSizes.begin(), localSizes.end());
-  result.insert(result.end(), numGroups.begin(), numGroups.begin());
   return result;
 }
 
@@ -231,7 +227,8 @@ void NDRange::init() {
 }
 
 bool NDRange::isPresentInDirection(llvm::Instruction *inst,
-                                   const std::string &functionName, unsigned int direction) {
+                                   const std::string &functionName,
+                                   unsigned int direction) {
   std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
   const InstVector &insts = dirInsts[functionName];
   return isPresent(inst, insts);

@@ -177,8 +177,6 @@ void findUsesOf(Instruction *inst, InstSet &result) {
   }
 }
 
-// FIXME: IN THEORY inst is external if is not control dependent on any div
-// branch.
 bool isExternal(Instruction *inst, RegionVector &regions) {
   bool result = false;
   for (RegionVector::const_iterator iter = regions.begin(),

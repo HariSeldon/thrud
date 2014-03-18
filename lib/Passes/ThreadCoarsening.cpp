@@ -85,6 +85,8 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
 
   errs() << "ThreadCoarsening::runOnFunction\n";
 
+//  F.getParent()->dump();
+
   // Get command line options.
   direction = CoarseningDirectionCL;
   factor = CoarseningFactorCL;
@@ -106,6 +108,7 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   replacePlaceholders();
 
 //  F.getParent()->dump();
+//  replacePlaceholders();
 
   return true;
 }

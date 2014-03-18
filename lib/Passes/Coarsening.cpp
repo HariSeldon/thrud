@@ -45,6 +45,9 @@ void ThreadCoarsening::coarsenFunction() {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateInst(Instruction *inst) {
+  errs() << "ThreadCoarsening::replicateInst\n";
+  inst->dump();
+
   InstVector current;
   current.reserve(factor - 1);
   Instruction *bookmark = inst;
@@ -67,8 +70,8 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
   if (phIter != phMap.end()) {
     InstVector &V = phIter->second;
     for (unsigned int index = 0; index < V.size(); ++index) {
-//      errs() << "phReplacement construction:\n";
-//      V[index]->dump(); errs() <<  " -- "; 
+      errs() << "phReplacement construction:\n";
+      V[index]->dump(); errs() <<  " -- "; 
       current[index]->dump(); 
 
       phReplacementMap[V[index]] = current[index];
@@ -77,13 +80,27 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
 }
 
 //------------------------------------------------------------------------------
-void ThreadCoarsening::applyCoarseningMap(DivergentRegion &region, 
+void ThreadCoarsening::applyCoarseningMap(DivergentRegion &region,
                                           unsigned int index) {
-  for(DivergentRegion::iterator iter = region.begin(), iterEnd = region.end();
-      iter != iterEnd; ++iter) {
+  for (DivergentRegion::iterator iter = region.begin(), iterEnd = region.end();
+       iter != iterEnd; ++iter) {
     BasicBlock *block = *iter;
     applyCoarseningMap(block, index);
-  }    
+//    for (BasicBlock::iterator iterBlock = block->begin(), endBlock = block->end();
+//         iterBlock != endBlock; ++iterBlock) {
+//      Instruction *inst = iterBlock;
+//      for (unsigned int opIndex = 0, opEnd = inst->getNumOperands();
+//           opIndex != opEnd; ++opIndex) {
+//        Instruction *operand = dyn_cast<Instruction>(inst->getOperand(opIndex));
+//        if (operand == NULL)
+//          continue;
+//        Instruction *newOp = getCoarsenedInstructionNoPhs(operand, index);
+//        if (newOp == NULL)
+//          continue;
+//        inst->setOperand(opIndex, newOp);
+//      }
+//    }
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -110,13 +127,12 @@ void ThreadCoarsening::applyCoarseningMap(Instruction *inst,
   }
 }
 
-
 //------------------------------------------------------------------------------
 Instruction *
 ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
                                           unsigned int coarseningIndex) {
-//  errs() << "ThreadCoarsening::getCoarsenedInstruction\n";
-//  inst->dump();
+  errs() << "ThreadCoarsening::getCoarsenedInstruction\n";
+  inst->dump();
   CoarseningMap::iterator It = cMap.find(inst);
   // The instruction is in the map.
   if (It != cMap.end()) {
@@ -127,6 +143,7 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
   else {
     // The instruction is divergent.
     if (sdda->isDivergent(inst)) {
+      errs() << "I NEED A PLACE HOLDER\n";
       // Look in placeholder map.
       CoarseningMap::iterator PHIt = phMap.find(inst);
       Instruction *result = NULL;
@@ -142,10 +159,11 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
         for (unsigned int counter = 0; counter < factor - 1; ++counter) {
           Instruction *ph = inst->clone();
           ph->insertAfter(inst);
-          renameValueWithFactor(ph, (inst->getName() + Twine("ph")).str(),
+          renameValueWithFactor(ph, (inst->getName() + Twine("place.holder")).str(),
                                 coarseningIndex);
           newEntry.push_back(ph);
         }
+        errs() << "insertion in phMap\n";
         phMap.insert(std::pair<Instruction *, InstVector>(inst, newEntry));
         // Return the appropriate placeholder.
         result = newEntry[coarseningIndex];
@@ -156,11 +174,27 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
   return NULL;
 }
 
+////------------------------------------------------------------------------------
+//Instruction *
+//ThreadCoarsening::getCoarsenedInstructionNoPhs(Instruction *inst,
+//                                               unsigned int coarseningIndex) {
+//  errs() << "ThreadCoarsening::getCoarsenedInstructionNoPhs\n";
+//  inst->dump();
+//  CoarseningMap::iterator It = cMap.find(inst);
+//  // The instruction is in the map.
+//  if (It != cMap.end()) {
+//    InstVector &entry = It->second;
+//    Instruction *result = entry[coarseningIndex];
+//    return result;
+//  } 
+//  return NULL;
+//}
+
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replacePlaceholders() {
-//  errs() << "ThreadCoarsening::replacePlaceholders\n";
-//  dumpCoarseningMap(phMap);
-//  printMap(phReplacementMap);
+  errs() << "ThreadCoarsening::replacePlaceholders\n";
+  dumpCoarseningMap(phMap);
+  printMap(phReplacementMap);
 
   // Iterate over placeholder map.
   for (CoarseningMap::iterator mapIter = phMap.begin(), mapEnd = phMap.end();
@@ -171,6 +205,9 @@ void ThreadCoarsening::replacePlaceholders() {
          instIter != instEnd; ++instIter) {
       Instruction *ph = *instIter;
       Value *replacement = phReplacementMap[ph];
+      //if(replacement == NULL) {
+      //  ph->eraseFromParent();
+      //}
       assert(replacement != NULL && "Missing replacement value");
       ph->replaceAllUsesWith(replacement);
     }
@@ -236,6 +273,9 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
 
     bookmark = getExitingAndExit(newRegion);
     //applyCoarseningMap(region, index);
+
+    // FIXME.
+    // Update maps with alive values.
   }
 }
 

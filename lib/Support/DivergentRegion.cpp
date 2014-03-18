@@ -131,6 +131,9 @@ DivergentRegion DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
     applyMap(*iter, blocksMap);
   }
 
+  // FIXME.
+  // Add the cloning of the alive values.
+
   return DivergentRegion(newHeader, newExiting, dt, pdt);
 }
 
