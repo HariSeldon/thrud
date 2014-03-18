@@ -47,7 +47,7 @@ private:
   GraphMap forwardGraph;
   GraphMap backwardGraph;
   std::vector<std::pair<BasicBlock *, BasicBlock *> > s;
-  std::vector<BasicBlock *> ls;
+  BlockVector ls;
 };
 
 #endif

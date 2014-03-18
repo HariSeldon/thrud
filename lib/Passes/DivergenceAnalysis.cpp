@@ -36,6 +36,13 @@ bool isExternal(Instruction *inst, RegionVector &regions);
 
 // DivergenceAnalysis.
 // -----------------------------------------------------------------------------
+void DivergenceAnalysis::init() {
+  divInsts.clear();
+  externalDivInsts.clear();
+  divBranches.clear();
+  regions.clear();
+}
+
 InstVector DivergenceAnalysis::getTids() {
   // This must be overriden by all subclasses.
   return InstVector();
@@ -121,6 +128,20 @@ void DivergenceAnalysis::findExternalInsts() {
       externalDivInsts.push_back(*iter);
     }
   }
+
+  // Remove from externalDivInsts all the calls to builtin functions.
+  InstVector oclIds = ndr->getTids();
+  InstVector result;
+
+  size_t oldSize = externalDivInsts.size();
+
+  std::sort(externalDivInsts.begin(), externalDivInsts.end());
+  std::sort(oclIds.begin(), oclIds.end());
+  std::set_difference(externalDivInsts.begin(), externalDivInsts.end(),
+                      oclIds.begin(), oclIds.end(), std::back_inserter(result));
+  externalDivInsts.swap(result);
+
+  assert(externalDivInsts.size() <= oldSize && "Wrong set difference");
 }
 
 // Public functions.
@@ -189,6 +210,7 @@ bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
   if (!IsKernel(function))
     return false;
 
+  init();
   pdt = &getAnalysis<PostDominatorTree>();
   dt = &getAnalysis<DominatorTree>();
   loopInfo = &getAnalysis<LoopInfo>();
@@ -228,6 +250,7 @@ bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {
   if (!IsKernel(function))
     return false;
 
+  init();
   pdt = &getAnalysis<PostDominatorTree>();
   dt = &getAnalysis<DominatorTree>();
   loopInfo = &getAnalysis<LoopInfo>();

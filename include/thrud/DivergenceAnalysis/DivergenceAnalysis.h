@@ -24,6 +24,7 @@ protected:
   virtual InstVector getTids();
   void performAnalysis();
 
+  void init();
   void findBranches();
   void findRegions();
   void findExternalInsts();

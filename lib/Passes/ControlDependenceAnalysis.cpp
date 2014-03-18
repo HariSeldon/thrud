@@ -18,8 +18,12 @@ void ControlDependenceAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
 
 bool ControlDependenceAnalysis::runOnFunction(Function &function) {
   pdt = &getAnalysis<PostDominatorTree>();
+//  pdt->dump();
 
-  pdt->dump();
+  forwardGraph.clear();
+  backwardGraph.clear();
+  s.clear();
+  ls.clear();
 
   findS(function);
   findLs();
@@ -28,7 +32,7 @@ bool ControlDependenceAnalysis::runOnFunction(Function &function) {
   transitiveClosure();
   buildBackwardGraph();
 
-  dump();
+//  dump();
 
   return false;
 }
@@ -41,7 +45,7 @@ void ControlDependenceAnalysis::findS(Function &function) {
          succIter != succEnd; ++succIter) {
       BasicBlock *child = *succIter;
       if (!pdt->dominates(child, block)) {
-        llvm::errs() << block->getName() << " -- " << child->getName() << "\n";
+//        llvm::errs() << block->getName() << " -- " << child->getName() << "\n";
         s.push_back(std::pair<BasicBlock *, BasicBlock *>(block, child));
       }
     }
@@ -58,7 +62,7 @@ void ControlDependenceAnalysis::findLs() {
         pdt->findNearestCommonDominator(edge.first, edge.second);
     assert(block != NULL && "Ill-formatted function");
     ls.push_back(block);
-  }
+  }  
   assert(ls.size() == s.size() && "Mismatching S and Ls");
 }
 
@@ -124,7 +128,6 @@ void ControlDependenceAnalysis::transitiveClosure() {
         if(!isPresent(block, result)) 
           worklist.insert(block);
       } 
-      dumpSet(worklist);
     }
 
     // Update block vector.

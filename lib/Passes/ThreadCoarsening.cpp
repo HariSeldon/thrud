@@ -83,6 +83,8 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   if (KernelNameCL != "" && FunctionName != KernelNameCL)
     return false;
 
+  errs() << "ThreadCoarsening::runOnFunction\n";
+
   // Get command line options.
   direction = CoarseningDirectionCL;
   factor = CoarseningFactorCL;
@@ -96,14 +98,22 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   ndr = &getAnalysis<NDRange>();
 
-  errs() << "ThreadCoarsening::runOnFunction\n";
-    
+  init();
+
   // Transform the kernel.
   scaleNDRange();
   coarsenFunction();
   replacePlaceholders();
 
+//  F.getParent()->dump();
+
   return true;
+}
+
+void ThreadCoarsening::init() {
+  cMap.clear();
+  phMap.clear();
+  phReplacementMap.clear();
 }
 
 //------------------------------------------------------------------------------

@@ -48,7 +48,6 @@ void BranchExtraction::getAnalysisUsage(AnalysisUsage &au) const {
 
 //------------------------------------------------------------------------------
 bool BranchExtraction::runOnFunction(Function &F) {
-  llvm::errs() << "BranchExtraction::runOnFunction\n";
   // Apply the pass to kernels only.
   if (!IsKernel((const Function *)&F))
     return false;
@@ -56,6 +55,8 @@ bool BranchExtraction::runOnFunction(Function &F) {
   std::string FunctionName = F.getName();
   if (KernelNameCL != "" && FunctionName != KernelNameCL)
     return false;
+
+  llvm::errs() << "BranchExtraction::runOnFunction\n";
 
   // Perform analyses.
   loopInfo = &getAnalysis<LoopInfo>();
@@ -85,30 +86,22 @@ bool BranchExtraction::runOnFunction(Function &F) {
 void BranchExtraction::extractBranches(DivergentRegion *region) {
   BasicBlock *header = region->getHeader();
   BasicBlock *exiting = region->getExiting();
+  BasicBlock *newHeader = NULL;
 
-  // No loops.
-  if(loopInfo->getLoopFor(header) == NULL && loopInfo->getLoopFor(exiting) == NULL) {
-    // Split Header.
-    BasicBlock *newHeader = SplitBlock(header, header->getTerminator(), this);
-    region->setHeader(newHeader);
-
-    // Split Exiting.
-    Instruction *firstNonPHI = exiting->getFirstNonPHI();
-    SplitBlock(exiting, firstNonPHI, this);
-  }
-
-  // Loops.
-  Loop *loop = loopInfo->getLoopFor(header);
-  if(loop != NULL) {
+  if (!loopInfo->isLoopHeader(header))
+    newHeader = SplitBlock(header, header->getTerminator(), this);
+  else {
+    newHeader = header;
+    Loop *loop = loopInfo->getLoopFor(header);
     if (loop == loopInfo->getLoopFor(exiting)) {
       exiting = loop->getExitBlock();
       region->setExiting(exiting);
     }
-
-    // Split Exiting.
-    Instruction *firstNonPHI = exiting->getFirstNonPHI();
-    SplitBlock(exiting, firstNonPHI, this);
   }
+
+  Instruction *firstNonPHI = exiting->getFirstNonPHI();
+  SplitBlock(exiting, firstNonPHI, this);
+  region->setHeader(newHeader);
 }
 
 // Remember to update the DT / PDT.

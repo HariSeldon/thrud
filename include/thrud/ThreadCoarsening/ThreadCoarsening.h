@@ -34,6 +34,8 @@ public:
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
 
 private:
+  void init();
+
   // NDRange scaling.
   void scaleNDRange();
   void scaleSizes();

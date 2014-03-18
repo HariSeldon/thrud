@@ -63,10 +63,14 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
   cMap.insert(std::pair<Instruction *, InstVector>(inst, current));
 
   // Update placeholder replacement map.
-  CoarseningMap::iterator cIter = cMap.find(inst);
-  if (cIter != cMap.end()) {
-    InstVector &V = cIter->second;
+  CoarseningMap::iterator phIter = phMap.find(inst);
+  if (phIter != phMap.end()) {
+    InstVector &V = phIter->second;
     for (unsigned int index = 0; index < V.size(); ++index) {
+//      errs() << "phReplacement construction:\n";
+//      V[index]->dump(); errs() <<  " -- "; 
+      current[index]->dump(); 
+
       phReplacementMap[V[index]] = current[index];
     }
   }
@@ -96,9 +100,11 @@ void ThreadCoarsening::applyCoarseningMap(Instruction *inst,
                                           unsigned int index) {
   for (unsigned int opIndex = 0, opEnd = inst->getNumOperands();
        opIndex != opEnd; ++opIndex) {
-    Instruction *Op = dyn_cast<Instruction>(inst->getOperand(opIndex));
-    Instruction *newOp = getCoarsenedInstruction(Op, index);
-    if(newOp == NULL)
+    Instruction *operand = dyn_cast<Instruction>(inst->getOperand(opIndex));
+    if(operand == NULL)
+      continue;
+    Instruction *newOp = getCoarsenedInstruction(operand, index);
+    if(newOp == NULL) 
       continue;
     inst->setOperand(opIndex, newOp);
   }
@@ -109,16 +115,18 @@ void ThreadCoarsening::applyCoarseningMap(Instruction *inst,
 Instruction *
 ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
                                           unsigned int coarseningIndex) {
+//  errs() << "ThreadCoarsening::getCoarsenedInstruction\n";
+//  inst->dump();
   CoarseningMap::iterator It = cMap.find(inst);
+  // The instruction is in the map.
   if (It != cMap.end()) {
-    // The instruction is in the map.
     InstVector &entry = It->second;
     Instruction *result = entry[coarseningIndex];
     return result;
-  } else {
-    // The instruction is not in the map.
+  } 
+  else {
+    // The instruction is divergent.
     if (sdda->isDivergent(inst)) {
-      // The instruction is divergent.
       // Look in placeholder map.
       CoarseningMap::iterator PHIt = phMap.find(inst);
       Instruction *result = NULL;
@@ -126,12 +134,14 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
         // The instruction is in the placeholder map.
         InstVector &entry = PHIt->second;
         result = entry[coarseningIndex];
-      } else {
-        // The instruction is not in the placeholder map.
+      } 
+      // The instruction is not in the placeholder map.
+      else {
         // Make an entry in the placeholder map.
         InstVector newEntry;
         for (unsigned int counter = 0; counter < factor - 1; ++counter) {
           Instruction *ph = inst->clone();
+          ph->insertAfter(inst);
           renameValueWithFactor(ph, (inst->getName() + Twine("ph")).str(),
                                 coarseningIndex);
           newEntry.push_back(ph);
@@ -148,6 +158,10 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replacePlaceholders() {
+//  errs() << "ThreadCoarsening::replacePlaceholders\n";
+//  dumpCoarseningMap(phMap);
+//  printMap(phReplacementMap);
+
   // Iterate over placeholder map.
   for (CoarseningMap::iterator mapIter = phMap.begin(), mapEnd = phMap.end();
        mapIter != mapEnd; ++mapIter) {
@@ -157,9 +171,6 @@ void ThreadCoarsening::replacePlaceholders() {
          instIter != instEnd; ++instIter) {
       Instruction *ph = *instIter;
       Value *replacement = phReplacementMap[ph];
-      if(replacement == NULL) {
-        ph->dump();
-      }
       assert(replacement != NULL && "Missing replacement value");
       ph->replaceAllUsesWith(replacement);
     }
@@ -172,8 +183,6 @@ void ThreadCoarsening::replicateRegion(DivergentRegion *region) {
          "Header does not dominates Exiting");
   assert(pdt->dominates(region->getExiting(), region->getHeader()) &&
          "Exiting does not post dominate Header");
-
-  region->dump();
 
   // Do not replicate if the region is strict.
   if (region->isStrict())
@@ -219,19 +228,13 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
     changeBlockTarget(exiting, newRegion.getHeader());
     changeBlockTarget(newRegion.getExiting(), bookmark->getExiting());
 
+    // Update the phi nodes of the newly inserted header.
+    remapBlocksInPHIs(newRegion.getHeader(), pred, exiting);
+    // Update the phi nodes in the exit block.
+    remapBlocksInPHIs(bookmark->getExiting(), region->getExiting(),
+                      newRegion.getExiting());
+
     bookmark = getExitingAndExit(newRegion);
-
-
-    //// IP.first -> NewPair.second
-    //bounds->setHeader(newBounds.getExiting());
-    //
-    //// Update the phi nodes of the newly inserted header.
-    //remapBlocksInPHIs(newBounds.getHeader(), pred, exiting);
-    //// Update the phi nodes in the exit block.
-    //remapBlocksInPHIs(bounds->getExiting(), region->getExiting(),
-    //                  newBounds.getExiting());
-
-    //DivergentRegion region(newBounds);
     //applyCoarseningMap(region, index);
   }
 }
