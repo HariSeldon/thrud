@@ -114,6 +114,21 @@ void applyMap(BasicBlock *BB, Map &map) {
 }
 
 //------------------------------------------------------------------------------
+void applyMap(InstVector &insts, Map &map, InstVector &result) {
+  result.clear();
+  result.reserve(insts.size());
+
+  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
+    Value *newValue = map[*iter];
+    if(newValue != NULL) {
+      if(Instruction *inst = dyn_cast<Instruction>(newValue)) {
+        result.push_back(inst); 
+      } 
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
 void printMap(const Map &map) {
   errs() << "==== Map ====\n";
   for (Map::const_iterator I = map.begin(), E = map.end(); I != E; ++I)

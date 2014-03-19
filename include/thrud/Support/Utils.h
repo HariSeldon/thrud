@@ -37,8 +37,8 @@ void applyMap(Instruction *Inst, Map &map);
 void applyMap(BasicBlock *block, Map &map);
 void applyMapToPHIs(BasicBlock *block, Map &map);
 void applyMapToPhiBlocks(PHINode *Phi, Map &map);
-
 void applyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF);
+void applyMap(InstVector &insts, Map &map, InstVector &result);
 
 void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index);
 

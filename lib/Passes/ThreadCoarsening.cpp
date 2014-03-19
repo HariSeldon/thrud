@@ -85,8 +85,6 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
 
   errs() << "ThreadCoarsening::runOnFunction\n";
 
-//  F.getParent()->dump();
-
   // Get command line options.
   direction = CoarseningDirectionCL;
   factor = CoarseningFactorCL;
@@ -100,15 +98,11 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   ndr = &getAnalysis<NDRange>();
 
-  init();
-
   // Transform the kernel.
+  init();
   scaleNDRange();
   coarsenFunction();
   replacePlaceholders();
-
-//  F.getParent()->dump();
-//  replacePlaceholders();
 
   return true;
 }

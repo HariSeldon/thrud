@@ -74,6 +74,7 @@ bool BranchExtraction::runOnFunction(Function &F) {
     region->fillRegion(dt, pdt);
     isolateRegion(region);
     region->fillRegion(dt, pdt);
+    region->findAliveValues();
   }
 
   return regions.size() != 0;

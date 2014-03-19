@@ -23,6 +23,16 @@ DivergentRegion::DivergentRegion(BasicBlock *header, BasicBlock *exiting,
   fillRegion(dt, pdt);
 }
 
+DivergentRegion::DivergentRegion(BasicBlock *header, BasicBlock *exiting,
+                                 DominatorTree *dt, PostDominatorTree *pdt, 
+                                 InstVector &alive)
+    : condition(DivergentRegion::ND), alive(alive) {
+  bounds.setHeader(header);
+  bounds.setExiting(exiting);
+
+  fillRegion(dt, pdt);
+}
+
 DivergentRegion::DivergentRegion(RegionBounds &bounds, DominatorTree *dt,
                                  PostDominatorTree *pdt)
     : bounds(bounds), condition(DivergentRegion::ND) {
@@ -50,6 +60,8 @@ RegionBounds &DivergentRegion::getBounds() { return bounds; }
 
 BlockVector &DivergentRegion::getBlocks() { return blocks; }
 
+InstVector &DivergentRegion::getAlive() { return alive; }
+
 void DivergentRegion::fillRegion(DominatorTree *dt, PostDominatorTree *pdt) {
   blocks.clear();
   bounds.listBlocks(blocks);
@@ -59,6 +71,40 @@ void DivergentRegion::fillRegion(DominatorTree *dt, PostDominatorTree *pdt) {
   //  if (isDominated(bounds.getHeader(), blocks, dt)) {
   //    updateBounds(dt, pdt);
   //  }
+}
+
+//------------------------------------------------------------------------------
+void DivergentRegion::findAliveValues() {
+//  errs() << "DivergentRegion::findAliveValues\n";
+  for (BlockVector::iterator iterBlock = blocks.begin(),
+                             blockEnd = blocks.end();
+       iterBlock != blockEnd; ++iterBlock) {
+    BasicBlock *block = *iterBlock;
+    for (BasicBlock::iterator iterInst = block->begin(), instEnd = block->end();
+         iterInst != instEnd; ++iterInst) {
+      Instruction *inst = iterInst;
+//      inst->dump();
+
+      // Iterate over the uses of the instruction.
+      for (Instruction::use_iterator iterUse = inst->use_begin(),
+                                     useEnd = inst->use_end();
+           iterUse != useEnd; ++iterUse) {
+        if (Instruction *useInst = dyn_cast<Instruction>(*iterUse)) {
+//          errs() << "  ";
+//          useInst->dump();
+          BasicBlock *blockUser = useInst->getParent();
+//          errs() << "  ";
+//          errs() << blockUser->getName() << "\n";
+          // If the user of the instruction is not in the region -> the value is
+          // alive.
+          if (!contains(*this, blockUser)) {
+            alive.push_back(inst);
+            break;
+          } 
+        }
+      }
+    }
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -97,20 +143,21 @@ void DivergentRegion::analyze() {
 }
 
 DivergentRegion DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
-                                       PostDominatorTree *pdt) {
+                                       PostDominatorTree *pdt, Map& valuesMap) {
+//  errs() << "DivergentRegion::clone\n";
 
   Function *function = getHeader()->getParent();
   BasicBlock *newHeader = NULL;
   BasicBlock *newExiting = NULL;
 
   Map regionBlockMap;
-  Map blocksMap;
+  valuesMap.clear();
   BlockVector newBlocks;
   newBlocks.reserve(blocks.size());
   for (BlockVector::iterator iter = blocks.begin(), iterEnd = blocks.end();
        iter != iterEnd; ++iter) {
     BasicBlock *block = *iter;
-    BasicBlock *newBlock = CloneBasicBlock(block, blocksMap, suffix, function, 0);
+    BasicBlock *newBlock = CloneBasicBlock(block, valuesMap, suffix, function, 0);
     regionBlockMap[block] = newBlock;
     newBlocks.push_back(newBlock);
 
@@ -128,12 +175,13 @@ DivergentRegion DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
                              iterEnd = newBlocks.end();
        iter != iterEnd; ++iter) {
     applyMap(*iter, regionBlockMap);
-    applyMap(*iter, blocksMap);
+    applyMap(*iter, valuesMap);
   }
 
-  // FIXME.
-  // Add the cloning of the alive values.
+//  InstVector newAlive;
+//  applyMap(alive, valuesMap, newAlive);
 
+//  return DivergentRegion(newHeader, newExiting, dt, pdt, newAlive);
   return DivergentRegion(newHeader, newExiting, dt, pdt);
 }
 
@@ -145,7 +193,9 @@ void DivergentRegion::dump() {
        iter != iterEnd; ++iter) {
     errs() << (*iter)->getName() << ", ";
   }
-  errs() << "\nCondition: ";
+  errs() << "\nAlive: ";
+  dumpVector(alive);
+  errs() << "Condition: ";
   switch (getCondition()) {
   case DivergentRegion::EQ:
     errs() << "EQUALS\n";

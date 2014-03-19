@@ -119,7 +119,7 @@ void DivergenceAnalysis::findRegions() {
 }
 
 // This is called only when the external instructions are acutally requrested,
-// ie. duting coarsening. This is done to be sure that this instructions are
+// ie. during coarsening. This is done to be sure that this instructions are
 // computed after the extraction of divergent regions from the CFG.
 void DivergenceAnalysis::findExternalInsts() {
   for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();

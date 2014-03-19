@@ -26,6 +26,8 @@ public:
 public:
   DivergentRegion(BasicBlock *header, BasicBlock *exiting, DominatorTree *dt,
                   PostDominatorTree *pdt);
+  DivergentRegion(BasicBlock *header, BasicBlock *exiting, DominatorTree *dt,
+                  PostDominatorTree *pdt, InstVector &alive);
   DivergentRegion(RegionBounds &bounds, DominatorTree *dt,
                   PostDominatorTree *pdt);
 
@@ -38,6 +40,7 @@ public:
 
   RegionBounds &getBounds();
   BlockVector &getBlocks();
+  InstVector &getAlive();
 
   void setHeader(BasicBlock *Header);
   void setExiting(BasicBlock *Exiting);
@@ -46,11 +49,13 @@ public:
   BoundCheck getCondition() const;
 
   void fillRegion(DominatorTree *dt, PostDominatorTree *pdt);
+  void findAliveValues();
 
   void analyze();
   bool isStrict();
 
-  DivergentRegion clone(const Twine &suffix, DominatorTree *dt, PostDominatorTree *pdt);
+  DivergentRegion clone(const Twine &suffix, DominatorTree *dt,
+                        PostDominatorTree *pdt, Map &valueMap);
 
   unsigned int size();
   void dump();
@@ -63,7 +68,7 @@ private:
   RegionBounds bounds;
   BlockVector blocks;
   BoundCheck condition;
-  // Add alive values.
+  InstVector alive;
 
 public:
   // Iterator class.

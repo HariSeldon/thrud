@@ -5,25 +5,23 @@
 
 #include "llvm/IR/Module.h"
 
-void dumpCoarseningMap(CoarseningMap &cMap) {
-  llvm::errs() << "------------------------------\n";
-  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end(); iter != end; ++iter) {
-    InstVector &entry = iter->second;
-    Instruction *inst = iter->first;
-    llvm::errs() << "Key: ";
-    inst->dump();
-    llvm::errs() << " ";
-    dumpVector(entry);
-    llvm::errs() << "\n";
-  }
-  llvm::errs() << "------------------------------\n";
-}
+//void dumpCoarseningMap(CoarseningMap &cMap) {
+//  llvm::errs() << "------------------------------\n";
+//  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end();
+//       iter != end; ++iter) {
+//    InstVector &entry = iter->second;
+//    Instruction *inst = iter->first;
+//    llvm::errs() << "Key: ";
+//    inst->dump();
+//    llvm::errs() << " ";
+//    dumpVector(entry);
+//    llvm::errs() << "\n";
+//  }
+//  llvm::errs() << "------------------------------\n";
+//}
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
-
-  dumpCoarseningMap(cMap);
-
   RegionVector &regions = sdda->getDivRegions();
   InstVector &insts = sdda->getDivInstsOutsideRegions();
 
@@ -45,8 +43,8 @@ void ThreadCoarsening::coarsenFunction() {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateInst(Instruction *inst) {
-  errs() << "ThreadCoarsening::replicateInst\n";
-  inst->dump();
+//  errs() << "ThreadCoarsening::replicateInst\n";
+//  inst->dump();
 
   InstVector current;
   current.reserve(factor - 1);
@@ -70,10 +68,6 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
   if (phIter != phMap.end()) {
     InstVector &V = phIter->second;
     for (unsigned int index = 0; index < V.size(); ++index) {
-      errs() << "phReplacement construction:\n";
-      V[index]->dump(); errs() <<  " -- "; 
-      current[index]->dump(); 
-
       phReplacementMap[V[index]] = current[index];
     }
   }
@@ -86,20 +80,6 @@ void ThreadCoarsening::applyCoarseningMap(DivergentRegion &region,
        iter != iterEnd; ++iter) {
     BasicBlock *block = *iter;
     applyCoarseningMap(block, index);
-//    for (BasicBlock::iterator iterBlock = block->begin(), endBlock = block->end();
-//         iterBlock != endBlock; ++iterBlock) {
-//      Instruction *inst = iterBlock;
-//      for (unsigned int opIndex = 0, opEnd = inst->getNumOperands();
-//           opIndex != opEnd; ++opIndex) {
-//        Instruction *operand = dyn_cast<Instruction>(inst->getOperand(opIndex));
-//        if (operand == NULL)
-//          continue;
-//        Instruction *newOp = getCoarsenedInstructionNoPhs(operand, index);
-//        if (newOp == NULL)
-//          continue;
-//        inst->setOperand(opIndex, newOp);
-//      }
-//    }
   }
 }
 
@@ -118,10 +98,10 @@ void ThreadCoarsening::applyCoarseningMap(Instruction *inst,
   for (unsigned int opIndex = 0, opEnd = inst->getNumOperands();
        opIndex != opEnd; ++opIndex) {
     Instruction *operand = dyn_cast<Instruction>(inst->getOperand(opIndex));
-    if(operand == NULL)
+    if (operand == NULL)
       continue;
     Instruction *newOp = getCoarsenedInstruction(operand, index);
-    if(newOp == NULL) 
+    if (newOp == NULL)
       continue;
     inst->setOperand(opIndex, newOp);
   }
@@ -131,19 +111,17 @@ void ThreadCoarsening::applyCoarseningMap(Instruction *inst,
 Instruction *
 ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
                                           unsigned int coarseningIndex) {
-  errs() << "ThreadCoarsening::getCoarsenedInstruction\n";
-  inst->dump();
+//  errs() << "ThreadCoarsening::getCoarsenedInstruction\n";
+//  inst->dump();
   CoarseningMap::iterator It = cMap.find(inst);
   // The instruction is in the map.
   if (It != cMap.end()) {
     InstVector &entry = It->second;
     Instruction *result = entry[coarseningIndex];
     return result;
-  } 
-  else {
+  } else {
     // The instruction is divergent.
     if (sdda->isDivergent(inst)) {
-      errs() << "I NEED A PLACE HOLDER\n";
       // Look in placeholder map.
       CoarseningMap::iterator PHIt = phMap.find(inst);
       Instruction *result = NULL;
@@ -151,19 +129,19 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
         // The instruction is in the placeholder map.
         InstVector &entry = PHIt->second;
         result = entry[coarseningIndex];
-      } 
-      // The instruction is not in the placeholder map.
-      else {
+      }
+          // The instruction is not in the placeholder map.
+          else {
         // Make an entry in the placeholder map.
         InstVector newEntry;
         for (unsigned int counter = 0; counter < factor - 1; ++counter) {
           Instruction *ph = inst->clone();
           ph->insertAfter(inst);
-          renameValueWithFactor(ph, (inst->getName() + Twine("place.holder")).str(),
+          renameValueWithFactor(ph,
+                                (inst->getName() + Twine("place.holder")).str(),
                                 coarseningIndex);
           newEntry.push_back(ph);
         }
-        errs() << "insertion in phMap\n";
         phMap.insert(std::pair<Instruction *, InstVector>(inst, newEntry));
         // Return the appropriate placeholder.
         result = newEntry[coarseningIndex];
@@ -174,27 +152,11 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
   return NULL;
 }
 
-////------------------------------------------------------------------------------
-//Instruction *
-//ThreadCoarsening::getCoarsenedInstructionNoPhs(Instruction *inst,
-//                                               unsigned int coarseningIndex) {
-//  errs() << "ThreadCoarsening::getCoarsenedInstructionNoPhs\n";
-//  inst->dump();
-//  CoarseningMap::iterator It = cMap.find(inst);
-//  // The instruction is in the map.
-//  if (It != cMap.end()) {
-//    InstVector &entry = It->second;
-//    Instruction *result = entry[coarseningIndex];
-//    return result;
-//  } 
-//  return NULL;
-//}
-
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replacePlaceholders() {
-  errs() << "ThreadCoarsening::replacePlaceholders\n";
-  dumpCoarseningMap(phMap);
-  printMap(phReplacementMap);
+//  errs() << "ThreadCoarsening::replacePlaceholders\n";
+//  dumpCoarseningMap(phMap);
+//  printMap(phReplacementMap);
 
   // Iterate over placeholder map.
   for (CoarseningMap::iterator mapIter = phMap.begin(), mapEnd = phMap.end();
@@ -247,19 +209,16 @@ void ThreadCoarsening::replicateRegion(DivergentRegion *region) {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
-  errs() << "ThreadCoarsening::replicateRegionClassic\n";
+//  errs() << "ThreadCoarsening::replicateRegionClassic\n";
 
   BasicBlock *pred = getPredecessor(region, loopInfo);
   RegionBounds *bookmark = getExitingAndExit(*region);
 
   for (unsigned int index = 0; index < factor - 1; ++index) {
-    // Clone the region and apply the new map.
-    // CIMap is applied to all the blocks in the region.
-    DivergentRegion newRegion = region->clone("..cf" + Twine(index + 2), dt, pdt);
+    Map valueMap;
+    DivergentRegion newRegion =
+        region->clone("..cf" + Twine(index + 2), dt, pdt, valueMap);
     applyCoarseningMap(newRegion, index);
-    //// Build the mapping for the phi nodes in the exiting block.
-    //BuildExitingPhiMap(R->getExiting(), NewPair.getExiting(), RegionsMap);
-
     // Connect the region to the CFG.
     BasicBlock *exiting = bookmark->getHeader();
     changeBlockTarget(exiting, newRegion.getHeader());
@@ -272,10 +231,42 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
                       newRegion.getExiting());
 
     bookmark = getExitingAndExit(newRegion);
-    //applyCoarseningMap(region, index);
 
-    // FIXME.
-    // Update maps with alive values.
+    // Manage alive values.
+    // Go through region alive values.
+    InstVector &aliveInsts = region->getAlive();
+    for (InstVector::iterator iter = aliveInsts.begin(),
+                              iterEnd = aliveInsts.end();
+         iter != iterEnd; ++iter) {
+      Instruction *alive = *iter;
+      Value *newValue = valueMap[alive];
+      Instruction *newAlive = dyn_cast<Instruction>(newValue);
+      assert(newAlive != NULL && "Wrong value in valueMap");
+
+      // Look for 'alive' in the coarsening map.
+      CoarseningMap::iterator mapIter = cMap.find(alive);
+      // The 'alive' is already in the map.
+      if (mapIter != cMap.end()) {
+        InstVector &cInsts = mapIter->second;
+        cInsts.push_back(newAlive);
+      }
+          // The 'alive' is not in the map -> add a new entry.
+          else {
+        InstVector newCInsts(1, dyn_cast<Instruction>(newAlive));
+        cMap.insert(std::pair<Instruction *, InstVector>(alive, newCInsts));
+      }
+
+      InstVector &current = cMap.find(alive)->second;
+
+      // Update placeholder replacement map with alive values.
+      CoarseningMap::iterator phIter = phMap.find(alive);
+      if (phIter != phMap.end()) {
+        InstVector &V = phIter->second;
+        for (unsigned int index = 0; index < V.size(); ++index) {
+          phReplacementMap[V[index]] = current[index];
+        }
+      }
+    }
   }
 }
 
@@ -295,13 +286,14 @@ void ThreadCoarsening::replicateRegionTrueMerging(DivergentRegion *region) {
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
                                               unsigned int branch) {
-//  RegionBounds *bounds = getExtingExit(region);
-//  BasicBlock *pred = getPredecessor(region, loopInfo);
-//
-//  // Get branch.
-//  BranchInst *Branch = dyn_cast<BranchInst>(R->getHeader()->getTerminator());
-//  Branch->dump();
-//
-//  // Get Block.
-//  BasicBlock *Head = Branch->getSuccessor(branch);
+  //  RegionBounds *bounds = getExtingExit(region);
+  //  BasicBlock *pred = getPredecessor(region, loopInfo);
+  //
+  //  // Get branch.
+  //  BranchInst *Branch =
+  // dyn_cast<BranchInst>(R->getHeader()->getTerminator());
+  //  Branch->dump();
+  //
+  //  // Get Block.
+  //  BasicBlock *Head = Branch->getSuccessor(branch);
 }
