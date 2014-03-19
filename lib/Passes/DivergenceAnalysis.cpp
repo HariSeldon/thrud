@@ -157,6 +157,22 @@ InstVector &DivergenceAnalysis::getDivInstsOutsideRegions() {
   return externalDivInsts;
 }
 
+InstVector DivergenceAnalysis::getDivInsts(DivergentRegion *region,
+                                           unsigned int branchIndex) {
+  InstVector result;
+  DivergentRegion &r = *region;
+
+  for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();
+       iter != iterEnd; ++iter) {
+    Instruction *inst = *iter;
+    if (containsInternally(r, inst)) {
+      result.push_back(inst);
+    }
+  }
+
+  return result;
+}
+
 RegionVector &DivergenceAnalysis::getDivRegions() {
   return regions;
 }

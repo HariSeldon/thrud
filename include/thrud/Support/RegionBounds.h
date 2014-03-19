@@ -21,12 +21,15 @@ public:
   void setHeader(BasicBlock *Header);
   void setExiting(BasicBlock *Exiting);
 
-  void listBlocks(BlockVector &result) const;
+  void listBlocks(BlockVector &result);
 
 private:
   BasicBlock *header;
   BasicBlock *exiting;
 
 };
+
+void listBlocks(RegionBounds *bounds, BlockVector &result);
+void listBlocks(BasicBlock *header, BasicBlock *exiting, BlockVector &result);
 
 #endif

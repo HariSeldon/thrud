@@ -242,8 +242,9 @@ template <class type> void dumpVector(const std::vector<type *> &toDump) {
 template <> void dumpVector(const BlockVector &toDump) {
   for (BlockVector::const_iterator I = toDump.begin(), E = toDump.end(); I != E;
        ++I) {
-    llvm::errs() << "  " << (*I)->getName() << "\n";
+    errs() << (*I)->getName() << " -- ";
   }
+  errs() << "\n";
 }
 
 template void dumpVector(const std::vector<Instruction *> &toDump);
@@ -401,11 +402,11 @@ bool PostdominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
 }
 
 //------------------------------------------------------------------------------
-void changeBlockTarget(BasicBlock *BB, BasicBlock *NewTarget) {
-  TerminatorInst *T = BB->getTerminator();
-  assert(T->getNumSuccessors() &&
+void changeBlockTarget(BasicBlock *block, BasicBlock *newTarget, unsigned int branchIndex) {
+  TerminatorInst *terminator = block->getTerminator();
+  assert(terminator->getNumSuccessors() &&
          "The target can be change only if it is unique");
-  T->setSuccessor(0, NewTarget);
+  terminator->setSuccessor(branchIndex, newTarget);
 }
 
 //------------------------------------------------------------------------------

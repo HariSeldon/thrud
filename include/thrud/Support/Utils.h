@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/DivergentRegion.h"
 #include "thrud/Support/RegionBounds.h"
@@ -92,7 +95,7 @@ bool isPresent(const Instruction *inst, std::vector<BlockVector *> &value);
 BasicBlock *findImmediatePostDom(BasicBlock *block, const PostDominatorTree *pdt);
 
 // Block management.
-void changeBlockTarget(BasicBlock *bb, BasicBlock *newTarget);
+void changeBlockTarget(BasicBlock *block, BasicBlock *newTarget, unsigned int branchIndex = 0);
 
 // Region analysis.
 BlockVector InsertChildren(BasicBlock *block, BlockSet &Set);
@@ -198,3 +201,5 @@ bool isUsedOutsideOfDefiningBlock(const Instruction *inst);
 Instruction *findFirstUser(Instruction *inst);
 Instruction *findLastUser(Instruction *inst);
 InstVector findUsers(llvm::Value *value);
+
+#endif

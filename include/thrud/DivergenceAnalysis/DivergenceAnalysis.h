@@ -16,6 +16,7 @@ using namespace llvm;
 class DivergenceAnalysis {
 public:
   InstVector &getDivInsts();
+  InstVector getDivInsts(DivergentRegion *region, unsigned int branchIndex);
   InstVector &getDivInstsOutsideRegions();
   RegionVector &getDivRegions();
   bool isDivergent(Instruction *inst);

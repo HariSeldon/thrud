@@ -18,7 +18,20 @@ const BasicBlock *RegionBounds::getExiting() const { return exiting; }
 void RegionBounds::setHeader(BasicBlock *header) { this->header = header; }
 void RegionBounds::setExiting(BasicBlock *exiting) { this->exiting = exiting; }
 
-void RegionBounds::listBlocks(BlockVector &result) const {
+void RegionBounds::listBlocks(BlockVector &result) {
+  ::listBlocks(this, result);
+}
+
+void listBlocks(RegionBounds *bounds, BlockVector &result) { 
+  listBlocks(bounds->getHeader(), bounds->getExiting(), result);
+}
+
+void listBlocks(BasicBlock *header, BasicBlock *exiting, BlockVector &result) {
+  if(header == exiting) {
+    result.push_back(header);
+    return;
+  }
+
   // Perform traversal of the tree starting from header and stopping at exiting.
   BlockDeque worklist;
   worklist.push_back(header);
