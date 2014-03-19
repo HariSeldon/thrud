@@ -304,23 +304,30 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
 
   branch->setCondition(reduction);
 
-  // This manages the case, all True or all False.
-  InstVector insts = sdda->getDivInsts(region, branchIndex);
-  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
-    Instruction *inst = *iter;
-    replicateInst(inst);
-  }
+//  // This manages the case, all True or all False.
+//  InstVector insts = sdda->getDivInsts(region, branchIndex);
+//  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
+//    Instruction *inst = *iter;
+//    replicateInst(inst);
+//  }
 
   // Manage the other case.
   BasicBlock *pred = getPredecessor(region, loopInfo);
   RegionBounds *bookmark = new RegionBounds(region->getHeader(), region->getExiting());
 
+  // This does not work for CF higher that one.
+  // I think I am not inserting the region in the right place.
   for (unsigned int index = 0; index < factor; ++index) {
     Map valueMap;
     DivergentRegion newRegion =
         region->clone("..cf" + Twine(index + 2), dt, pdt, valueMap);
-    // This is going to be a problem.
-    applyCoarseningMap(newRegion, index);
+
+    errs() << "Index:" << index << "\n";
+    if(index != 0) {
+      applyCoarseningMap(newRegion, index - 1);
+    }
+
+
     // Connect the region to the CFG.
     BasicBlock *exiting = bookmark->getHeader();
 
@@ -341,6 +348,14 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
     bookmark = new RegionBounds(newRegion.getExiting(), region->getExiting()); 
   }
   
+  // This manages the case, all True or all False.
+  InstVector insts = sdda->getDivInsts(region, branchIndex);
+  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
+    Instruction *inst = *iter;
+    replicateInst(inst);
+  }
+  
+
 //  region->getHeader()->getParent()->getParent()->dump();
 }
 
