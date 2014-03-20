@@ -55,8 +55,13 @@ private:
   void applyCoarseningMap(Instruction *inst, unsigned int index);
   Instruction *getCoarsenedInstruction(Instruction *inst,
                                        unsigned int coarseningIndex);
+  BasicBlock *createTopBranch(DivergentRegion *region);
+  DivergentRegion *createCascadingFirstRegion(DivergentRegion *region,
+                                              BasicBlock *pred,
+                                              unsigned int branchIndex);
   Instruction *insertBooleanReduction(Instruction *base, InstVector &insts,
                                       llvm::Instruction::BinaryOps binOp);
+
 
   // Manage placeholders.
   void replacePlaceholders();

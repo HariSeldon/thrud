@@ -22,6 +22,10 @@ void RegionBounds::listBlocks(BlockVector &result) {
   ::listBlocks(this, result);
 }
 
+void RegionBounds::dump(const std::string &prefix) const {
+  errs() << prefix << " " << header->getName() << " -- " << exiting->getName() << "\n";
+}
+
 void listBlocks(RegionBounds *bounds, BlockVector &result) { 
   listBlocks(bounds->getHeader(), bounds->getExiting(), result);
 }

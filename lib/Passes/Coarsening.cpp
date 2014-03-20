@@ -5,6 +5,8 @@
 
 #include "llvm/IR/Module.h"
 
+#include "llvm/Transforms/Utils/Cloning.h"
+
 //void dumpCoarseningMap(CoarseningMap &cMap) {
 //  llvm::errs() << "------------------------------\n";
 //  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end();
@@ -43,12 +45,14 @@ void ThreadCoarsening::coarsenFunction() {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateInst(Instruction *inst) {
-//  errs() << "ThreadCoarsening::replicateInst\n";
-//  inst->dump();
+  errs() << "ThreadCoarsening::replicateInst\n";
+  inst->dump();
 
   InstVector current;
   current.reserve(factor - 1);
   Instruction *bookmark = inst;
+
+  errs() << "Factor:" << factor << "\n";
 
   for (unsigned int index = 0; index < factor - 1; ++index) {
     // Clone.
@@ -156,7 +160,7 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
 void ThreadCoarsening::replacePlaceholders() {
 //  errs() << "ThreadCoarsening::replacePlaceholders\n";
 //  dumpCoarseningMap(phMap);
-//  printMap(phReplacementMap);
+//  dump(phReplacementMap);
 
   // Iterate over placeholder map.
   for (CoarseningMap::iterator mapIter = phMap.begin(), mapEnd = phMap.end();
@@ -174,202 +178,4 @@ void ThreadCoarsening::replacePlaceholders() {
       ph->replaceAllUsesWith(replacement);
     }
   }
-}
-
-//------------------------------------------------------------------------------
-void ThreadCoarsening::replicateRegion(DivergentRegion *region) {
-  assert(dt->dominates(region->getHeader(), region->getExiting()) &&
-         "Header does not dominates Exiting");
-  assert(pdt->dominates(region->getExiting(), region->getHeader()) &&
-         "Exiting does not post dominate Header");
-
-  // Do not replicate if the region is strict.
-  if (region->isStrict())
-    return;
-
-  switch (divRegionOption) {
-  case FullReplication: {
-    replicateRegionClassic(region);
-    break;
-  }
-  case TrueBranchMerging: {
-    replicateRegionTrueMerging(region);
-    break;
-  }
-  case FalseBranchMerging: {
-    replicateRegionFalseMerging(region);
-    break;
-  }
-  case FullMerging: {
-    replicateRegionFullMerging(region);
-    break;
-  }
-  }
-}
-
-//------------------------------------------------------------------------------
-void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
-//  errs() << "ThreadCoarsening::replicateRegionClassic\n";
-
-  BasicBlock *pred = getPredecessor(region, loopInfo);
-  RegionBounds *bookmark = getExitingAndExit(*region);
-
-  for (unsigned int index = 0; index < factor - 1; ++index) {
-    Map valueMap;
-    DivergentRegion newRegion =
-        region->clone("..cf" + Twine(index + 2), dt, pdt, valueMap);
-    applyCoarseningMap(newRegion, index);
-    // Connect the region to the CFG.
-    BasicBlock *exiting = bookmark->getHeader();
-    changeBlockTarget(exiting, newRegion.getHeader());
-    changeBlockTarget(newRegion.getExiting(), bookmark->getExiting());
-
-    // Update the phi nodes of the newly inserted header.
-    remapBlocksInPHIs(newRegion.getHeader(), pred, exiting);
-    // Update the phi nodes in the exit block.
-    remapBlocksInPHIs(bookmark->getExiting(), region->getExiting(),
-                      newRegion.getExiting());
-
-    bookmark = getExitingAndExit(newRegion);
-
-    // Manage alive values.
-    // Go through region alive values.
-    InstVector &aliveInsts = region->getAlive();
-    for (InstVector::iterator iter = aliveInsts.begin(),
-                              iterEnd = aliveInsts.end();
-         iter != iterEnd; ++iter) {
-      Instruction *alive = *iter;
-      Value *newValue = valueMap[alive];
-      Instruction *newAlive = dyn_cast<Instruction>(newValue);
-      assert(newAlive != NULL && "Wrong value in valueMap");
-
-      // Look for 'alive' in the coarsening map.
-      CoarseningMap::iterator mapIter = cMap.find(alive);
-      // The 'alive' is already in the map.
-      if (mapIter != cMap.end()) {
-        InstVector &cInsts = mapIter->second;
-        cInsts.push_back(newAlive);
-      }
-          // The 'alive' is not in the map -> add a new entry.
-          else {
-        InstVector newCInsts(1, dyn_cast<Instruction>(newAlive));
-        cMap.insert(std::pair<Instruction *, InstVector>(alive, newCInsts));
-      }
-
-      InstVector &current = cMap.find(alive)->second;
-
-      // Update placeholder replacement map with alive values.
-      CoarseningMap::iterator phIter = phMap.find(alive);
-      if (phIter != phMap.end()) {
-        InstVector &V = phIter->second;
-        for (unsigned int index = 0; index < V.size(); ++index) {
-          phReplacementMap[V[index]] = current[index];
-        }
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-void ThreadCoarsening::replicateRegionFullMerging(DivergentRegion *region) {}
-
-//------------------------------------------------------------------------------
-void ThreadCoarsening::replicateRegionFalseMerging(DivergentRegion *region) {
-  replicateRegionMerging(region, 1);
-}
-
-//------------------------------------------------------------------------------
-void ThreadCoarsening::replicateRegionTrueMerging(DivergentRegion *region) {
-  replicateRegionMerging(region, 0);
-}
-
-//------------------------------------------------------------------------------
-void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
-                                              unsigned int branchIndex) {
-  if(!region->areSubregionsDisjoint()) {
-    errs() << "FALLING BACK TO replicateRegionClassic!";
-    return replicateRegionClassic(region);
-  }
-
-  // Identify the comparisons.
-  BranchInst *branch = dyn_cast<BranchInst>(region->getHeader()->getTerminator());
-  Instruction *condition = dyn_cast<Instruction>(branch->getCondition());
-  assert(condition != NULL && "The condition is not an instruction");
-  CoarseningMap::iterator conditionIter = cMap.find(condition);
-  assert(conditionIter != cMap.end() && "condition not in coarsening map");
-  InstVector &cConditions = conditionIter->second;
-
-  Instruction *reduction =
-      insertBooleanReduction(condition, cConditions, llvm::Instruction::And);
-
-  branch->setCondition(reduction);
-
-//  // This manages the case, all True or all False.
-//  InstVector insts = sdda->getDivInsts(region, branchIndex);
-//  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
-//    Instruction *inst = *iter;
-//    replicateInst(inst);
-//  }
-
-  // Manage the other case.
-  BasicBlock *pred = getPredecessor(region, loopInfo);
-  RegionBounds *bookmark = new RegionBounds(region->getHeader(), region->getExiting());
-
-  // This does not work for CF higher that one.
-  // I think I am not inserting the region in the right place.
-  for (unsigned int index = 0; index < factor; ++index) {
-    Map valueMap;
-    DivergentRegion newRegion =
-        region->clone("..cf" + Twine(index + 2), dt, pdt, valueMap);
-
-    errs() << "Index:" << index << "\n";
-    if(index != 0) {
-      applyCoarseningMap(newRegion, index - 1);
-    }
-
-
-    // Connect the region to the CFG.
-    BasicBlock *exiting = bookmark->getHeader();
-
-    if(index == 0)
-      changeBlockTarget(exiting, newRegion.getHeader(), 1 - branchIndex);
-    else 
-      changeBlockTarget(exiting, newRegion.getHeader());
-
-    changeBlockTarget(newRegion.getExiting(), bookmark->getExiting());
-
-    // Update the phi nodes of the newly inserted header.
-    remapBlocksInPHIs(newRegion.getHeader(), pred, exiting);
-    // Update the phi nodes in the exit block.
-    remapBlocksInPHIs(bookmark->getExiting(), region->getExiting(),
-                      newRegion.getExiting());
-
-    delete bookmark;
-    bookmark = new RegionBounds(newRegion.getExiting(), region->getExiting()); 
-  }
-  
-  // This manages the case, all True or all False.
-  InstVector insts = sdda->getDivInsts(region, branchIndex);
-  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
-    Instruction *inst = *iter;
-    replicateInst(inst);
-  }
-  
-
-//  region->getHeader()->getParent()->getParent()->dump();
-}
-
-//------------------------------------------------------------------------------
-Instruction *
-ThreadCoarsening::insertBooleanReduction(Instruction *base, InstVector &insts,
-                                         llvm::Instruction::BinaryOps binOp) {
-
-  llvm::Instruction *reduction = base;
-  for (unsigned int index = 0; index < insts.size(); ++index) {
-    reduction = BinaryOperator::Create(binOp, reduction, insts[index],
-                                       Twine("cmp.cf") + Twine(index + 1),
-                                       base->getParent()->getTerminator());
-  }
-
-  return reduction;
 }

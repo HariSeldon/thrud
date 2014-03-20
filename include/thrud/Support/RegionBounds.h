@@ -23,6 +23,8 @@ public:
 
   void listBlocks(BlockVector &result);
 
+  void dump(const std::string &prefix = "") const;
+
 private:
   BasicBlock *header;
   BasicBlock *exiting;

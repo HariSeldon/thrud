@@ -168,7 +168,7 @@ bool DivergentRegion::areSubregionsDisjoint() {
   return false;
 }
 
-DivergentRegion DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
+DivergentRegion* DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
                                        PostDominatorTree *pdt, Map& valuesMap) {
   Function *function = getHeader()->getParent();
   BasicBlock *newHeader = NULL;
@@ -193,7 +193,7 @@ DivergentRegion DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
     CloneDominatorInfo(block, regionBlockMap, dt);
   }
 
-  //der The remapping of the branches must be done at the end of the cloning
+  // The remapping of the branches must be done at the end of the cloning
   // process.
   for (BlockVector::iterator iter = newBlocks.begin(),
                              iterEnd = newBlocks.end();
@@ -202,7 +202,7 @@ DivergentRegion DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
     applyMap(*iter, valuesMap);
   }
 
-  return DivergentRegion(newHeader, newExiting, dt, pdt);
+  return new DivergentRegion(newHeader, newExiting, dt, pdt);
 }
 
 DivergentRegion DivergentRegion::cloneSubregion(const Twine &suffix,

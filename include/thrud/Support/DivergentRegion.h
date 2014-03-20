@@ -55,8 +55,8 @@ public:
   bool isStrict();
   bool areSubregionsDisjoint();
 
-  DivergentRegion clone(const Twine &suffix, DominatorTree *dt,
-                        PostDominatorTree *pdt, Map &valueMap);
+  DivergentRegion *clone(const Twine &suffix, DominatorTree *dt,
+                         PostDominatorTree *pdt, Map &valueMap);
   DivergentRegion cloneSubregion(const Twine &suffix, DominatorTree *dt, 
                         PostDominatorTree *pdt, unsigned int branchIndex, Map &valueMap);
 

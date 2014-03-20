@@ -129,7 +129,7 @@ void applyMap(InstVector &insts, Map &map, InstVector &result) {
 }
 
 //------------------------------------------------------------------------------
-void printMap(const Map &map) {
+void dump(const Map &map) {
   errs() << "==== Map ====\n";
   for (Map::const_iterator I = map.begin(), E = map.end(); I != E; ++I)
     errs() << I->first->getName() << " -> " << I->second->getName() << "\n";

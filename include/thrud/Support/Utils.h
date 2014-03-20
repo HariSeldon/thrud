@@ -46,7 +46,7 @@ void applyMap(InstVector &insts, Map &map, InstVector &result);
 void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index);
 
 // Prints to stderr the given map. For debug only.
-void printMap(const Map &map);
+void dump(const Map &map);
 
 // Replate all the usages of O with N.
 void replaceUses(Value *O, Value *N);
