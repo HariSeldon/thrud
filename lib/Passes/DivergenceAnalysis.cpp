@@ -32,15 +32,17 @@ extern cl::opt<unsigned int> CoarseningDirectionCL;
 // Support functions.
 // -----------------------------------------------------------------------------
 void findUsesOf(Instruction *inst, InstSet &result);
-bool isExternal(Instruction *inst, RegionVector &regions);
+bool isOutermost(Instruction *inst, RegionVector &regions);
+bool isOutermost(DivergentRegion *region, RegionVector &regions);
 
 // DivergenceAnalysis.
 // -----------------------------------------------------------------------------
 void DivergenceAnalysis::init() {
   divInsts.clear();
-  externalDivInsts.clear();
+  outermostDivInsts.clear();
   divBranches.clear();
   regions.clear();
+  outermostRegions.clear();
 }
 
 InstVector DivergenceAnalysis::getTids() {
@@ -71,8 +73,9 @@ void DivergenceAnalysis::performAnalysis() {
 
     findUsesOf(inst, users);
     // Add users of the current instruction to the work list.
-    for (InstSet::iterator iter = users.begin(), iterEnd = users.end(); iter != iterEnd; ++iter) {
-      if(!isPresent(*iter, divInsts)) 
+    for (InstSet::iterator iter = users.begin(), iterEnd = users.end();
+         iter != iterEnd; ++iter) {
+      if (!isPresent(*iter, divInsts))
         worklist.insert(*iter);
     }
   }
@@ -88,22 +91,9 @@ void DivergenceAnalysis::findBranches() {
   }
 }
 
-void DivergenceAnalysis::findOutermostBranches(InstVector &result) {
+void DivergenceAnalysis::findRegions() {
   for (InstVector::iterator iter = divBranches.begin(),
                             iterEnd = divBranches.end();
-       iter != iterEnd; ++iter) {
-    Instruction *inst = *iter;
-    if (!cda->dependsOnAny(inst, divBranches)) {
-      result.push_back(inst);
-    }
-  }
-}
-
-void DivergenceAnalysis::findRegions() {
-  InstVector branches;
-  findOutermostBranches(branches);
-
-  for (InstVector::iterator iter = branches.begin(), iterEnd = branches.end();
        iter != iterEnd; ++iter) {
     BasicBlock *header = (*iter)->getParent();
     BasicBlock *exiting = findImmediatePostDom(header, pdt);
@@ -118,43 +108,52 @@ void DivergenceAnalysis::findRegions() {
   }
 }
 
-// This is called only when the external instructions are acutally requrested,
+// This is called only when the outermost instructions are acutally requrested,
 // ie. during coarsening. This is done to be sure that this instructions are
 // computed after the extraction of divergent regions from the CFG.
-void DivergenceAnalysis::findExternalInsts() {
+void DivergenceAnalysis::findOutermostInsts() {
+  outermostDivInsts.clear();
   for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();
        iter != iterEnd; ++iter) {
-    if (isExternal(*iter, regions)) {
-      externalDivInsts.push_back(*iter);
+    if (isOutermost(*iter, regions)) {
+      outermostDivInsts.push_back(*iter);
     }
   }
 
-  // Remove from externalDivInsts all the calls to builtin functions.
+  // Remove from outermostDivInsts all the calls to builtin functions.
   InstVector oclIds = ndr->getTids();
   InstVector result;
 
-  size_t oldSize = externalDivInsts.size();
+  size_t oldSize = outermostDivInsts.size();
 
-  std::sort(externalDivInsts.begin(), externalDivInsts.end());
+  std::sort(outermostDivInsts.begin(), outermostDivInsts.end());
   std::sort(oclIds.begin(), oclIds.end());
-  std::set_difference(externalDivInsts.begin(), externalDivInsts.end(),
+  std::set_difference(outermostDivInsts.begin(), outermostDivInsts.end(),
                       oclIds.begin(), oclIds.end(), std::back_inserter(result));
-  externalDivInsts.swap(result);
+  outermostDivInsts.swap(result);
 
-  assert(externalDivInsts.size() <= oldSize && "Wrong set difference");
+  assert(outermostDivInsts.size() <= oldSize && "Wrong set difference");
+}
+
+void DivergenceAnalysis::findOutermostRegions() {
+  outermostRegions.clear();
+  for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
+       iter != iterEnd; ++iter) {
+    if (isOutermost(*iter, regions)) {
+      outermostRegions.push_back(*iter);
+    }
+  }
 }
 
 // Public functions.
 //------------------------------------------------------------------------------
-InstVector &DivergenceAnalysis::getDivInsts() {
-  return divInsts;
-}
+InstVector &DivergenceAnalysis::getDivInsts() { return divInsts; }
 
-InstVector &DivergenceAnalysis::getDivInstsOutsideRegions() {
+InstVector &DivergenceAnalysis::getOutermostDivInsts() {
   // Use memoization.
-  if(externalDivInsts.empty())
-    findExternalInsts();
-  return externalDivInsts;
+  if (outermostDivInsts.empty())
+    findOutermostInsts();
+  return outermostDivInsts;
 }
 
 InstVector DivergenceAnalysis::getDivInsts(DivergentRegion *region,
@@ -173,8 +172,28 @@ InstVector DivergenceAnalysis::getDivInsts(DivergentRegion *region,
   return result;
 }
 
-RegionVector &DivergenceAnalysis::getDivRegions() {
-  return regions;
+RegionVector &DivergenceAnalysis::getDivRegions() { return regions; }
+
+RegionVector &DivergenceAnalysis::getOutermostDivRegions() {
+  // Use memoization.
+  if (outermostRegions.empty()) {
+    findOutermostRegions();
+  }
+  return outermostRegions;
+}
+
+RegionVector DivergenceAnalysis::getDivRegions(DivergentRegion *region,
+                                               unsigned int branchIndex) {
+  RegionVector result;
+  DivergentRegion &r = *region;
+  for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
+       iter != iterEnd; ++iter) {
+    DivergentRegion *currentRegion = *iter;
+    if (containsInternally(r, currentRegion)) {
+      result.push_back(currentRegion);
+    }
+  }
+  return result;
 }
 
 bool DivergenceAnalysis::isDivergent(Instruction *inst) {
@@ -193,13 +212,25 @@ void findUsesOf(Instruction *inst, InstSet &result) {
   }
 }
 
-bool isExternal(Instruction *inst, RegionVector &regions) {
+bool isOutermost(Instruction *inst, RegionVector &regions) {
   bool result = false;
   for (RegionVector::const_iterator iter = regions.begin(),
                                     iterEnd = regions.end();
        iter != iterEnd; ++iter) {
     DivergentRegion *region = *iter;
     result |= contains(*region, inst);
+  }
+  return !result;
+}
+
+bool isOutermost(DivergentRegion *region, RegionVector &regions) {
+  Instruction *inst = region->getHeader()->getTerminator();
+  bool result = false;
+  for (RegionVector::const_iterator iter = regions.begin(),
+                                    iterEnd = regions.end();
+       iter != iterEnd; ++iter) {
+    DivergentRegion *region = *iter;
+    result |= containsInternally(*region, inst);
   }
   return !result;
 }
@@ -215,7 +246,7 @@ void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<DominatorTree>();
   au.addRequired<NDRange>();
   au.addRequired<ControlDependenceAnalysis>();
-//  au.setPreservesAll();
+  //  au.setPreservesAll();
 }
 
 bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
@@ -243,7 +274,8 @@ InstVector SingleDimDivAnalysis::getTids() {
 }
 
 char SingleDimDivAnalysis::ID = 0;
-static RegisterPass<SingleDimDivAnalysis> X("sdda", "Single divergence analysis");
+static RegisterPass<SingleDimDivAnalysis> X("sdda",
+                                            "Single divergence analysis");
 
 // MultiDimDivAnalysis
 //------------------------------------------------------------------------------
@@ -255,7 +287,7 @@ void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<DominatorTree>();
   au.addRequired<NDRange>();
   au.addRequired<ControlDependenceAnalysis>();
-//  au.setPreservesAll();
+  //  au.setPreservesAll();
 }
 
 bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {
@@ -278,9 +310,8 @@ bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {
   return false;
 }
 
-InstVector MultiDimDivAnalysis::getTids() {
-  return ndr->getTids();
-}
+InstVector MultiDimDivAnalysis::getTids() { return ndr->getTids(); }
 
 char MultiDimDivAnalysis::ID = 0;
-static RegisterPass<MultiDimDivAnalysis> Y("mdda", "Multidimensional divergence analysis");
+static RegisterPass<MultiDimDivAnalysis>
+    Y("mdda", "Multidimensional divergence analysis");

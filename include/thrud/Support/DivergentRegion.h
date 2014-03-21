@@ -149,5 +149,7 @@ bool contains(const DivergentRegion &region, const Instruction *inst);
 bool containsInternally(const DivergentRegion &region, const Instruction *inst);
 bool contains(const DivergentRegion &region, const BasicBlock *block);
 bool containsInternally(const DivergentRegion &region, const BasicBlock *block);
+bool containsInternally(const DivergentRegion &region,
+                        const DivergentRegion *innerRegion);
 
 #endif

@@ -282,6 +282,53 @@ void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *DT) {
   DT->addNewBlock(NewBB, NewBBDom);
 }
 
+////------------------------------------------------------------------------------
+///// SplitBlock - Split the specified block at the specified instruction - every
+///// thing before SplitPt stays in Old and everything starting with SplitPt moves
+///// to a new block.  The two blocks are joined by an unconditional branch and
+///// the loop info is updated.
+/////
+//BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt, Pass *P) {
+//  BasicBlock::iterator SplitIt = SplitPt;
+//  while (isa<PHINode>(SplitIt) || isa<LandingPadInst>(SplitIt))
+//    ++SplitIt;
+//  BasicBlock *New = Old->splitBasicBlock(SplitIt, Old->getName()+".split");
+//
+//  // The new block lives in whichever loop the old one did. This preserves
+//  // LCSSA as well, because we force the split point to be after any PHI nodes.
+//  if (LoopInfo *LI = P->getAnalysisIfAvailable<LoopInfo>())
+//    if (Loop *L = LI->getLoopFor(Old))
+//      L->addBasicBlockToLoop(New, LI->getBase());
+//
+//  if (DominatorTree *DT = P->getAnalysisIfAvailable<DominatorTree>()) {
+//    // Old dominates New. New node dominates all other nodes dominated by Old.
+//    if (DomTreeNode *OldNode = DT->getNode(Old)) {
+//      std::vector<DomTreeNode *> Children;
+//      for (DomTreeNode::iterator I = OldNode->begin(), E = OldNode->end();
+//           I != E; ++I)
+//        Children.push_back(*I);
+//
+//      DomTreeNode *NewNode = DT->addNewBlock(New,Old);
+//      for (std::vector<DomTreeNode *>::iterator I = Children.begin(),
+//             E = Children.end(); I != E; ++I)
+//        DT->changeImmediateDominator(*I, NewNode);
+//    }
+//  }
+//
+//  if (PostDominatorTree *pdt = P->getAnalysisIfAvailable<PostDominatorTree>()) {
+//    // New postdominates Old.
+//    if (DomTreeNode *oldNode = pdt->getNode(Old)) {
+//      BasicBlock *oldNodeDom = oldNode->getIDom()->getBlock();
+//      DomTreeNode *newNode = pdt->addNewBlock(New, oldNodeDom);
+//      newNode->addChild(oldNode);
+//      pdt->changeImmediateDominator(oldNode, newNode);
+//    } 
+//  }
+//
+//
+//  return New;
+//}
+
 //------------------------------------------------------------------------------
 // FIXME: this can be implemented with set differences.
 void Remove(BranchSet &Branches, BranchSet &ToDelete) {

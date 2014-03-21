@@ -205,50 +205,50 @@ DivergentRegion* DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
   return new DivergentRegion(newHeader, newExiting, dt, pdt);
 }
 
-DivergentRegion DivergentRegion::cloneSubregion(const Twine &suffix,
-                                                DominatorTree *dt,
-                                                PostDominatorTree *pdt,
-                                                unsigned int branchIndex,
-                                                Map &valuesMap) {
-  Function *function = getHeader()->getParent();
-  BasicBlock *newHeader = NULL;
-  BranchInst *branch = dyn_cast<BranchInst>(getHeader()->getTerminator());
-  BasicBlock *top = branch->getSuccessor(branchIndex);
-  BlockVector blocks;
-  listBlocks(top, getExiting(), blocks);
-
-  Map regionBlockMap;
-  valuesMap.clear();
-  BlockVector newBlocks;
-  newBlocks.reserve(blocks.size());
-
-  for (BlockVector::iterator iter = blocks.begin(), iterEnd = blocks.end();
-    iter != iterEnd; ++iter) {
-    BasicBlock *block = *iter;
-    if (block == getExiting())
-      continue;
-
-    BasicBlock *newBlock = CloneBasicBlock(block, valuesMap, suffix, function, 0);
-    regionBlockMap[block] = newBlock;
-    newBlocks.push_back(newBlock);
-
-    if (block == top)
-      newHeader = newBlock;
-
-    CloneDominatorInfo(block, regionBlockMap, dt);
-  }
-
-  // The remapping of the branches must be done at the end of the cloning
-  // process.
-  for (BlockVector::iterator iter = newBlocks.begin(),
-                             iterEnd = newBlocks.end();
-       iter != iterEnd; ++iter) {
-    applyMap(*iter, regionBlockMap);
-    applyMap(*iter, valuesMap);
-  }
-
-  return DivergentRegion(newHeader, getExiting(), dt, pdt);
-}
+//DivergentRegion DivergentRegion::cloneSubregion(const Twine &suffix,
+//                                                DominatorTree *dt,
+//                                                PostDominatorTree *pdt,
+//                                                unsigned int branchIndex,
+//                                                Map &valuesMap) {
+//  Function *function = getHeader()->getParent();
+//  BasicBlock *newHeader = NULL;
+//  BranchInst *branch = dyn_cast<BranchInst>(getHeader()->getTerminator());
+//  BasicBlock *top = branch->getSuccessor(branchIndex);
+//  BlockVector blocks;
+//  listBlocks(top, getExiting(), blocks);
+//
+//  Map regionBlockMap;
+//  valuesMap.clear();
+//  BlockVector newBlocks;
+//  newBlocks.reserve(blocks.size());
+//
+//  for (BlockVector::iterator iter = blocks.begin(), iterEnd = blocks.end();
+//    iter != iterEnd; ++iter) {
+//    BasicBlock *block = *iter;
+//    if (block == getExiting())
+//      continue;
+//
+//    BasicBlock *newBlock = CloneBasicBlock(block, valuesMap, suffix, function, 0);
+//    regionBlockMap[block] = newBlock;
+//    newBlocks.push_back(newBlock);
+//
+//    if (block == top)
+//      newHeader = newBlock;
+//
+//    CloneDominatorInfo(block, regionBlockMap, dt);
+//  }
+//
+//  // The remapping of the branches must be done at the end of the cloning
+//  // process.
+//  for (BlockVector::iterator iter = newBlocks.begin(),
+//                             iterEnd = newBlocks.end();
+//       iter != iterEnd; ++iter) {
+//    applyMap(*iter, regionBlockMap);
+//    applyMap(*iter, valuesMap);
+//  }
+//
+//  return DivergentRegion(newHeader, getExiting(), dt, pdt);
+//}
 
 void DivergentRegion::dump() {
   errs() << "Bounds: " << getHeader()->getName() << " -- "
@@ -441,4 +441,10 @@ bool containsInternally(const DivergentRegion &region,
       return true;
   }
   return false;
+}
+
+bool containsInternally(const DivergentRegion &region,
+                       const DivergentRegion *innerRegion) {
+  return containsInternally(region, innerRegion->getHeader()) &&
+         containsInternally(region, innerRegion->getExiting());
 }

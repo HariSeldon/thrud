@@ -16,10 +16,13 @@ using namespace llvm;
 class DivergenceAnalysis {
 public:
   InstVector &getDivInsts();
+  InstVector &getOutermostDivInsts();
   InstVector getDivInsts(DivergentRegion *region, unsigned int branchIndex);
-  InstVector &getDivInstsOutsideRegions();
-  RegionVector &getDivRegions();
   bool isDivergent(Instruction *inst);
+
+  RegionVector &getDivRegions();
+  RegionVector &getOutermostDivRegions();
+  RegionVector getDivRegions(DivergentRegion *region, unsigned int branchIndex);
 
 protected:
   virtual InstVector getTids();
@@ -28,14 +31,15 @@ protected:
   void init();
   void findBranches();
   void findRegions();
-  void findExternalInsts();
-  void findOutermostBranches(InstVector &result);
+  void findOutermostInsts();
+  void findOutermostRegions();
 
 protected:
   InstVector divInsts;
-  InstVector externalDivInsts;
+  InstVector outermostDivInsts;
   InstVector divBranches;
   RegionVector regions;
+  RegionVector outermostRegions;
 
   NDRange *ndr;
   PostDominatorTree *pdt;

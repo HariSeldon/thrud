@@ -24,8 +24,11 @@
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
-  RegionVector &regions = sdda->getDivRegions();
-  InstVector &insts = sdda->getDivInstsOutsideRegions();
+  RegionVector &regions = sdda->getOutermostDivRegions();
+  InstVector &insts = sdda->getOutermostDivInsts();
+
+  dumpVector(insts);
+  dumpVector(regions);
 
   // Replicate instructions.
   for (InstVector::iterator instIter = insts.begin(), instEnd = insts.end();
@@ -51,8 +54,6 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
   InstVector current;
   current.reserve(factor - 1);
   Instruction *bookmark = inst;
-
-  errs() << "Factor:" << factor << "\n";
 
   for (unsigned int index = 0; index < factor - 1; ++index) {
     // Clone.

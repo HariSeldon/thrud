@@ -183,7 +183,7 @@ BasicBlock *ThreadCoarsening::createTopBranch(DivergentRegion *region) {
       insertBooleanReduction(condition, cConditions, llvm::Instruction::And);
   Map headerMap;
   BasicBlock *newHeader =
-      CloneBasicBlock(header, headerMap, "newHeader", header->getParent(), 0);
+      CloneBasicBlock(header, headerMap, ".newHeader", header->getParent(), 0);
   changeBlockTarget(pred, newHeader);
   BranchInst *newBranch = dyn_cast<BranchInst>(newHeader->getTerminator());
   newBranch->setCondition(reduction);

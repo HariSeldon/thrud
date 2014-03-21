@@ -16,6 +16,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -64,17 +65,29 @@ bool BranchExtraction::runOnFunction(Function &F) {
   pdt = &getAnalysis<PostDominatorTree>();
 
   SingleDimDivAnalysis *sdda = &getAnalysis<SingleDimDivAnalysis>();
-
-  // Isolate regions.
   RegionVector &regions = sdda->getDivRegions();
+
+  // This is terribly inefficient.
   for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
        iter != iterEnd; ++iter) {
     DivergentRegion *region = *iter;
+    BasicBlock *newExiting = findImmediatePostDom(region->getHeader(), pdt);
+    region->setExiting(newExiting);
+    region->fillRegion(dt, pdt);
     extractBranches(region);
     region->fillRegion(dt, pdt);
     isolateRegion(region);
     region->fillRegion(dt, pdt);
     region->findAliveValues();
+    dt->DT->recalculate(F);
+    pdt->DT->recalculate(F);
+  }
+
+  for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
+       iter != iterEnd; ++iter) {
+    DivergentRegion *region = *iter;
+    region->fillRegion(dt, pdt);
+    region->dump();
   }
 
   return regions.size() != 0;
@@ -109,21 +122,28 @@ void BranchExtraction::extractBranches(DivergentRegion *region) {
 void BranchExtraction::isolateRegion(DivergentRegion *region) {
   BasicBlock *exiting = region->getExiting();
 
-  // The header does not dominate the exiting.
+  // If the header dominates the exiting bail out.
   if (dt->dominates(region->getHeader(), region->getExiting()))
     return;
 
+  // TODO.
+  // Verify that the incoming branch from outside is pointing to the exiting
+  // block.
+
   // Create a new exiting block.
   BasicBlock *newExiting = BasicBlock::Create(
-      exiting->getContext(), exiting->getName() + Twine(".be_split"),
+      exiting->getContext(), exiting->getName() + Twine(".extracted"),
       exiting->getParent(), exiting);
   BranchInst::Create(exiting, newExiting);
 
-  // All the blocks in the region pointing to the exiting are redirected to the new exiting.
-  for (DivergentRegion::iterator iter = region->begin(), iterEnd = region->end();
+  // All the blocks in the region pointing to the exiting are redirected to the
+  // new exiting.
+  for (DivergentRegion::iterator iter = region->begin(),
+                                 iterEnd = region->end();
        iter != iterEnd; ++iter) {
     TerminatorInst *terminator = (*iter)->getTerminator();
-    for (unsigned int index = 0; index < terminator->getNumSuccessors(); ++index) {
+    for (unsigned int index = 0; index < terminator->getNumSuccessors();
+         ++index) {
       if (terminator->getSuccessor(index) == exiting) {
         terminator->setSuccessor(index, newExiting);
       }
@@ -178,8 +198,6 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
     PHINode *ToDelete = *I;
     ToDelete->eraseFromParent();
   }
-//  std::for_each(oldPhis.begin(), oldPhis.end(), std::mem_fun_ref(&PHINode::eraseFromParent));
-
 
   region->setExiting(newExiting);
 }
