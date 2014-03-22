@@ -7,6 +7,8 @@
 
 #include "llvm/Transforms/Utils/Cloning.h"
 
+#include "thrud/Support/Utils.h"
+
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegion(DivergentRegion *region) {
   assert(dt->dominates(region->getHeader(), region->getExiting()) &&
@@ -45,6 +47,16 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
   BasicBlock *pred = getPredecessor(region, loopInfo);
   RegionBounds *bookmark = getExitingAndExit(*region);
 
+  CoarseningMap aliveMap;
+  // Initialize aliveMap.
+  InstVector &aliveInsts = region->getAlive();
+  for (InstVector::iterator iter = aliveInsts.begin(),
+                            iterEnd = aliveInsts.end();
+       iter != iterEnd; ++iter) {
+    aliveMap.insert(std::pair<Instruction *, InstVector>(*iter, InstVector()));
+  }
+
+  // Replicate the region.
   for (unsigned int index = 0; index < factor - 1; ++index) {
     Map valueMap;
     DivergentRegion *newRegion =
@@ -62,43 +74,34 @@ void ThreadCoarsening::replicateRegionClassic(DivergentRegion *region) {
                       newRegion->getExiting());
 
     bookmark = getExitingAndExit(*newRegion);
+    delete newRegion;
 
-    // Manage alive values.
-    // Go through region alive values.
-    InstVector &aliveInsts = region->getAlive();
-    for (InstVector::iterator iter = aliveInsts.begin(),
-                              iterEnd = aliveInsts.end();
-         iter != iterEnd; ++iter) {
-      Instruction *alive = *iter;
-      Value *newValue = valueMap[alive];
-      Instruction *newAlive = dyn_cast<Instruction>(newValue);
-      assert(newAlive != NULL && "Wrong value in valueMap");
+    // Fill the aliveMap.
+    for (CoarseningMap::iterator mapIter = aliveMap.begin(),
+                                 mapEnd = aliveMap.end();
+         mapIter != mapEnd; ++mapIter) {
+      InstVector &coarsenedInsts = mapIter->second;
+      Value *value = valueMap[mapIter->first];
+      assert(value != NULL && "Missing alive value in region map");
+      coarsenedInsts.push_back(dyn_cast<Instruction>(value));
+    }
+  }
 
-      // Look for 'alive' in the coarsening map.
-      CoarseningMap::iterator mapIter = cMap.find(alive);
-      // The 'alive' is already in the map.
-      if (mapIter != cMap.end()) {
-        InstVector &cInsts = mapIter->second;
-        cInsts.push_back(newAlive);
-      }
-          // The 'alive' is not in the map -> add a new entry.
-          else {
-        InstVector newCInsts(1, dyn_cast<Instruction>(newAlive));
-        cMap.insert(std::pair<Instruction *, InstVector>(alive, newCInsts));
-      }
+  // Go through region alive values.
+  for (CoarseningMap::iterator mapIter = aliveMap.begin(),
+                               mapEnd = aliveMap.end();
+       mapIter != mapEnd; ++mapIter) {
+    Instruction *alive = mapIter->first;
+    InstVector &coarsenedValues = mapIter->second;
 
-      InstVector &current = cMap.find(alive)->second;
-
-      // Update placeholder replacement map with alive values.
-      CoarseningMap::iterator phIter = phMap.find(alive);
-      if (phIter != phMap.end()) {
-        InstVector &V = phIter->second;
-        for (unsigned int index = 0; index < V.size(); ++index) {
-          phReplacementMap[V[index]] = current[index];
-        }
+    // Update placeholder replacement map with alive values.
+    CoarseningMap::iterator phIter = phMap.find(alive);
+    if (phIter != phMap.end()) {
+      InstVector &V = phIter->second;
+      for (unsigned int index = 0; index < factor - 1; ++index) {
+        phReplacementMap[V[index]] = coarsenedValues[index];
       }
     }
-    delete newRegion;
   }
 }
 
@@ -121,27 +124,64 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
   errs() << "ThreadCoarsening::replicateRegionMerging\n";
 
   if (!region->areSubregionsDisjoint()) {
+    assert(false && "Region merging is not possible");
     return replicateRegionClassic(region);
   }
 
-  BasicBlock *topBlock = createTopBranch(region);
-  DivergentRegion *firstRegion =
-      createCascadingFirstRegion(region, topBlock, branchIndex);
+  InstVector &alive = region->getAlive();
+  // Identify exiting block of merged subregion.
+  BasicBlock *mergedSubregionExiting =
+      getExitingOfSubregion(region, branchIndex);
+  // Identify the alive values defined in the merged subregion.
+  InstVector aliveFromMerged;
+  for (InstVector::iterator iter = alive.begin(), iterEnd = alive.end();
+       iter != iterEnd; ++iter) {
+    if (PHINode *phi = dyn_cast<PHINode>(*iter)) {
+      aliveFromMerged.push_back(dyn_cast<Instruction>(
+          phi->getIncomingValueForBlock(mergedSubregionExiting)));
+    } else {
+      aliveFromMerged.push_back(*iter);
+    }
+  }
 
-  // This manages the case, all True or all False.
+  errs() << "mergedSubregionExiting: " << mergedSubregionExiting->getName()
+         << "\n";
+  errs() << "aliveFromMerged:\n";
+  dumpVector(aliveFromMerged);
+
+  // Get the exiting block of the branchIndex subregion.
+  BasicBlock *topBlock = createTopBranch(region);
+  Map firstRegionMap;
+  DivergentRegion *firstRegion =
+      createCascadingFirstRegion(region, topBlock, branchIndex, firstRegionMap);
+
+  // Replicate instructions in branchIndex region.
   InstVector insts = sdda->getDivInsts(region, branchIndex);
   for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end();
        iter != iterEnd; ++iter) {
     Instruction *inst = *iter;
     replicateInst(inst);
   }
-  //  ?????
+  //?????
   //  newBranch->setSuccessor(branchIndex, branch->getSuccessor(branchIndex));
   //  changeBlockTarget(topBlock, newRegion->getHeader());
 
   BasicBlock *pred = firstRegion->getExiting();
   RegionBounds *bookmark =
       new RegionBounds(firstRegion->getExiting(), region->getExiting());
+  BasicBlock *replicatedExiting = NULL;
+  firstRegion->dump();
+
+  // Initialize aliveMap.
+  CoarseningMap aliveMap;
+  InstVector &aliveInsts = firstRegion->getAlive();
+  for (InstVector::iterator iter = aliveInsts.begin(),
+                            iterEnd = aliveInsts.end();
+       iter != iterEnd; ++iter) {
+    aliveMap.insert(std::pair<Instruction *, InstVector>(*iter, InstVector()));
+  }
+
+  dumpCoarseningMap(aliveMap);
 
   for (unsigned int index = 0; index < factor - 1; ++index) {
     Map valueMap;
@@ -162,12 +202,168 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
 
     delete bookmark;
     bookmark = new RegionBounds(newRegion->getExiting(), region->getExiting());
-    // FIXME manage alive values.
+    replicatedExiting = newRegion->getExiting();
+
+    // Fill the aliveMap.
+    for (CoarseningMap::iterator mapIter = aliveMap.begin(),
+                                 mapEnd = aliveMap.end();
+         mapIter != mapEnd; ++mapIter) {
+      InstVector &coarsenedInsts = mapIter->second;
+      Value *value = valueMap[mapIter->first];
+      assert(value != NULL && "Missing alive value in region map");
+      coarsenedInsts.push_back(dyn_cast<Instruction>(value));
+    }
   }
+
+  dumpCoarseningMap(aliveMap);
+
+  // Add new phi nodes to the exit block.
+  updateExitPhiNodes(region->getExiting(), mergedSubregionExiting,
+                     aliveFromMerged, firstRegionMap, replicatedExiting,
+                     aliveMap);
+
+  // Remove the blocks in the 1 - branchIndex subregion.
+  BranchInst *branch = dyn_cast<BranchInst>(region->getHeader()->getTerminator());
+
+  BlockVector toRemove;
+  listBlocks(branch->getSuccessor(1 - branchIndex), region->getExiting(), toRemove);
+  toRemove.erase(find(toRemove.begin(), toRemove.end(), region->getExiting()));
+  
+  for (BlockVector::iterator iter = toRemove.begin(), iterEnd = toRemove.end(); iter != iterEnd; ++iter) {
+    BasicBlock *block = *iter;
+    block->replaceAllUsesWith(region->getExiting());
+    for(BasicBlock::iterator instIter = block->begin(), instEnd = block->end(); instIter != instEnd; ++instIter) {
+      instIter->replaceAllUsesWith(UndefValue::get(instIter->getType()));
+    }
+//    block->removeFromParent();
+  }
+
+  for (BlockVector::iterator iter = toRemove.begin(), iterEnd = toRemove.end(); iter != iterEnd; ++iter) {
+    BasicBlock *block = *iter;
+    block->eraseFromParent();
+  }
+  
 
   // Remove old region header.
   region->getHeader()->getTerminator()->eraseFromParent();
   region->getHeader()->eraseFromParent();
+
+  //region->getExiting()->getParent()->getParent()->dump();
+  
+
+  // This removal must be done after the update of the phis in the original
+  // block.
+
+  // Add the phi nodes values to the map.
+  //  for (CoarseningMap::iterator mapIter = aliveMap.begin(),
+  //                               mapEnd = aliveMap.end();
+  //       mapIter != mapEnd; ++mapIter) {
+  //    Instruction *alive = mapIter->first;
+  //    InstVector &coarsenedValues = mapIter->second;
+  //
+  //    // Update placeholder replacement map with alive values.
+  //    CoarseningMap::iterator phIter = phMap.find(alive);
+  //    if (phIter != phMap.end()) {
+  //      InstVector &V = phIter->second;
+  //      for (unsigned int index = 0; index < factor - 1; ++index) {
+  //        phReplacementMap[V[index]] = coarsenedValues[index];
+  //      }
+  //    }
+  //  }
+}
+
+Instruction *getAlivePastPhi(Instruction *inst, CoarseningMap &aliveMap) {
+  errs() << "getAlivePastPhi\n";
+  inst->dump();
+  dumpCoarseningMap(aliveMap);
+
+  CoarseningMap::iterator aliveIter = aliveMap.find(inst);
+  if(aliveIter != aliveMap.end()) {
+    return aliveIter->first;
+  }
+  else {
+    for (CoarseningMap::iterator iter = aliveMap.begin(),
+                                 iterEnd = aliveMap.end();
+         iter != iterEnd; ++iter) {
+      Instruction *mapInst = iter->first;
+      if(PHINode *phi = dyn_cast<PHINode>(mapInst)) {
+        phi->dump();
+        unsigned int argNumber = phi->getNumIncomingValues();
+        for (unsigned int index = 0; index < argNumber; ++index) {
+          Value *phiValue = phi->getIncomingValue(index);
+          phiValue->dump();
+          if(phiValue == inst) {
+            return phi;
+          }
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
+
+void ThreadCoarsening::updateExitPhiNodes(BasicBlock *target,
+                                          BasicBlock *mergedSubregionExiting,
+                                          InstVector &aliveFromMerged,
+                                          Map &cloningMap,
+                                          BasicBlock *replicatedExiting,
+                                          CoarseningMap &aliveMap) {
+
+  errs() << "ThreadCoarsening::updateExitPhiNodes\n";
+
+  dumpCoarseningMap(aliveMap);
+
+  for (InstVector::iterator iter = aliveFromMerged.begin(),
+                            iterEnd = aliveFromMerged.end();
+       iter != iterEnd; ++iter) {
+    Instruction *inst = *iter;
+    Instruction *clonedInst = dyn_cast<Instruction>(cloningMap[inst]);
+    Instruction *clonedAliveInst = getAlivePastPhi(clonedInst, aliveMap); 
+    clonedAliveInst->dump(); 
+
+    errs() << "inst:";
+    inst->dump();
+    errs() << "clonedInst:";
+    clonedInst->dump();
+
+    for (unsigned int index = 0; index < factor; ++index) {
+
+      // Create phinode.
+      PHINode *newPhi = PHINode::Create(
+          inst->getType(), 2, inst->getName() + ".phXXX", target->begin());
+
+      // Add the incoming value from mergedSubregionExiting.
+      Instruction *toAdd = NULL;
+      if (index == 0) {
+        toAdd = inst;
+      } else {
+        CoarseningMap::iterator cMapIter = cMap.find(inst);
+        assert(cMapIter != cMap.end() && "Cannot find inst in coarsening map");
+        InstVector &coarsenedInsts = cMapIter->second;
+        toAdd = coarsenedInsts[index - 1];
+      }
+
+      newPhi->addIncoming(toAdd, mergedSubregionExiting);
+
+      // Add the incoming value from replicatedExiting.
+      if (index == 0) {
+        // Find clonedInst in the aliveMap.
+        // Alive map might contain phi nodes, in this case look in the arguments
+        // and return the result of the phi.
+        toAdd = clonedAliveInst;
+      } else {
+        CoarseningMap::iterator aliveMapIter = aliveMap.find(clonedAliveInst);
+        assert(aliveMapIter != aliveMap.end() && "Cannot find inst in alive map");
+        InstVector &coarsenedInsts = aliveMapIter->second;
+        toAdd = coarsenedInsts[index - 1];
+      }
+
+      newPhi->addIncoming(toAdd, replicatedExiting);
+    }
+  }
+
+  target->dump();
 }
 
 BasicBlock *ThreadCoarsening::createTopBranch(DivergentRegion *region) {
@@ -191,25 +387,28 @@ BasicBlock *ThreadCoarsening::createTopBranch(DivergentRegion *region) {
 }
 
 DivergentRegion *ThreadCoarsening::createCascadingFirstRegion(
-    DivergentRegion *region, BasicBlock *pred, unsigned int branchIndex) {
+    DivergentRegion *region, BasicBlock *pred, unsigned int branchIndex,
+    Map &valueMap) {
 
   // Clone and insert the first region in the else branch.
-  Map valueMap;
   DivergentRegion *firstRegion = region->clone(".clone", dt, pdt, valueMap);
 
   // Attach the top link.
   changeBlockTarget(pred, firstRegion->getHeader(), (1 - branchIndex));
-  // Attach the bottom link.
+  // Attach the bottom link. The new exiting points to the old exiting.
   changeBlockTarget(firstRegion->getExiting(), region->getExiting());
 
-// FIXME.
-//  // Update the phi nodes of the newly inserted header.
-//  remapBlocksInPHIs(firstRegion->getHeader(), pred, exiting);
-//  // Update the phi nodes in the exit block.
-//  remapBlocksInPHIs(region->getExiting(), region->getExiting(),
-//                    firstRegion->getExiting());
+  InstVector newAlive;
+  applyMap(region->getAlive(), valueMap, newAlive);
+  firstRegion->setAlive(newAlive);
 
-  // FIXME manage alive values.
+  // FIXME.
+  // Update the phi nodes of the newly inserted header.
+  //  remapBlocksInPHIs(firstRegion->getHeader(), pred, exiting);
+  // Update the phi nodes in the exit block.
+  //  remapBlocksInPHIs(region->getExiting(), region->getExiting(),
+  //                    firstRegion->getExiting());
+
   return firstRegion;
 }
 

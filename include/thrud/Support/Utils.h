@@ -58,13 +58,11 @@ void InitializeMap(Map &map, const InstVector &TIds, const InstVector &NewTIds,
                    unsigned int CI, unsigned int CF);
 
 // Instruction management.
-Function *GetFunctionOfInst(Instruction *inst);
-const Function *GetFunctionOfInst(const Instruction *inst);
 BranchVector FindBranches(Function &F);
 template <class InstructionType>
 std::vector<InstructionType *> getInsts(Function &F);
 unsigned int GetOperandPosition(User *U, Value *value);
-void GetPHIs(BasicBlock *block, PHIVector &Phis);
+void getPHIs(BasicBlock *block, PhiVector &Phis);
 
 // Function and module management.
 ValueVector GetPointerArgs(Function *F);
@@ -125,27 +123,6 @@ bool dominatesAll(const BasicBlock *block, const BlockVector &blocks,
 bool postdominatesAll(const BasicBlock *block, const BlockVector &blocks,
                       const PostDominatorTree *pdt);
 
-// Dependance analysis.
-// Return true if value depends on any of the values in Rs.
-bool DependsOn(const Value *value, const ValueVector &Rs);
-
-// Return true is value depends on R.
-bool DependsOn(const Value *value, const Value *R);
-
-// Recursive function that determines if value depends on R.
-bool DependsOnImpl(const Value *value, const Value *R, ConstValueVector &Trace);
-
-// Recursive function that determines if value depends on R.
-bool DependsOnImpl(const Value *value, const ValueVector &Rs,
-                   ConstValueVector &Trace);
-
-// List the predecessors of the given instruction: apply backward code slicing.
-InstSet ListPredecessors(Instruction *inst);
-void ListPredecessorsImpl(Instruction *inst, InstSet &Result);
-
-InstVector ForwardCodeSlicing(InstVector &TIds);
-void ForwardCodeSlicingImpl(InstSet &Insts, InstSet NewInsts);
-
 ValueVector ToValueVector(InstVector &Insts);
 
 template <class type> void dumpSet(const std::set<type *> &toDump);
@@ -158,34 +135,6 @@ bool IsStrictBranch(const BranchInst *Branch);
 // Divergence Utils.
 
 Function *getOpenCLFunctionByName(std::string calleeName, Function *caller);
-
-// Find all the instructions which depend on the TId.
-InstVector FindThreadDepInst(Function *F, ValueVector &TIds);
-
-BranchVector GetThreadDepBranches(BranchVector &blocks, ValueVector TIds);
-
-//------------------------------------------------------------------------------
-// Divergent regions analysis.
-std::vector<DivergentRegion *> GetDivergentRegions(BranchVector &BTId,
-                                                   DominatorTree *dt,
-                                                   PostDominatorTree *pdt,
-                                                   LoopInfo *loopInfo);
-void FillRegions(std::vector<DivergentRegion *> &DRs, DominatorTree *dt,
-                 PostDominatorTree *pdt);
-
-void GetInstToReplicate(InstVector &TIdInsts, InstVector &TIds,
-                        InstVector &AllTIds);
-
-InstVector GetInstToReplicateOutsideRegions(InstVector &TIdInsts,
-                                            InstVector &TIds, RegionVector &DRs,
-                                            InstVector &AllTIds);
-
-InstVector GetInstToReplicateOutsideRegionCores(InstVector &TIdInsts,
-                                                InstVector &TIds,
-                                                RegionVector &DRs,
-                                                InstVector &AllTIds);
-
-Value *GetTIdOperand(CmpInst *Cmp, ValueVector &TIds);
 
 //------------------------------------------------------------------------------
 bool isBarrier(Instruction *inst);

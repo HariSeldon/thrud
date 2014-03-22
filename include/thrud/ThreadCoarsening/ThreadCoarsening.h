@@ -58,10 +58,16 @@ private:
   BasicBlock *createTopBranch(DivergentRegion *region);
   DivergentRegion *createCascadingFirstRegion(DivergentRegion *region,
                                               BasicBlock *pred,
-                                              unsigned int branchIndex);
+                                              unsigned int branchIndex, 
+                                              Map &valueMap);
   Instruction *insertBooleanReduction(Instruction *base, InstVector &insts,
                                       llvm::Instruction::BinaryOps binOp);
-
+  void updateExitPhiNodes(BasicBlock *target,
+                          BasicBlock *mergedSubregionExiting,
+                          InstVector &aliveFromMerged,
+                          Map &cloningMap,
+                          BasicBlock *replicatedExiting,
+                          CoarseningMap &aliveMap);
 
   // Manage placeholders.
   void replacePlaceholders();
@@ -88,5 +94,7 @@ private:
   CoarseningMap phMap;
   Map phReplacementMap;
 };
+
+void dumpCoarseningMap(CoarseningMap &cMap);
 
 #endif

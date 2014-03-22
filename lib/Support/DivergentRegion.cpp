@@ -56,6 +56,10 @@ void DivergentRegion::setExiting(BasicBlock *Exiting) {
   bounds.setExiting(Exiting);
 }
 
+void DivergentRegion::setAlive(const InstVector &alive) {
+  this->alive = alive;
+}
+
 RegionBounds &DivergentRegion::getBounds() { return bounds; }
 
 BlockVector &DivergentRegion::getBlocks() { return blocks; }
@@ -448,3 +452,23 @@ bool containsInternally(const DivergentRegion &region,
   return containsInternally(region, innerRegion->getHeader()) &&
          containsInternally(region, innerRegion->getExiting());
 }
+
+BasicBlock *getExitingOfSubregion(DivergentRegion *region,
+                                  unsigned int branchIndex) {
+  BasicBlock *exiting = region->getExiting();
+  BranchInst *branch = dyn_cast<BranchInst>(region->getHeader()->getTerminator());
+  assert(branch->getNumSuccessors() == 2 && "Wrong successor number");
+
+  BasicBlock *top = branch->getSuccessor(branchIndex);
+  BlockVector blocks;
+  listBlocks(top, exiting, blocks);
+
+  for (pred_iterator iter = pred_begin(exiting), iterEnd = pred_end(exiting);
+       iter != iterEnd; ++iter) {
+    BasicBlock *pred = *iter;
+    if(isPresent(pred, blocks)) {
+      return pred;
+    } 
+  }
+  return NULL;
+} 

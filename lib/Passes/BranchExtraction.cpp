@@ -87,7 +87,6 @@ bool BranchExtraction::runOnFunction(Function &F) {
        iter != iterEnd; ++iter) {
     DivergentRegion *region = *iter;
     region->fillRegion(dt, pdt);
-    region->dump();
   }
 
   return regions.size() != 0;
@@ -154,13 +153,13 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
   // in the region.
   // 'Exiting' will contain the phi working on the values from the blocks
   // outside and in the region.
-  PHIVector oldPhis;
-  GetPHIs(exiting, oldPhis);
+  PhiVector oldPhis;
+  getPHIs(exiting, oldPhis);
 
-  PHIVector newPhis;
-  PHIVector exitPhis;
+  PhiVector newPhis;
+  PhiVector exitPhis;
 
-  for (PHIVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
+  for (PhiVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
        ++I) {
     PHINode *phi = *I;
     PHINode *newPhi = PHINode::Create(phi->getType(), 0,
@@ -193,7 +192,7 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
   }
 
   // Delete the old phi nodes.
-  for (PHIVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
+  for (PhiVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
        ++I) {
     PHINode *ToDelete = *I;
     ToDelete->eraseFromParent();

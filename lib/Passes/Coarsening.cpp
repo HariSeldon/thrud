@@ -7,20 +7,20 @@
 
 #include "llvm/Transforms/Utils/Cloning.h"
 
-//void dumpCoarseningMap(CoarseningMap &cMap) {
-//  llvm::errs() << "------------------------------\n";
-//  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end();
-//       iter != end; ++iter) {
-//    InstVector &entry = iter->second;
-//    Instruction *inst = iter->first;
-//    llvm::errs() << "Key: ";
-//    inst->dump();
-//    llvm::errs() << " ";
-//    dumpVector(entry);
-//    llvm::errs() << "\n";
-//  }
-//  llvm::errs() << "------------------------------\n";
-//}
+void dumpCoarseningMap(CoarseningMap &cMap) {
+  llvm::errs() << "------------------------------\n";
+  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end();
+       iter != end; ++iter) {
+    InstVector &entry = iter->second;
+    Instruction *inst = iter->first;
+    llvm::errs() << "Key: ";
+    inst->dump();
+    llvm::errs() << " ";
+    dumpVector(entry);
+    llvm::errs() << "\n";
+  }
+  llvm::errs() << "------------------------------\n";
+}
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
@@ -116,8 +116,8 @@ void ThreadCoarsening::applyCoarseningMap(Instruction *inst,
 Instruction *
 ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
                                           unsigned int coarseningIndex) {
-//  errs() << "ThreadCoarsening::getCoarsenedInstruction\n";
-//  inst->dump();
+  //  errs() << "ThreadCoarsening::getCoarsenedInstruction\n";
+  //  inst->dump();
   CoarseningMap::iterator It = cMap.find(inst);
   // The instruction is in the map.
   if (It != cMap.end()) {
@@ -135,16 +135,16 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
         InstVector &entry = PHIt->second;
         result = entry[coarseningIndex];
       }
-          // The instruction is not in the placeholder map.
-          else {
+      // The instruction is not in the placeholder map.
+      else {
         // Make an entry in the placeholder map.
         InstVector newEntry;
         for (unsigned int counter = 0; counter < factor - 1; ++counter) {
           Instruction *ph = inst->clone();
           ph->insertAfter(inst);
-          renameValueWithFactor(ph,
-                                (inst->getName() + Twine("place.holder")).str(),
-                                coarseningIndex);
+          renameValueWithFactor(
+              ph, (inst->getName() + Twine(".place.holder")).str(),
+              coarseningIndex);
           newEntry.push_back(ph);
         }
         phMap.insert(std::pair<Instruction *, InstVector>(inst, newEntry));

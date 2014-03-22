@@ -261,7 +261,7 @@ void findOpenCLFunctionCalls(Function *callee, Function *caller,
   for (Value::use_iterator iter = callee->use_begin(), end = callee->use_end();
        iter != end; ++iter) {
     if (CallInst *inst = dyn_cast<CallInst>(*iter))
-      if (caller == GetFunctionOfInst(inst))
+      if (caller == inst->getParent()->getParent())
         if (const ConstantInt *ci =
                 dyn_cast<ConstantInt>(inst->getArgOperand(0))) {
           if (ci->equalsInt(direction))

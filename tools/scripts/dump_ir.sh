@@ -11,15 +11,14 @@ OCLDEF=$HOME/src/thrud/tools/scripts/ocldef.h
 OPTIMIZATION=-O3
 
 $CLANG -x cl \
+       -O0 \
        -target nvptx \
        -include ${OCLDEF} \
-       -O3 \
        ${INPUT_FILE} \
        -S -emit-llvm -fno-builtin -o - |
 $OPT -instnamer \
      -mem2reg \
      -loop-unroll -unroll-threshold=1000 \
      -inline -inline-threshold=10000 \
-     -O3 \
      -o - |
 $LLVM_DIS -o -  

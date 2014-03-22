@@ -102,7 +102,7 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   init();
   scaleNDRange();
   coarsenFunction();
-  replacePlaceholders();
+//  replacePlaceholders();
 
   return true;
 }

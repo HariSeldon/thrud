@@ -30,7 +30,7 @@ typedef std::pair<Instruction *, Instruction *> InstPair;
 typedef std::set<InstPair> InstPairs;
 typedef std::set<BranchInst *> BranchSet;
 typedef std::pair<int, int> IntPair;
-typedef std::vector<PHINode *> PHIVector;
+typedef std::vector<PHINode *> PhiVector;
 typedef std::stack<BasicBlock *> BlockStack;
 typedef std::deque<Instruction *> InstDeque;
 typedef std::deque<BasicBlock *> BlockDeque;

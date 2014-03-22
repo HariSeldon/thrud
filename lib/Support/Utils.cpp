@@ -83,8 +83,8 @@ void applyMap(Instruction *Inst, CoarseningMap &map, unsigned int CF) {
     }
   }
 
-//  if (PHINode *Phi = dyn_cast<PHINode>(Inst))
-//    applyMapToPhiBlocks(Phi, map);
+  //  if (PHINode *Phi = dyn_cast<PHINode>(Inst))
+  //    applyMapToPhiBlocks(Phi, map);
 }
 
 //------------------------------------------------------------------------------
@@ -118,12 +118,13 @@ void applyMap(InstVector &insts, Map &map, InstVector &result) {
   result.clear();
   result.reserve(insts.size());
 
-  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end(); iter != iterEnd; ++iter) {
+  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end();
+       iter != iterEnd; ++iter) {
     Value *newValue = map[*iter];
-    if(newValue != NULL) {
-      if(Instruction *inst = dyn_cast<Instruction>(newValue)) {
-        result.push_back(inst); 
-      } 
+    if (newValue != NULL) {
+      if (Instruction *inst = dyn_cast<Instruction>(newValue)) {
+        result.push_back(inst);
+      }
     }
   }
 }
@@ -147,16 +148,6 @@ void replaceUses(Value *oldValue, Value *newValue) {
     if (*I != newValue)
       (*I)->replaceUsesOfWith(oldValue, newValue);
   }
-}
-
-//------------------------------------------------------------------------------
-Function *GetFunctionOfInst(Instruction *I) {
-  return I->getParent()->getParent();
-}
-
-//------------------------------------------------------------------------------
-const Function *GetFunctionOfInst(const Instruction *I) {
-  return I->getParent()->getParent();
 }
 
 //------------------------------------------------------------------------------
@@ -205,7 +196,8 @@ bool IsByPointer(const Argument *A) {
 }
 
 //------------------------------------------------------------------------------
-BasicBlock *findImmediatePostDom(BasicBlock *block, const PostDominatorTree *pdt) {
+BasicBlock *findImmediatePostDom(BasicBlock *block,
+                                 const PostDominatorTree *pdt) {
   return pdt->getNode(block)->getIDom()->getBlock();
 }
 
@@ -219,11 +211,12 @@ template <class type> void dumpSet(const std::set<type *> &toDump) {
 }
 
 template <> void dumpSet(const BlockSet &toDump) {
-  for (BlockSet::iterator iter = toDump.begin(), iterEnd = toDump.end(); iter != iterEnd; ++iter) {
+  for (BlockSet::iterator iter = toDump.begin(), iterEnd = toDump.end();
+       iter != iterEnd; ++iter) {
     errs() << (*iter)->getName() << " ";
   }
   errs() << "\n";
-} 
+}
 
 template void dumpSet(const InstSet &toDump);
 template void dumpSet(const std::set<BranchInst *> &toDump);
@@ -280,100 +273,6 @@ void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *DT) {
       CloneDominatorInfo(BBDom, map, DT);
   }
   DT->addNewBlock(NewBB, NewBBDom);
-}
-
-////------------------------------------------------------------------------------
-///// SplitBlock - Split the specified block at the specified instruction - every
-///// thing before SplitPt stays in Old and everything starting with SplitPt moves
-///// to a new block.  The two blocks are joined by an unconditional branch and
-///// the loop info is updated.
-/////
-//BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt, Pass *P) {
-//  BasicBlock::iterator SplitIt = SplitPt;
-//  while (isa<PHINode>(SplitIt) || isa<LandingPadInst>(SplitIt))
-//    ++SplitIt;
-//  BasicBlock *New = Old->splitBasicBlock(SplitIt, Old->getName()+".split");
-//
-//  // The new block lives in whichever loop the old one did. This preserves
-//  // LCSSA as well, because we force the split point to be after any PHI nodes.
-//  if (LoopInfo *LI = P->getAnalysisIfAvailable<LoopInfo>())
-//    if (Loop *L = LI->getLoopFor(Old))
-//      L->addBasicBlockToLoop(New, LI->getBase());
-//
-//  if (DominatorTree *DT = P->getAnalysisIfAvailable<DominatorTree>()) {
-//    // Old dominates New. New node dominates all other nodes dominated by Old.
-//    if (DomTreeNode *OldNode = DT->getNode(Old)) {
-//      std::vector<DomTreeNode *> Children;
-//      for (DomTreeNode::iterator I = OldNode->begin(), E = OldNode->end();
-//           I != E; ++I)
-//        Children.push_back(*I);
-//
-//      DomTreeNode *NewNode = DT->addNewBlock(New,Old);
-//      for (std::vector<DomTreeNode *>::iterator I = Children.begin(),
-//             E = Children.end(); I != E; ++I)
-//        DT->changeImmediateDominator(*I, NewNode);
-//    }
-//  }
-//
-//  if (PostDominatorTree *pdt = P->getAnalysisIfAvailable<PostDominatorTree>()) {
-//    // New postdominates Old.
-//    if (DomTreeNode *oldNode = pdt->getNode(Old)) {
-//      BasicBlock *oldNodeDom = oldNode->getIDom()->getBlock();
-//      DomTreeNode *newNode = pdt->addNewBlock(New, oldNodeDom);
-//      newNode->addChild(oldNode);
-//      pdt->changeImmediateDominator(oldNode, newNode);
-//    } 
-//  }
-//
-//
-//  return New;
-//}
-
-//------------------------------------------------------------------------------
-// FIXME: this can be implemented with set differences.
-void Remove(BranchSet &Branches, BranchSet &ToDelete) {
-  if (Branches.size() == ToDelete.size()) {
-    Branches.clear();
-    return;
-  }
-
-  if (ToDelete.size() == 0)
-    return;
-
-  for (BranchSet::iterator I = ToDelete.begin(), E = ToDelete.end(); I != E;
-       ++I)
-    Branches.erase(*I);
-}
-
-//------------------------------------------------------------------------------
-void Remove(BranchSet &Branches, BranchInst *ToDelete) {
-  if (Branches.size() == 0)
-    return;
-  Branches.erase(ToDelete);
-}
-
-//------------------------------------------------------------------------------
-BranchVector FindOutermostBranches(BranchSet Branches, const DominatorTree *DT,
-                                   const PostDominatorTree *PDT) {
-
-  BranchVector Result;
-  while (BranchInst *Top = FindOutermostBranch(Branches, DT)) {
-    Result.push_back(Top);
-    Remove(Branches, Top);
-    BasicBlock *TopBlock = Top->getParent();
-    BasicBlock *Exiting = findImmediatePostDom(TopBlock, PDT);
-    BranchSet ToRemove;
-    for (BranchSet::iterator I = Branches.begin(), E = Branches.end(); I != E;
-         ++I) {
-      BranchInst *Branch = *I;
-      BasicBlock *BB = Branch->getParent();
-      if (BB != TopBlock && BB != Exiting &&
-          IsInRegion(TopBlock, Exiting, BB, DT, PDT))
-        ToRemove.insert(Branch);
-    }
-    Remove(Branches, ToRemove);
-  }
-  return Result;
 }
 
 //------------------------------------------------------------------------------
@@ -449,127 +348,12 @@ bool PostdominatesAll(const BasicBlock *BB, const BlockVector &Blocks,
 }
 
 //------------------------------------------------------------------------------
-void changeBlockTarget(BasicBlock *block, BasicBlock *newTarget, unsigned int branchIndex) {
+void changeBlockTarget(BasicBlock *block, BasicBlock *newTarget,
+                       unsigned int branchIndex) {
   TerminatorInst *terminator = block->getTerminator();
   assert(terminator->getNumSuccessors() &&
          "The target can be change only if it is unique");
   terminator->setSuccessor(branchIndex, newTarget);
-}
-
-//------------------------------------------------------------------------------
-bool DependsOn(const Value *V, const ValueVector &Rs) {
-  ConstValueVector Trace;
-  return DependsOnImpl(V, Rs, Trace);
-}
-
-//------------------------------------------------------------------------------
-bool DependsOn(const Value *V, const Value *R) {
-  ConstValueVector Trace;
-  return DependsOnImpl(V, R, Trace);
-}
-
-//------------------------------------------------------------------------------
-bool DependsOnImpl(const Value *V, const Value *R, ConstValueVector &Trace) {
-  if (V == R)
-    return true;
-
-  if (const User *U = dyn_cast<User>(V)) {
-    bool isDependent = false;
-
-    for (User::const_op_iterator UI = U->op_begin(), UE = U->op_end(); UI != UE;
-         ++UI) {
-      if (const Instruction *I = dyn_cast<Instruction>(UI)) {
-        if (!isPresent<Value>(I, Trace)) {
-          Trace.push_back(I);
-          isDependent |= DependsOnImpl(I, R, Trace);
-        }
-        // Manage the case in which the V is an argument of the current
-        // function.
-      } else {
-        Value *UV = cast<Value>(UI);
-        isDependent |= DependsOnImpl(UV, R, Trace);
-      }
-    }
-    return isDependent;
-
-  } else
-    return false;
-}
-
-//------------------------------------------------------------------------------
-bool DependsOnImpl(const Value *V, const ValueVector &Rs,
-                   ConstValueVector &Trace) {
-  if (isPresent<Value>(V, Rs))
-    return true;
-
-  if (const User *U = dyn_cast<User>(V)) {
-    bool isDependent = false;
-
-    for (User::const_op_iterator UI = U->op_begin(), UE = U->op_end(); UI != UE;
-         ++UI) {
-      if (Instruction *I = dyn_cast<Instruction>(UI)) {
-        if (!isPresent<Value>(I, Trace)) {
-          Trace.push_back(I);
-          isDependent |= DependsOnImpl(I, Rs, Trace);
-        }
-      } else {
-        // Manage the case in which the V is an argument of
-        // the current function.
-        Value *UV = cast<Value>(UI);
-        isDependent |= DependsOnImpl(UV, Rs, Trace);
-      }
-    }
-    return isDependent;
-
-  } else
-    return false;
-}
-
-//------------------------------------------------------------------------------
-InstSet ListPredecessors(Instruction *I) {
-  InstSet Result;
-  ListPredecessorsImpl(I, Result);
-  return Result;
-}
-
-//------------------------------------------------------------------------------
-void ListPredecessorsImpl(Instruction *I, InstSet &Result) {
-  if (User *U = dyn_cast<User>(I))
-    for (User::op_iterator UI = U->op_begin(), UE = U->op_end(); UI != UE; ++UI)
-      if (Instruction *Inst = dyn_cast<Instruction>(UI))
-        if (Result.insert(Inst).second)
-          ListPredecessorsImpl(Inst, Result);
-}
-
-//------------------------------------------------------------------------------
-InstVector ForwardCodeSlicing(InstVector &Insts) {
-  InstSet Set = InstSet(Insts.begin(), Insts.end());
-  //InstSet Result = InstSet(TIds.begin(), TIds.end());
-  InstSet Result;
-  ForwardCodeSlicingImpl(Result, Set);
-  return InstVector(Result.begin(), Result.end());
-}
-
-//------------------------------------------------------------------------------
-void ForwardCodeSlicingImpl(InstSet &Insts, InstSet NewInsts) {
-  if (NewInsts.empty())
-    return;
-
-  InstSet TmpInsts;
-  for (InstSet::iterator I = NewInsts.begin(), E = NewInsts.end(); I != E;
-       ++I) {
-    Instruction *Inst = *I;
-    for (Instruction::use_iterator useIter = Inst->use_begin(),
-                                   useEnd = Inst->use_end();
-         useIter != useEnd; ++useIter) {
-      if (Instruction *useInst = dyn_cast<Instruction>(*useIter)) {
-        std::pair<InstSet::iterator, bool> result = Insts.insert(useInst);
-        if (result.second)
-          TmpInsts.insert(useInst);
-      }
-    }
-  }
-  ForwardCodeSlicingImpl(Insts, TmpInsts);
 }
 
 //------------------------------------------------------------------------------
@@ -603,20 +387,6 @@ ValueVector GetPointerArgs(Function *F) {
 }
 
 //------------------------------------------------------------------------------
-InstVector FindArgDepInst(Function *F) {
-  InstVector Result;
-  ValueVector Args = GetPointerArgs(F);
-
-  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-    Instruction *Inst = &*I;
-    if (DependsOn(Inst, Args))
-      Result.push_back(Inst);
-  }
-
-  return Result;
-}
-
-//------------------------------------------------------------------------------
 bool IsStrictBranch(const BranchInst *Branch) {
   Value *Cond = Branch->getCondition();
   if (CmpInst *Cmp = dyn_cast<CmpInst>(Cond))
@@ -634,7 +404,7 @@ bool IsGreaterThan(CmpInst::Predicate Pred) {
 bool IsEquals(CmpInst::Predicate Pred) { return Pred == CmpInst::ICMP_EQ; }
 
 //------------------------------------------------------------------------------
-void GetPHIs(BasicBlock *BB, PHIVector &Phis) {
+void getPHIs(BasicBlock *BB, PhiVector &Phis) {
   PHINode *Phi = NULL;
   for (BasicBlock::iterator I = BB->begin(); (Phi = dyn_cast<PHINode>(I));
        ++I) {
@@ -666,20 +436,6 @@ void remapBlocksInPHIs(BasicBlock *Target, BasicBlock *OldBlock,
 }
 
 //------------------------------------------------------------------------------
-// Build a mapping: TIds -> CF * TId + CI.
-// Vector format:
-// TIds: list of all the values output of get_local_id or get_loacal_id.
-// NewTIds: list of all the tid updated values grouped by original value:
-// 2 * tid1, 2 * tid1 + 1, 2 * tid1 + 2, ...
-// 2 * tid2, 2 * tid2 + 1, 2 * tid2 + 2, ...
-void InitializeMap(Map &map, const InstVector &TIds, const InstVector &NewTIds,
-                   unsigned int CI, unsigned int CF) {
-  unsigned int N = TIds.size();
-  for (unsigned int ThreadIdIndex = 0; ThreadIdIndex < N; ++ThreadIdIndex)
-    map[TIds[ThreadIdIndex]] = NewTIds[(ThreadIdIndex + 1) * CF - CI - 1];
-}
-
-//------------------------------------------------------------------------------
 Function *getOpenCLFunctionByName(std::string calleeName, Function *caller) {
   Module &module = *caller->getParent();
   Function *callee = module.getFunction(calleeName);
@@ -692,113 +448,7 @@ Function *getOpenCLFunctionByName(std::string calleeName, Function *caller) {
 }
 
 //------------------------------------------------------------------------------
-// Divergence Utils.
-//------------------------------------------------------------------------------
-BranchVector GetThreadDepBranches(BranchVector &Bs, ValueVector TIds) {
-  BranchVector Result;
-
-  for (BranchVector::iterator I = Bs.begin(), E = Bs.end(); I != E; ++I) {
-    BranchInst *BInst = *I;
-    if (DependsOn(BInst, TIds))
-      Result.push_back(BInst);
-  }
-  return Result;
-}
-
-//------------------------------------------------------------------------------
-void GetInstToReplicate(InstVector &divInsts, InstVector &tids,
-                        InstVector &result) {
-  InstSet preds(divInsts.begin(), divInsts.end());
-  for (InstVector::iterator inst = divInsts.begin(), instEnd = divInsts.end();
-       inst != instEnd; ++inst)
-    ListPredecessorsImpl(*inst, preds);
-
-  InstVector tmp(preds.begin(), preds.end());
-  std::sort(tmp.begin(), tmp.end());
-  std::sort(tids.begin(), tmp.end());
-
-  std::set_difference(tmp.begin(), tmp.end(), tids.begin(), tids.end(),
-                      std::back_inserter(result));
-}
-
-// Compiler optimizations.
-//------------------------------------------------------------------------------
-InstVector GetInstToReplicateOutsideRegionCores(InstVector &TIdInsts,
-                                                InstVector &TIds,
-                                                RegionVector &DRs,
-                                                InstVector &AllTIds) {
-  InstVector Insts;
-  GetInstToReplicate(TIdInsts, AllTIds, Insts);
-  InstSet InstsSet(Insts.begin(), Insts.end());
-  InstSet ToRemove;
-
-  for (InstVector::iterator I = Insts.begin(), E = Insts.end(); I != E; ++I) {
-    for (std::vector<DivergentRegion *>::iterator regionIter = DRs.begin(),
-                                                  regionEnd = DRs.end();
-         regionIter != regionEnd; ++regionIter) {
-      DivergentRegion *region = *regionIter;
-      if(containsInternally(*region, *I))
-        ToRemove.insert(*I);
-    }
-  }
-
-  for (InstSet::iterator I = ToRemove.begin(), E = ToRemove.end(); I != E;
-       ++I) {
-    InstsSet.erase(*I);
-  }
-
-  InstVector Result(InstsSet.begin(), InstsSet.end());
-  return Result;
-}
-
-//------------------------------------------------------------------------------
-InstVector GetInstToReplicateOutsideRegions(InstVector &TIdInsts,
-                                            InstVector &TIds, RegionVector &DRs,
-                                            InstVector &AllTIds) {
-  InstVector Insts;
-  GetInstToReplicate(TIdInsts, AllTIds, Insts);
-  InstSet InstsSet(Insts.begin(), Insts.end());
-  InstSet ToRemove;
-
-  for (InstVector::iterator I = Insts.begin(), E = Insts.end(); I != E; ++I) {
-    for (std::vector<DivergentRegion *>::iterator regionIter = DRs.begin(),
-                                                  regionEnd = DRs.end();
-         regionIter != regionEnd; ++regionIter) {
-      DivergentRegion *region = *regionIter;
-      if(containsInternally(*region, *I))
-        ToRemove.insert(*I);
-    }
-  }
-
-  for (InstSet::iterator I = ToRemove.begin(), E = ToRemove.end(); I != E;
-       ++I) {
-    InstsSet.erase(*I);
-  }
-
-  InstVector Result(InstsSet.begin(), InstsSet.end());
-  return Result;
-}
-
-//------------------------------------------------------------------------------
 // Region and Branch Analysis.
-//------------------------------------------------------------------------------
-// Find the operand that depends on the thread id.
-// If more than one operand depends on the tid retun NULL.
-Value *GetTIdOperand(CmpInst *Cmp, ValueVector &TIds) {
-  Value *Result = NULL;
-  for (CmpInst::op_iterator I = Cmp->op_begin(), E = Cmp->op_end(); I != E;
-       ++I) {
-    Value *V = I->get();
-    if (DependsOn(V, TIds)) {
-      if (Result == NULL)
-        Result = V;
-      else
-        return NULL;
-    }
-  }
-  return Result;
-}
-
 //------------------------------------------------------------------------------
 bool isBarrier(Instruction *I) {
   if (CallInst *Inst = dyn_cast<CallInst>(I)) {
@@ -981,7 +631,7 @@ Instruction *findFirstUser(Instruction *I) {
 
 //------------------------------------------------------------------------------
 bool IsIntCast(Instruction *I) {
-  if(CallInst *call = dyn_cast<CallInst>(I)) {
+  if (CallInst *call = dyn_cast<CallInst>(I)) {
     Function *callee = call->getCalledFunction();
     std::string name = callee->getName();
     bool begin = (name[0] == '_' && name[1] == 'Z');
@@ -993,7 +643,8 @@ bool IsIntCast(Instruction *I) {
 }
 
 //------------------------------------------------------------------------------
-void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index) {
+void renameValueWithFactor(Value *value, StringRef oldName,
+                           unsigned int index) {
   if (!oldName.empty())
     value->setName(oldName + "..cf" + Twine(index + 2));
 }
@@ -1034,7 +685,7 @@ template <class T> bool isPresent(const T *V, const std::set<const T *> &Vs) {
 
 template bool isPresent(const Instruction *V, const ConstInstSet &Vs);
 
-template <class T> bool isPresent(const T *value, const std::deque<T*> &d) {
+template <class T> bool isPresent(const T *value, const std::deque<T *> &d) {
   typename std::deque<T *>::const_iterator iter =
       std::find(d.begin(), d.end(), value);
   return iter != d.end();
