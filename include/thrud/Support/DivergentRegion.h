@@ -60,7 +60,7 @@ public:
                          PostDominatorTree *pdt, Map &valueMap);
   DivergentRegion cloneSubregion(const Twine &suffix, DominatorTree *dt, 
                         PostDominatorTree *pdt, unsigned int branchIndex, Map &valueMap);
-  BasicBlock *getExitingOfSubregion(unsigned int branchIndex);
+  BasicBlock *getSubregionExiting(unsigned int branchIndex);
 
   unsigned int size();
   void dump();
@@ -153,6 +153,8 @@ bool contains(const DivergentRegion &region, const BasicBlock *block);
 bool containsInternally(const DivergentRegion &region, const BasicBlock *block);
 bool containsInternally(const DivergentRegion &region,
                         const DivergentRegion *innerRegion);
-BasicBlock *getExitingOfSubregion(DivergentRegion *region, unsigned int branchIndex);
+BasicBlock *getSubregionExiting(DivergentRegion *region, unsigned int branchIndex);
+void getSubregionAlive(DivergentRegion *region,
+                       const BasicBlock *subregionExiting, InstVector &result);
 
 #endif

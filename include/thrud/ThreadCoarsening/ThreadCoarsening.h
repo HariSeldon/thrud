@@ -55,27 +55,28 @@ private:
   void applyCoarseningMap(Instruction *inst, unsigned int index);
   Instruction *getCoarsenedInstruction(Instruction *inst,
                                        unsigned int coarseningIndex);
+
+  // Manage placeholders.
+  void replacePlaceholders();
+
+  // Region merging methods.
+  BasicBlock *getExitingSubregion();
+
   BasicBlock *createTopBranch(DivergentRegion *region);
   DivergentRegion *createCascadingFirstRegion(DivergentRegion *region,
                                               BasicBlock *pred,
-                                              unsigned int branchIndex, 
+                                              unsigned int branchIndex,
                                               Map &valueMap);
   Instruction *insertBooleanReduction(Instruction *base, InstVector &insts,
                                       llvm::Instruction::BinaryOps binOp);
   void updateExitPhiNodes(BasicBlock *target,
                           BasicBlock *mergedSubregionExiting,
-                          InstVector &aliveFromMerged,
-                          Map &cloningMap,
+                          InstVector &aliveFromMerged, Map &cloningMap,
                           BasicBlock *replicatedExiting,
                           CoarseningMap &aliveMap);
-
-  // Manage placeholders.
-  void replacePlaceholders();
-
-  //  void InsertReplicatedInst(InstPairs &IP, Map &map);
-  //  void PerformDuplication();
-  //  void BuildPhiNodeMap(BasicBlock *OldBlock, BasicBlock *NewBlock, Map
-  // &map);
+  void removeRedundantBlocks(DivergentRegion *region, unsigned int branchIndex);
+  void buildPhiMap(DivergentRegion *region, InstVector &aliveFromMerged,
+                   BasicBlock *mergedSubregionExiting, Map &result);
 
 private:
   unsigned int direction;

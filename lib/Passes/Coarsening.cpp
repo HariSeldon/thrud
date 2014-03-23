@@ -31,19 +31,14 @@ void ThreadCoarsening::coarsenFunction() {
   dumpVector(regions);
 
   // Replicate instructions.
-  for (InstVector::iterator instIter = insts.begin(), instEnd = insts.end();
-       instIter != instEnd; ++instIter) {
-    Instruction *inst = *instIter;
-    replicateInst(inst);
-  }
+  std::for_each(
+      insts.begin(), insts.end(),
+      std::bind1st(std::mem_fun(&ThreadCoarsening::replicateInst), this));
 
   // Replicate regions.
-  for (RegionVector::iterator regionIter = regions.begin(),
-                              regionEnd = regions.end();
-       regionIter != regionEnd; ++regionIter) {
-    DivergentRegion *region = *regionIter;
-    replicateRegion(region);
-  }
+  std::for_each(
+      regions.begin(), regions.end(),
+      std::bind1st(std::mem_fun(&ThreadCoarsening::replicateRegion), this));
 }
 
 //------------------------------------------------------------------------------

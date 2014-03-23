@@ -453,7 +453,7 @@ bool containsInternally(const DivergentRegion &region,
          containsInternally(region, innerRegion->getExiting());
 }
 
-BasicBlock *getExitingOfSubregion(DivergentRegion *region,
+BasicBlock *getSubregionExiting(DivergentRegion *region,
                                   unsigned int branchIndex) {
   BasicBlock *exiting = region->getExiting();
   BranchInst *branch = dyn_cast<BranchInst>(region->getHeader()->getTerminator());
@@ -471,4 +471,20 @@ BasicBlock *getExitingOfSubregion(DivergentRegion *region,
     } 
   }
   return NULL;
-} 
+}
+
+void getSubregionAlive(DivergentRegion *region,
+                       const BasicBlock *subregionExiting, InstVector &result) {
+  // Identify the alive values defined in the merged subregion.
+  InstVector &alive = region->getAlive();
+  for (InstVector::iterator iter = alive.begin(), iterEnd = alive.end();
+       iter != iterEnd; ++iter) {
+    Instruction *inst = *iter;
+    if (PHINode *phi = dyn_cast<PHINode>(inst)) {
+      result.push_back(dyn_cast<Instruction>(
+          phi->getIncomingValueForBlock(subregionExiting)));
+    } else {
+      result.push_back(inst);
+    }
+  }
+}
