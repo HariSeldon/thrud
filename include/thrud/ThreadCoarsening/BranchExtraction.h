@@ -1,9 +1,8 @@
-#include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
-
 #include "llvm/Pass.h"
 using namespace llvm;
 
 class DivergentRegion;
+class SingleDimDivAnalysis;
 
 class BranchExtraction : public FunctionPass {
 public:
@@ -21,4 +20,5 @@ private:
   LoopInfo *loopInfo;
   DominatorTree *dt;
   PostDominatorTree *pdt;
+  SingleDimDivAnalysis *sdda;
 };

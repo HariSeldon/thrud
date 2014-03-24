@@ -1,5 +1,7 @@
 #define DEBUG_TYPE "branch_extraction"
 
+#include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
+
 #include "thrud/ThreadCoarsening/BranchExtraction.h"
 
 #include "thrud/Support/DataTypes.h"
@@ -57,14 +59,12 @@ bool BranchExtraction::runOnFunction(Function &F) {
   if (KernelNameCL != "" && FunctionName != KernelNameCL)
     return false;
 
-  llvm::errs() << "BranchExtraction::runOnFunction\n";
-
   // Perform analyses.
   loopInfo = &getAnalysis<LoopInfo>();
   dt = &getAnalysis<DominatorTree>();
   pdt = &getAnalysis<PostDominatorTree>();
 
-  SingleDimDivAnalysis *sdda = &getAnalysis<SingleDimDivAnalysis>();
+  sdda = &getAnalysis<SingleDimDivAnalysis>();
   RegionVector &regions = sdda->getDivRegions();
 
   // This is terribly inefficient.
@@ -117,7 +117,7 @@ void BranchExtraction::extractBranches(DivergentRegion *region) {
   region->setHeader(newHeader);
 }
 
-// Remember to update the DT / PDT.
+// -----------------------------------------------------------------------------
 void BranchExtraction::isolateRegion(DivergentRegion *region) {
   BasicBlock *exiting = region->getExiting();
 
@@ -159,6 +159,8 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
   PhiVector newPhis;
   PhiVector exitPhis;
 
+  InstVector &divInsts = sdda->getDivInsts();
+
   for (PhiVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
        ++I) {
     PHINode *phi = *I;
@@ -177,6 +179,10 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
     }
     newPhis.push_back(newPhi);
     exitPhis.push_back(exitPhi);
+
+    // Update divInsts.
+    divInsts.push_back(newPhi);
+    divInsts.push_back(exitPhi);
   }
 
   unsigned int phiNumber = newPhis.size();
@@ -194,8 +200,15 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
   // Delete the old phi nodes.
   for (PhiVector::iterator I = oldPhis.begin(), E = oldPhis.end(); I != E;
        ++I) {
-    PHINode *ToDelete = *I;
-    ToDelete->eraseFromParent();
+    PHINode *toDelete = *I;
+
+    // Update divInsts.
+    InstVector::iterator iter = std::find(divInsts.begin(), divInsts.end(), static_cast<Instruction*>(toDelete));  
+    if(iter != divInsts.end()) {
+      divInsts.erase(iter);
+    }
+
+    toDelete->eraseFromParent();
   }
 
   region->setExiting(newExiting);

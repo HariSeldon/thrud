@@ -43,13 +43,19 @@ private:
 
   // Coarsening.
   void coarsenFunction();
-  void replicateInst(Instruction *Inst);
-  void replicateRegion(DivergentRegion *R);
-  void replicateRegionClassic(DivergentRegion *R);
-  void replicateRegionFalseMerging(DivergentRegion *R);
-  void replicateRegionTrueMerging(DivergentRegion *R);
-  void replicateRegionMerging(DivergentRegion *R, unsigned int branch);
-  void replicateRegionFullMerging(DivergentRegion *R);
+  void replicateInst(Instruction *iNst);
+  void replicateRegion(DivergentRegion *region);
+  void replicateRegionClassic(DivergentRegion *region);
+
+  void initAliveMap(DivergentRegion *region, CoarseningMap &aliveMap);
+  void replicateRegionImpl(DivergentRegion *region, CoarseningMap &aliveMap);
+  void updateAliveMap(CoarseningMap &aliveMap, Map &regionMap);
+  void updatePlaceholdersWithAlive(CoarseningMap &aliveMap);
+
+  void replicateRegionFalseMerging(DivergentRegion *region);
+  void replicateRegionTrueMerging(DivergentRegion *region);
+  void replicateRegionMerging(DivergentRegion *region, unsigned int branch);
+  void replicateRegionFullMerging(DivergentRegion *region);
   void applyCoarseningMap(DivergentRegion &region, unsigned int index);
   void applyCoarseningMap(BasicBlock *block, unsigned int index);
   void applyCoarseningMap(Instruction *inst, unsigned int index);

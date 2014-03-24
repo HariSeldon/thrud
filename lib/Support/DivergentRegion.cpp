@@ -41,9 +41,11 @@ DivergentRegion::DivergentRegion(RegionBounds &bounds, DominatorTree *dt,
 
 BasicBlock *DivergentRegion::getHeader() { return bounds.getHeader(); }
 BasicBlock *DivergentRegion::getExiting() { return bounds.getExiting(); }
+
 const BasicBlock *DivergentRegion::getHeader() const {
   return bounds.getHeader();
 }
+
 const BasicBlock *DivergentRegion::getExiting() const {
   return bounds.getExiting();
 }
@@ -392,13 +394,12 @@ DivergentRegion::const_iterator DivergentRegion::const_iterator::end() {
 
 // Non member functions.
 //------------------------------------------------------------------------------
-RegionBounds *getExitingAndExit(DivergentRegion &region) {
-  BasicBlock *exiting = region.getExiting();
-  TerminatorInst *terminator = exiting->getTerminator();
+BasicBlock *getExit(DivergentRegion &region) {
+  TerminatorInst *terminator = region.getExiting()->getTerminator();
   assert(terminator->getNumSuccessors() == 1 &&
          "Divergent region must have one successor only");
   BasicBlock *exit = terminator->getSuccessor(0);
-  return new RegionBounds(exiting, exit);
+  return exit; 
 }
 
 //------------------------------------------------------------------------------

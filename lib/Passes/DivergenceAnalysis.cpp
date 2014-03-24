@@ -79,6 +79,10 @@ void DivergenceAnalysis::performAnalysis() {
         worklist.insert(*iter);
     }
   }
+
+  errs() << "DivergenceAnalysis::performAnalysis\n";
+  dumpVector(divInsts);
+
 }
 
 void DivergenceAnalysis::findBranches() {
@@ -112,11 +116,17 @@ void DivergenceAnalysis::findRegions() {
 // ie. during coarsening. This is done to be sure that this instructions are
 // computed after the extraction of divergent regions from the CFG.
 void DivergenceAnalysis::findOutermostInsts() {
+  errs() << "DivergenceAnalysis::findOutermostInsts\n";
   outermostDivInsts.clear();
+//  dumpVector(divInsts);
   for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();
        iter != iterEnd; ++iter) {
-    if (isOutermost(*iter, regions)) {
-      outermostDivInsts.push_back(*iter);
+    Instruction *inst = *iter;
+    inst->dump();
+    errs() << isOutermost(inst, regions) << "\n";
+    if (isOutermost(inst, regions)) {
+      inst->dump();
+      outermostDivInsts.push_back(inst);
     }
   }
 

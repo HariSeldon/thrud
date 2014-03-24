@@ -1,5 +1,4 @@
 // Required passes: -mem2reg and -instnamer
-// At the end perform CSE / DCE.
 
 #define DEBUG_TYPE "thread_coarsening"
 
@@ -102,7 +101,7 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   init();
   scaleNDRange();
   coarsenFunction();
-//  replacePlaceholders();
+  replacePlaceholders();
 
   return true;
 }
@@ -117,51 +116,3 @@ void ThreadCoarsening::init() {
 char ThreadCoarsening::ID = 0;
 static RegisterPass<ThreadCoarsening>
     X("tc", "OpenCL Thread Coarsening Transformation Pass");
-
-//  for (unsigned int CI = 1; CI < CF; ++CI) {
-//    // Mapping between the old instruction in the old region and the
-//    // new instructions in the new region. These new values have to be
-//    // applied to the instructions duplicated using the current
-//    // coarsening index.
-//    Map CIMap;
-//    // Initialize the map with the TId -> newTId mapping.
-//    InitializeMap(CIMap, TIds, newTIds, CI, CF);
-//
-//    InstPairs InstMapping;
-//    DuplicateInsts(Insts, InstMapping, CIMap, CI);
-//    InsertReplicatedInst(InstMapping, CIMap);
-//
-//    // Duplicate divergent regions.
-//    Map RegionsMap;
-//    ReplicateRegions(Regions, RegionsMap, CI, CIMap);
-//
-//    // Apply the RegionsMap to the replicated instructions.
-//    for (InstPairs::iterator I = InstMapping.begin(), E = InstMapping.end();
-//         I != E; ++I) {
-//      Instruction *inst = I->second;
-//      applyMap(inst, RegionsMap);
-//    }
-//  }
-//
-//  // Apply the map to all the instrucions.
-//  // This replaces tid with 2 * tid.
-//  Map map;
-//  InitializeMap(map, TIds, newTIds, 0, CF);
-//  for (RegionVector::iterator regionInfo = Regions.begin(), RE =
-// Regions.end();
-//       regionInfo != RE; ++regionInfo) {
-//    DivergentRegion *R = *regionInfo;
-//    BlockVector *Blocks = R->getBlocks();
-//    for (BlockVector::iterator BI = Blocks->begin(), BE = Blocks->end();
-//         BI != BE; ++BI) {
-//      BasicBlock *BB = *BI;
-//      for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
-//        if (!isPresent<Instruction>(I, InstTIds))
-//          applyMap(I, map);
-//      }
-//    }
-//  }
-//  // Apply the map to all the original divergent instructions.
-//  for (InstVector::iterator I = Insts.begin(), E = Insts.end(); I != E; ++I) {
-//    applyMap(*I, map);
-//  }

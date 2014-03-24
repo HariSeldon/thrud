@@ -18,7 +18,5 @@ $CLANG -x cl \
        -S -emit-llvm -fno-builtin -o - |
 $OPT -instnamer \
      -mem2reg \
-     -loop-unroll -unroll-threshold=1000 \
-     -inline -inline-threshold=10000 \
      -o - |
 $LLVM_DIS -o -  

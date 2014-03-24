@@ -28,7 +28,6 @@ void ThreadCoarsening::coarsenFunction() {
   InstVector &insts = sdda->getOutermostDivInsts();
 
   dumpVector(insts);
-  dumpVector(regions);
 
   // Replicate instructions.
   std::for_each(

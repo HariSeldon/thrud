@@ -224,6 +224,7 @@ template void dumpSet(const BlockSet &toDump);
 
 //------------------------------------------------------------------------------
 template <class type> void dumpVector(const std::vector<type *> &toDump) {
+  errs() << "Size: " << toDump.size() << "\n";
   for (typename std::vector<type *>::const_iterator I = toDump.begin(),
                                                     E = toDump.end();
        I != E; ++I) {
@@ -233,6 +234,7 @@ template <class type> void dumpVector(const std::vector<type *> &toDump) {
 
 // Template specialization for BasicBlock.
 template <> void dumpVector(const BlockVector &toDump) {
+  errs() << "Size: " << toDump.size() << "\n";
   for (BlockVector::const_iterator I = toDump.begin(), E = toDump.end(); I != E;
        ++I) {
     errs() << (*I)->getName() << " -- ";
@@ -428,11 +430,11 @@ void BuildExitingPhiMap(BasicBlock *OldExiting, BasicBlock *NewExiting,
 }
 
 //------------------------------------------------------------------------------
-void remapBlocksInPHIs(BasicBlock *Target, BasicBlock *OldBlock,
-                       BasicBlock *NewBlock) {
-  Map PhiMap;
-  PhiMap[OldBlock] = NewBlock;
-  applyMapToPHIs(Target, PhiMap);
+void remapBlocksInPHIs(BasicBlock *block, BasicBlock *oldBlock,
+                       BasicBlock *newBlock) {
+  Map phiMap;
+  phiMap[oldBlock] = newBlock;
+  applyMapToPHIs(block, phiMap);
 }
 
 //------------------------------------------------------------------------------
