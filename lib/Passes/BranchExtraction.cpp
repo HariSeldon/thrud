@@ -87,6 +87,7 @@ bool BranchExtraction::runOnFunction(Function &F) {
        iter != iterEnd; ++iter) {
     DivergentRegion *region = *iter;
     region->fillRegion(dt, pdt);
+    InstVector &alive = region->getAlive();
   }
 
   return regions.size() != 0;
@@ -181,8 +182,12 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
     exitPhis.push_back(exitPhi);
 
     // Update divInsts.
-    divInsts.push_back(newPhi);
-    divInsts.push_back(exitPhi);
+    if (std::find(divInsts.begin(), divInsts.end(),
+                  static_cast<Instruction *>(phi)) !=
+        divInsts.end()) {
+      divInsts.push_back(newPhi);
+      divInsts.push_back(exitPhi);
+    }
   }
 
   unsigned int phiNumber = newPhis.size();

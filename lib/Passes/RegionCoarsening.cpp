@@ -117,16 +117,9 @@ void ThreadCoarsening::updatePlaceholdersWithAlive(CoarseningMap &aliveMap) {
                                mapEnd = aliveMap.end();
        mapIter != mapEnd; ++mapIter) {
     Instruction *alive = mapIter->first;
-    InstVector &coarsenedValues = mapIter->second;
+    InstVector &coarsenedInsts = mapIter->second;
 
-    // Update placeholder replacement map with alive values.
-    CoarseningMap::iterator phIter = phMap.find(alive);
-    if (phIter != phMap.end()) {
-      InstVector &coarsenedPhs = phIter->second;
-      for (unsigned int index = 0; index < factor - 1; ++index) {
-        phReplacementMap[coarsenedPhs[index]] = coarsenedValues[index];
-      }
-    }
+    updatePlaceholderMap(alive, coarsenedInsts);
   }
 }
 
@@ -170,12 +163,12 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
 
   // Replicate instructions in branchIndex region.
   InstVector insts = sdda->getDivInsts(region, branchIndex);
+  dumpVector(insts);
+  
   std::for_each(
       insts.begin(), insts.end(),
       std::bind1st(std::mem_fun(&ThreadCoarsening::replicateInst), this));
 
-  // FIXME pred is wrong!
-  BasicBlock *pred = firstRegion->getExiting();
   BasicBlock *topInsertionPoint = firstRegion->getExiting();
   BasicBlock *bottomInsertionPoint = region->getExiting();
   BasicBlock *replicatedExiting = NULL;
@@ -195,8 +188,6 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
     changeBlockTarget(topInsertionPoint, newRegion->getHeader());
     changeBlockTarget(newRegion->getExiting(), bottomInsertionPoint);
 
-//    // Update the phi nodes of the newly inserted header.
-//    remapBlocksInPHIs(newRegion->getHeader(), pred, topInsertionPoint);
     // Update the phi nodes in the exit block.
     remapBlocksInPHIs(bottomInsertionPoint, region->getExiting(),
                       newRegion->getExiting());
@@ -209,14 +200,16 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
     updateAliveMap(aliveMap, valueMap);
   }
 
-  // Remove old region header.
-  region->getHeader()->getTerminator()->eraseFromParent();
-  region->getHeader()->eraseFromParent();
+  dumpCoarseningMap(phMap);
 
   // Add new phi nodes to the exit block.
   updateExitPhiNodes(region->getExiting(), mergedSubregionExiting,
                      aliveFromMerged, firstRegionMap, replicatedExiting,
                      aliveMap);
+
+  // Remove old region header.
+  region->getHeader()->getTerminator()->eraseFromParent();
+  region->getHeader()->eraseFromParent();
 }
 
 // -----------------------------------------------------------------------------
@@ -317,14 +310,12 @@ void ThreadCoarsening::updateExitPhiNodes(BasicBlock *block,
         phi = tmpPhi;
       }
     }
-    assert(phi != NULL && "Missing phis");
+    assert(phi != NULL && "Missing phi");
 
     phi->dump();
     unsigned int toKeep = phi->getBasicBlockIndex(mergedSubregionExiting);
     phi->removeIncomingValue(1 - toKeep);
     phi->addIncoming(clonedAliveInst, replicatedExiting);
-
-    errs() << "cphis:\n";
 
     // Go through the values matching the phi node in the phMap.
     InstVector &coarsenedPhis = phMap.find(phi)->second;
@@ -349,10 +340,13 @@ void ThreadCoarsening::updateExitPhiNodes(BasicBlock *block,
 
       ++counter;
     }
+
+    updatePlaceholderMap(phi, coarsenedPhis);
+
   }
 }
 
-
+// -----------------------------------------------------------------------------
 BasicBlock *ThreadCoarsening::createTopBranch(DivergentRegion *region) {
   BasicBlock *pred = getPredecessor(region, loopInfo);
   BasicBlock *header = region->getHeader();
@@ -373,6 +367,7 @@ BasicBlock *ThreadCoarsening::createTopBranch(DivergentRegion *region) {
   return newHeader;
 }
 
+// -----------------------------------------------------------------------------
 DivergentRegion *ThreadCoarsening::createCascadingFirstRegion(
     DivergentRegion *region, BasicBlock *pred, unsigned int branchIndex,
     Map &valueMap) {
@@ -399,6 +394,7 @@ DivergentRegion *ThreadCoarsening::createCascadingFirstRegion(
   return firstRegion;
 }
 
+// -----------------------------------------------------------------------------
 Instruction *
 ThreadCoarsening::insertBooleanReduction(Instruction *base, InstVector &insts,
                                          llvm::Instruction::BinaryOps binOp) {

@@ -101,6 +101,9 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   init();
   scaleNDRange();
   coarsenFunction();
+
+  //F.getParent()->dump();
+
   replacePlaceholders();
 
   return true;

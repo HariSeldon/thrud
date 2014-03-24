@@ -62,12 +62,20 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
   }
   cMap.insert(std::pair<Instruction *, InstVector>(inst, current));
 
+  updatePlaceholderMap(inst, current);
+}
+
+//------------------------------------------------------------------------------
+void ThreadCoarsening::updatePlaceholderMap(Instruction *inst, InstVector &coarsenedInsts) {
+  errs() << "ThreadCoarsening::updatePlaceholderMap\n";
+
   // Update placeholder replacement map.
   CoarseningMap::iterator phIter = phMap.find(inst);
   if (phIter != phMap.end()) {
-    InstVector &V = phIter->second;
-    for (unsigned int index = 0; index < V.size(); ++index) {
-      phReplacementMap[V[index]] = current[index];
+    errs() << "Found!\n";
+    InstVector &coarsenedPhs = phIter->second;
+    for (unsigned int index = 0; index < coarsenedPhs.size(); ++index) {
+      phReplacementMap[coarsenedPhs[index]] = coarsenedInsts[index];
     }
   }
 }
@@ -153,9 +161,9 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replacePlaceholders() {
-//  errs() << "ThreadCoarsening::replacePlaceholders\n";
-//  dumpCoarseningMap(phMap);
-//  dump(phReplacementMap);
+  errs() << "ThreadCoarsening::replacePlaceholders\n";
+  dumpCoarseningMap(phMap);
+  ::dump(phReplacementMap);
 
   // Iterate over placeholder map.
   for (CoarseningMap::iterator mapIter = phMap.begin(), mapEnd = phMap.end();
@@ -169,8 +177,9 @@ void ThreadCoarsening::replacePlaceholders() {
       //if(replacement == NULL) {
       //  ph->eraseFromParent();
       //}
-      assert(replacement != NULL && "Missing replacement value");
-      ph->replaceAllUsesWith(replacement);
+ //     assert(replacement != NULL && "Missing replacement value");
+      if(replacement != NULL && ph != replacement)
+        ph->replaceAllUsesWith(replacement);
     }
   }
 }
