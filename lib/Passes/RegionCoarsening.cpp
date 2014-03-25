@@ -132,7 +132,7 @@ void ThreadCoarsening::replicateRegionTrueMerging(DivergentRegion *region) {
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
                                               unsigned int branchIndex) {
-  errs() << "ThreadCoarsening::replicateRegionMerging\n";
+//  errs() << "ThreadCoarsening::replicateRegionMerging\n";
 
   if (!region->areSubregionsDisjoint()) {
     assert(false && "Region merging is not possible");
@@ -156,7 +156,6 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
 
   // Replicate instructions in branchIndex region.
   InstVector insts = sdda->getDivInsts(region, branchIndex);
-  dumpVector(insts);
   std::for_each(
       insts.begin(), insts.end(),
       std::bind1st(std::mem_fun(&ThreadCoarsening::replicateInst), this));
@@ -347,23 +346,11 @@ void ThreadCoarsening::updateExitPhiNodes(BasicBlock *block,
 
 // -----------------------------------------------------------------------------
 BasicBlock *ThreadCoarsening::createTopBranch(DivergentRegion *region) {
-  errs() << "ThreadCoarsening::createTopBranch\n";
-  region->dump();
-
   BasicBlock *pred = getPredecessor(region, loopInfo);
-  errs() << "pred:\n";
-  pred->dump();
-  
   BasicBlock *header = region->getHeader();
-
-  header->dump();
-
   BranchInst *branch = dyn_cast<BranchInst>(header->getTerminator());
   Instruction *condition = dyn_cast<Instruction>(branch->getCondition());
   assert(condition != NULL && "The condition is not an instruction");
-  
-  condition->dump();
-
   CoarseningMap::iterator conditionIter = cMap.find(condition);
   assert(conditionIter != cMap.end() && "condition not in coarsening map");
   InstVector &cConditions = conditionIter->second;

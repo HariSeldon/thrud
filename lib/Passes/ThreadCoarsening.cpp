@@ -97,8 +97,6 @@ bool ThreadCoarsening::runOnFunction(Function &F) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   ndr = &getAnalysis<NDRange>();
 
-  dumpVector(sdda->getDivRegions());
-
   // Transform the kernel.
   init();
   scaleNDRange();
