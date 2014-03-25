@@ -3,6 +3,8 @@
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/Utils.h"
 
+#include "llvm/Analysis/LoopInfo.h"
+
 #include "llvm/IR/Module.h"
 
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -15,10 +17,6 @@ void ThreadCoarsening::replicateRegion(DivergentRegion *region) {
          "Header does not dominates Exiting");
   assert(pdt->dominates(region->getExiting(), region->getHeader()) &&
          "Exiting does not post dominate Header");
-
-  // Do not replicate if the region is strict.
-  if (region->isStrict())
-    return;
 
   switch (divRegionOption) {
   case FullReplication: {
@@ -136,6 +134,11 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
 
   if (!region->areSubregionsDisjoint()) {
     assert(false && "Region merging is not possible");
+    return replicateRegionClassic(region);
+  }
+
+  if (loopInfo->isLoopHeader(region->getHeader())) {
+//    assert(false && "Region merging is not possible, the region is a loop");
     return replicateRegionClassic(region);
   }
 

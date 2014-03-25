@@ -53,7 +53,7 @@ public:
   void findAliveValues();
 
   void analyze();
-  bool isStrict();
+  //bool isStrict();
   bool areSubregionsDisjoint();
 
   DivergentRegion *clone(const Twine &suffix, DominatorTree *dt,

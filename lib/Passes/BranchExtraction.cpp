@@ -114,8 +114,19 @@ void BranchExtraction::extractBranches(DivergentRegion *region) {
   }
 
   Instruction *firstNonPHI = exiting->getFirstNonPHI();
-  SplitBlock(exiting, firstNonPHI, this);
+  BasicBlock *newExiting = SplitBlock(exiting, firstNonPHI, this);
   region->setHeader(newHeader);
+
+  // Check is a region in the has as header exiting.
+  // If so replace it with new exiting.
+  RegionVector &regions = sdda->getDivRegions();
+  for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
+       iter != iterEnd; ++iter) {
+    DivergentRegion *region = *iter;
+    if(region->getHeader() == exiting) {
+      region->setHeader(newExiting);
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------
