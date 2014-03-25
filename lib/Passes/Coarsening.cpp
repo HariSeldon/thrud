@@ -27,8 +27,6 @@ void ThreadCoarsening::coarsenFunction() {
   RegionVector &regions = sdda->getOutermostDivRegions();
   InstVector &insts = sdda->getOutermostDivInsts();
 
-  dumpVector(insts);
-
   // Replicate instructions.
   std::for_each(
       insts.begin(), insts.end(),
@@ -42,9 +40,6 @@ void ThreadCoarsening::coarsenFunction() {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateInst(Instruction *inst) {
-  errs() << "ThreadCoarsening::replicateInst\n";
-  inst->dump();
-
   InstVector current;
   current.reserve(factor - 1);
   Instruction *bookmark = inst;
@@ -67,12 +62,9 @@ void ThreadCoarsening::replicateInst(Instruction *inst) {
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::updatePlaceholderMap(Instruction *inst, InstVector &coarsenedInsts) {
-  errs() << "ThreadCoarsening::updatePlaceholderMap\n";
-
   // Update placeholder replacement map.
   CoarseningMap::iterator phIter = phMap.find(inst);
   if (phIter != phMap.end()) {
-    errs() << "Found!\n";
     InstVector &coarsenedPhs = phIter->second;
     for (unsigned int index = 0; index < coarsenedPhs.size(); ++index) {
       phReplacementMap[coarsenedPhs[index]] = coarsenedInsts[index];
@@ -161,9 +153,9 @@ ThreadCoarsening::getCoarsenedInstruction(Instruction *inst,
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replacePlaceholders() {
-  errs() << "ThreadCoarsening::replacePlaceholders\n";
-  dumpCoarseningMap(phMap);
-  ::dump(phReplacementMap);
+//  errs() << "ThreadCoarsening::replacePlaceholders\n";
+//  dumpCoarseningMap(phMap);
+//  ::dump(phReplacementMap);
 
   // Iterate over placeholder map.
   for (CoarseningMap::iterator mapIter = phMap.begin(), mapEnd = phMap.end();

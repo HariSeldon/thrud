@@ -31,7 +31,8 @@ protected:
   void init();
   void findBranches();
   void findRegions();
-  void findOutermostInsts();
+  void findOutermostInsts(InstVector &insts, RegionVector &regions,
+                          InstVector &result);
   void findOutermostRegions();
 
 protected:

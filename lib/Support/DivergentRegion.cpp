@@ -86,7 +86,6 @@ void DivergentRegion::findAliveValues() {
     for (BasicBlock::iterator iterInst = block->begin(), instEnd = block->end();
          iterInst != instEnd; ++iterInst) {
       Instruction *inst = iterInst;
-      inst->dump();
 
       // Iterate over the uses of the instruction.
       for (Instruction::use_iterator iterUse = inst->use_begin(),

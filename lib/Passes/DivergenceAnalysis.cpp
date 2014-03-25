@@ -79,10 +79,6 @@ void DivergenceAnalysis::performAnalysis() {
         worklist.insert(*iter);
     }
   }
-
-  errs() << "DivergenceAnalysis::performAnalysis\n";
-  dumpVector(divInsts);
-
 }
 
 void DivergenceAnalysis::findBranches() {
@@ -115,34 +111,31 @@ void DivergenceAnalysis::findRegions() {
 // This is called only when the outermost instructions are acutally requrested,
 // ie. during coarsening. This is done to be sure that this instructions are
 // computed after the extraction of divergent regions from the CFG.
-void DivergenceAnalysis::findOutermostInsts() {
-  errs() << "DivergenceAnalysis::findOutermostInsts\n";
-  outermostDivInsts.clear();
-//  dumpVector(divInsts);
-  for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();
+void DivergenceAnalysis::findOutermostInsts(InstVector &insts,
+                                            RegionVector &regions,
+                                            InstVector &result) {
+  result.clear();
+  for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end();
        iter != iterEnd; ++iter) {
     Instruction *inst = *iter;
-    inst->dump();
-    errs() << isOutermost(inst, regions) << "\n";
     if (isOutermost(inst, regions)) {
-      inst->dump();
-      outermostDivInsts.push_back(inst);
+      result.push_back(inst);
     }
   }
 
-  // Remove from outermostDivInsts all the calls to builtin functions.
+  // Remove from result all the calls to builtin functions.
   InstVector oclIds = ndr->getTids();
-  InstVector result;
+  InstVector tmp;
 
-  size_t oldSize = outermostDivInsts.size();
+  size_t oldSize = result.size();
 
-  std::sort(outermostDivInsts.begin(), outermostDivInsts.end());
+  std::sort(result.begin(), result.end());
   std::sort(oclIds.begin(), oclIds.end());
-  std::set_difference(outermostDivInsts.begin(), outermostDivInsts.end(),
-                      oclIds.begin(), oclIds.end(), std::back_inserter(result));
-  outermostDivInsts.swap(result);
+  std::set_difference(result.begin(), result.end(), oclIds.begin(),
+                      oclIds.end(), std::back_inserter(tmp));
+  result.swap(tmp);
 
-  assert(outermostDivInsts.size() <= oldSize && "Wrong set difference");
+  assert(result.size() <= oldSize && "Wrong set difference");
 }
 
 void DivergenceAnalysis::findOutermostRegions() {
@@ -162,23 +155,26 @@ InstVector &DivergenceAnalysis::getDivInsts() { return divInsts; }
 InstVector &DivergenceAnalysis::getOutermostDivInsts() {
   // Use memoization.
   if (outermostDivInsts.empty())
-    findOutermostInsts();
+    findOutermostInsts(divInsts, regions, outermostDivInsts);
   return outermostDivInsts;
 }
 
 InstVector DivergenceAnalysis::getDivInsts(DivergentRegion *region,
                                            unsigned int branchIndex) {
-  InstVector result;
+  InstVector tmp;
   DivergentRegion &r = *region;
 
   for (InstVector::iterator iter = divInsts.begin(), iterEnd = divInsts.end();
        iter != iterEnd; ++iter) {
     Instruction *inst = *iter;
     if (containsInternally(r, inst)) {
-      result.push_back(inst);
+      tmp.push_back(inst);
     }
   }
 
+  RegionVector internalRegions = getDivRegions(region, branchIndex);
+  InstVector result;
+  findOutermostInsts(tmp, internalRegions, result);
   return result;
 }
 

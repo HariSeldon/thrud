@@ -43,7 +43,7 @@ private:
 
   // Coarsening.
   void coarsenFunction();
-  void replicateInst(Instruction *iNst);
+  void replicateInst(Instruction *inst);
   void updatePlaceholderMap(Instruction *inst, InstVector &coarsenedInsts);
 
   void replicateRegion(DivergentRegion *region);

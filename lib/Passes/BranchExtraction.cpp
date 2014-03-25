@@ -208,8 +208,9 @@ void BranchExtraction::isolateRegion(DivergentRegion *region) {
     PHINode *toDelete = *I;
 
     // Update divInsts.
-    InstVector::iterator iter = std::find(divInsts.begin(), divInsts.end(), static_cast<Instruction*>(toDelete));  
-    if(iter != divInsts.end()) {
+    InstVector::iterator iter = std::find(divInsts.begin(), divInsts.end(),
+                                          static_cast<Instruction *>(toDelete));
+    if (iter != divInsts.end()) {
       divInsts.erase(iter);
     }
 
