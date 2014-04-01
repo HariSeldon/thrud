@@ -47,6 +47,7 @@ void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index);
 
 // Prints to stderr the given map. For debug only.
 void dump(const Map &map);
+void dumpV2V(const V2VMap &map);
 
 // Replate all the usages of O with N.
 void replaceUses(Value *O, Value *N);

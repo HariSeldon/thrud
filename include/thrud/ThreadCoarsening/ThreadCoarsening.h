@@ -9,7 +9,6 @@
 #include "llvm/Pass.h"
 
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/RegionInfo.h"
 
 using namespace llvm;
 
@@ -94,7 +93,6 @@ private:
 
   PostDominatorTree *pdt;
   DominatorTree *dt;
-  RegionInfo *regionInfo;
   SingleDimDivAnalysis *sdda;
   LoopInfo *loopInfo;
   NDRange *ndr;

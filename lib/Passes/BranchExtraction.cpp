@@ -2,7 +2,7 @@
 
 #include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
-#include "thrud/ThreadCoarsening/BranchExtraction.h"
+#include "thrud/Support/BranchExtraction.h"
 
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/DivergentRegion.h"

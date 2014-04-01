@@ -430,7 +430,7 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
           continue;
       }
 
-      memoryStrides.push_back(SA.GetThreadStride(pointer));
+      memoryStrides.push_back(SA.getThreadStride(pointer));
     }
     if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
@@ -438,7 +438,7 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
         if (gep->getPointerAddressSpace() == LOCAL_AS)
           continue;
       }
-      memoryStrides.push_back(SA.GetThreadStride(pointer));
+      memoryStrides.push_back(SA.getThreadStride(pointer));
     }
   }
 }

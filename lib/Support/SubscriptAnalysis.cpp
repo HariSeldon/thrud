@@ -13,7 +13,7 @@ SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR,
     : SE(SE), NDR(NDR), Dir(Dir) {}
 
 //------------------------------------------------------------------------------
-int SubscriptAnalysis::GetThreadStride(Value *value) {
+int SubscriptAnalysis::getThreadStride(Value *value) {
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
   }
@@ -32,8 +32,11 @@ int SubscriptAnalysis::GetThreadStride(Value *value) {
   return result;
 }
 
+bool SubscriptAnalysis::isConsecutive(Value *value) {
+  return getThreadStride(value) == 4;
+}
+
 //------------------------------------------------------------------------------
-// WARNING: SCEV does not support %.
 int SubscriptAnalysis::AnalyzeSubscript(const SCEV *Scev) {
   NDRangePoint firstPoint(0, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
   NDRangePoint secondPoint(1, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);

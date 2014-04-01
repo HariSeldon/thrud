@@ -6,7 +6,7 @@ import time;
 
 KERNELS_DIRECTORY = "kernels";
 CL_EXTENSION = ".cl";
-CF = "2";
+CF = "4";
 CD = "0";
 ST = "1";
 DIV_REGION = "classic";
@@ -32,6 +32,9 @@ def runCommand(arguments):
 
   if runReturnCode != 0:
     print "\033[1;31m%s\033[1;m" % "Failure!";
+  else:
+    print "\033[1;32m%s\033[1;m" % "Ok!"
+    
 
 #  if runReturnCode != 0:
 #    if(runReturnCode == None):
@@ -44,7 +47,6 @@ def runCommand(arguments):
 #                                (commandOutput[0], commandOutput[1]));
 
   commandOutput = runProcess.communicate();
-
   return (commandOutput[0], commandOutput[1]);
 
 # ------------------------------------------------------------------------------

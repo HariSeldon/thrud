@@ -16,6 +16,7 @@ class PHINode;
 
 // New types.
 typedef ValueToValueMapTy Map;
+typedef llvm::ValueMap<llvm::Value*, llvm::Value*> V2VMap;
 typedef std::vector<Instruction *> InstVector;
 typedef std::vector<const Instruction *> ConstInstVector;
 typedef std::set<Instruction *> InstSet;

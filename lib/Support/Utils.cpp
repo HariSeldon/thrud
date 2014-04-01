@@ -138,6 +138,14 @@ void dump(const Map &map) {
 }
 
 //------------------------------------------------------------------------------
+void dumpV2V(const V2VMap &map) {
+  errs() << "==== Map ====\n";
+  for (V2VMap::const_iterator I = map.begin(), E = map.end(); I != E; ++I)
+    errs() << I->first->getName() << " -> " << I->second->getName() << "\n";
+  errs() << "=============\n";
+}
+
+//------------------------------------------------------------------------------
 void replaceUses(Value *oldValue, Value *newValue) {
   std::vector<User *> uses;
   std::copy(oldValue->use_begin(), oldValue->use_end(),

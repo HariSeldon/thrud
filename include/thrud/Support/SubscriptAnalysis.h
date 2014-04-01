@@ -15,7 +15,8 @@ public:
 
 public:
   int AnalyzeSubscript(const SCEV *Scev);
-  int GetThreadStride(Value *value);
+  int getThreadStride(Value *value);
+  bool isConsecutive(Value *value);
 
 private:
   ScalarEvolution *SE;

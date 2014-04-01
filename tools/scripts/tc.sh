@@ -19,9 +19,10 @@ $CLANG -x cl \
        -S -emit-llvm -fno-builtin -o - | \
 $OPT -mem2reg -instnamer \
      -load $LIB_THRUD -be -tc \
-     -coarsening-factor 4 \
+     -coarsening-factor 16 \
      -coarsening-direction 0 \
      -coarsening-stride 1 \
-     -div-region-mgt=merge-true \
+     -div-region-mgt=classic \
      -o - | \
-${OPT} -dot-cfg
+#${LLVM_DIS} -o -  
+${OPT} -dot-cfg-only
