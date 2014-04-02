@@ -87,7 +87,6 @@ bool BranchExtraction::runOnFunction(Function &F) {
        iter != iterEnd; ++iter) {
     DivergentRegion *region = *iter;
     region->fillRegion(dt, pdt);
-    InstVector &alive = region->getAlive();
   }
 
   return regions.size() != 0;

@@ -209,6 +209,7 @@ void NDRange::dump() {
 
 // -----------------------------------------------------------------------------
 void NDRange::init() {
+  oclInsts.clear();
   // A vector per dimension.
   oclInsts.reserve(DIRECTION_NUMBER);
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {

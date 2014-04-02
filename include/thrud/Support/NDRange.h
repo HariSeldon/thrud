@@ -67,7 +67,6 @@ private:
 
 
 private:
-  Function *kernel;
   std::vector<std::map<std::string, InstVector> > oclInsts;
 };
 
