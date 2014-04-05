@@ -27,9 +27,6 @@ void ThreadCoarsening::coarsenFunction() {
   RegionVector &regions = sdda->getOutermostDivRegions();
   InstVector &insts = sdda->getOutermostDivInsts();
 
-  dumpVector(insts);
-  dumpVector(regions);
-
   // Replicate instructions.
   std::for_each(
       insts.begin(), insts.end(),

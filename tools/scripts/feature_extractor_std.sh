@@ -14,7 +14,7 @@ TMP_NAME=$THRUD_DIR/tmp.ll
 LINKER_OUTPUT=$THRUD_DIR/linked.bc
 EXTRACTOR_INPUT=$THRUD_DIR/extractor_input.bc
 
-OCLDEF=$THRUD_DIR/ocldef.h
+OCLDEF=$THRUD_DIR/opencl_spir.h
 OPTIMIZATION=-O3
 
 if [ $# -ne 3 ]
@@ -29,7 +29,7 @@ KERNEL_NAME=$3
 
 # Compile kernel.
 $CLANG -x cl \
-       -target nvptx \
+       -target spir \
        -include $OCLDEF \
        -O0 \
        $INPUT_FILE \
@@ -39,7 +39,7 @@ $CLANG -x cl \
 if [ $NVVM_MATH_FUNCTIONS -eq 1 ]
 then
   # Compile bridge.
-  $CLANG -target nvptx \
+  $CLANG -target spir \
           ${BRIDGE_NAME}.cpp \
          -fno-builtin \
          -S -emit-llvm \

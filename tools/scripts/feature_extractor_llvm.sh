@@ -1,59 +1,3 @@
-#! /bin/bash
-
-#CLANG=clang
-#OPT=opt
-#LLVM_DIS=llvm-dis
-#AXTOR=axtor
-#LIB_THRUD=$HOME/root/lib/libThrud.so
-#
-#if [ $# -ne 5 ]
-#then
-#  echo "Must specify: input file, kernel name, cd, cf, st"
-#exit 1;
-#fi
-#
-#INPUT_FILE=$1
-#KERNEL_NAME=$2
-#COARSENING_DIRECTION=$3
-#COARSENING_FACTOR=$4
-#COARSENING_STRIDE=$5
-#
-#OCLDEF=$HOME/src/thrud/tools/scripts/ocldef.h
-#OPTIMIZATION=-O0
-#RANDOM_FILE=/tmp/tc_tmp${RANDOM}.cl
-#OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl
-#
-#$CLANG -x cl \
-#       -target nvptx \
-#       -include ${OCLDEF} \
-#       ${OPTIMIZATION} \
-#       ${INPUT_FILE} \
-#       -S -emit-llvm -fno-builtin -o - | \
-#$OPT -mem2reg \
-#     -inline -inline-threshold=10000 \
-#     -instnamer -load ${LIB_THRUD} -be -tc \
-#     -coarsening-factor ${COARSENING_FACTOR} \
-#     -coarsening-direction ${COARSENING_DIRECTION} \
-#     -coarsening-stride ${COARSENING_STRIDE} -o - |
-#${LLVM_DIS} -o ${RANDOM_FILE}
-#${AXTOR} ${RANDOM_FILE} -m OCL -o ${OUTPUT_FILE} &>  /dev/null
-#
-#rm ${RANDOM_FILE}
-#
-#$CLANG -x cl \
-#       -target nvptx \
-#       -include ${OCLDEF} \
-#       -O3 \
-#       ${OUTPUT_FILE} \
-#       -S -emit-llvm -fno-builtin -o - | \
-#$OPT -instnamer \
-#     -mem2reg \
-#     -inline -inline-threshold=10000 \
-#     -O3 -load ${LIB_THRUD} -opencl-instcount -count-kernel-name ${KERNEL_NAME} \
-#     -o /dev/null
-#
-#rm ${OUTPUT_FILE}
-
 CLANG=clang
 OPT=opt
 LLVM_DIS=llvm-dis
@@ -71,8 +15,9 @@ EXTRACTOR_INPUT=$THRUD_DIR/extractor_input.bc
 RANDOM_FILE=/tmp/tc_tmp${RANDOM}.cl
 OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl
 
-OCLDEF=$THRUD_DIR/ocldef.h
+OCLDEF=$THRUD_DIR/opencl_spir.h
 OPTIMIZATION=-O3
+TARGET=spir
 
 if [ $# -ne 6 ]
 then
@@ -89,7 +34,7 @@ COARSENING_STRIDE=$6
 
 # Compile kernel.
 $CLANG -x cl \
-       -target nvptx \
+       -target $TARGET \
        -include $OCLDEF \
        -O0 \
        $INPUT_FILE \
@@ -104,7 +49,7 @@ ${LLVM_DIS} -o ${RANDOM_FILE}
 ${AXTOR} ${RANDOM_FILE} -m OCL -o ${OUTPUT_FILE} &>  /dev/null
 
 $CLANG -x cl \
-       -target nvptx \
+       -target $TARGET \
        -include $OCLDEF \
        -O0 \
        $OUTPUT_FILE \
@@ -114,7 +59,7 @@ $CLANG -x cl \
 if [ $NVVM_MATH_FUNCTIONS -eq 1 ]
 then
   # Compile bridge.
-  $CLANG -target nvptx \
+  $CLANG -target $TARGET \
           ${BRIDGE_NAME}.cpp \
          -fno-builtin \
          -S -emit-llvm \
@@ -148,7 +93,7 @@ fi
 
 # Delete tmp files.
 rm -f ${BRIDGE_NAME}.ll
-rm -f $TMP_NAME
+#rm -f $TMP_NAME
 rm -f $LINKER_OUTPUT
 rm -f $EXTRACTOR_INPUT
 rm -f $RANDOM_FILE

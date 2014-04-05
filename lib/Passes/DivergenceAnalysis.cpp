@@ -252,7 +252,7 @@ void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<DominatorTree>();
   au.addRequired<NDRange>();
   au.addRequired<ControlDependenceAnalysis>();
-  //  au.setPreservesAll();
+  au.setPreservesAll();
 }
 
 bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
@@ -293,7 +293,7 @@ void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<DominatorTree>();
   au.addRequired<NDRange>();
   au.addRequired<ControlDependenceAnalysis>();
-  //  au.setPreservesAll();
+  au.setPreservesAll();
 }
 
 bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {

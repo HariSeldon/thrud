@@ -19,14 +19,14 @@ then
 fi
 
 
-OCLDEF=$HOME/src/thrud/tools/scripts/ocldef_intel.h
+OCLDEF=$HOME/src/thrud/tools/scripts/opencl_spir.h
 OPTIMIZATION=-O0
 TMP_FILE=/tmp/tc_tmp${RANDOM}.cl
 
 echo $TMP_FILE
 
 $CLANG -x cl \
-       -target nvptx \
+       -target spir \
        -include ${OCLDEF} \
        ${OPTIMIZATION} \
        ${INPUT_FILE} \
@@ -37,7 +37,6 @@ $OPT -mem2reg \
      -coarsening-direction ${COARSENING_DIRECTION} \
      -coarsening-stride ${COARSENING_STRIDE} -o - | \
 ${LLVM_DIS} -o ${TMP_FILE}
-cat ${TMP_FILE}
-#${AXTOR} ${TMP_FILE} -m OCL -o ${OUTPUT_FILE} 
-#
+${AXTOR} ${TMP_FILE} -m OCL -o ${OUTPUT_FILE} 
+
 rm ${TMP_FILE}

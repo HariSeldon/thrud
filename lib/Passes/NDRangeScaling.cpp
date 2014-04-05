@@ -10,6 +10,8 @@ Instruction *getAddInst(Value *value, unsigned int addend);
 Instruction *getAddInst(Value *V1, Value *V2);
 Instruction *getShiftInst(Value *value, unsigned int shift);
 Instruction *getAndInst(Value *value, unsigned int factor);
+Instruction *getDivInst(Value *value, unsigned int divisor);
+Instruction *getModuloInst(Value *value, unsigned int modulo);
 
 //------------------------------------------------------------------------------
 void ThreadCoarsening::scaleNDRange() {
@@ -33,29 +35,29 @@ void ThreadCoarsening::scaleSizes() {
 }
 
 //------------------------------------------------------------------------------
+// Scaling function: origTid = [newTid / st] * cf * st + newTid % st + subid * st
 void ThreadCoarsening::scaleIds() {
-  unsigned int logST = log2(stride);
   unsigned int cfst = factor * stride;
-  unsigned int st1 = stride - 1;
 
   InstVector tids = ndr->getTids(direction);
   for (InstVector::iterator instIter = tids.begin(), instEnd = tids.end();
        instIter != instEnd; ++instIter) {
     Instruction *inst = *instIter;
 
-    Instruction *shift = getShiftInst(inst, logST);
-    shift->insertAfter(inst);
-    Instruction *mul = getMulInst(shift, cfst);
-    mul->insertAfter(shift);
-    Instruction *andOp = getAndInst(inst, st1);
-    andOp->insertAfter(mul);
-    Instruction *base = getAddInst(andOp, mul);
-    base->insertAfter(andOp);
+    // Compute base of new tid.
+    Instruction *div = getDivInst(inst, stride); 
+    div->insertAfter(inst);
+    Instruction *mul = getMulInst(div, cfst);
+    mul->insertAfter(div);
+    Instruction *modulo = getModuloInst(inst, stride);
+    modulo->insertAfter(mul);
+    Instruction *base = getAddInst(mul, modulo);
+    base->insertAfter(modulo);
 
     // Replace uses of the threadId with the new base.
     replaceUses(inst, base);
-    andOp->setOperand(0, inst);
-    shift->setOperand(0, inst);
+    modulo->setOperand(0, inst);
+    div->setOperand(0, inst);
 
     // Compute the remaining thread ids.
     cMap.insert(std::pair<Instruction *, InstVector>(inst, InstVector()));
@@ -71,6 +73,45 @@ void ThreadCoarsening::scaleIds() {
     }
   }
 }
+
+//void ThreadCoarsening::scaleIds() {
+//  unsigned int logST = log2(stride);
+//  unsigned int cfst = factor * stride;
+//  unsigned int st1 = stride - 1;
+//
+//  InstVector tids = ndr->getTids(direction);
+//  for (InstVector::iterator instIter = tids.begin(), instEnd = tids.end();
+//       instIter != instEnd; ++instIter) {
+//    Instruction *inst = *instIter;
+//
+//    Instruction *shift = getShiftInst(inst, logST);
+//    shift->insertAfter(inst);
+//    Instruction *mul = getMulInst(shift, cfst);
+//    mul->insertAfter(shift);
+//    Instruction *andOp = getAndInst(inst, st1);
+//    andOp->insertAfter(mul);
+//    Instruction *base = getAddInst(andOp, mul);
+//    base->insertAfter(andOp);
+//
+//    // Replace uses of the threadId with the new base.
+//    replaceUses(inst, base);
+//    andOp->setOperand(0, inst);
+//    shift->setOperand(0, inst);
+//
+//    // Compute the remaining thread ids.
+//    cMap.insert(std::pair<Instruction *, InstVector>(inst, InstVector()));
+//    InstVector &current = cMap[base];
+//    current.reserve(factor - 1);
+//
+//    Instruction *bookmark = base;
+//    for (unsigned int index = 2; index <= factor; ++index) {
+//      Instruction *add = getAddInst(base, (index - 1) * stride);
+//      add->insertAfter(bookmark);
+//      current.push_back(add);
+//      bookmark = add;
+//    }
+//  }
+//}
 
 //------------------------------------------------------------------------------
 void ThreadVectorizing::widenTids() {
@@ -191,5 +232,23 @@ Instruction *getAndInst(Value *value, unsigned int factor) {
       BinaryOperator::Create(Instruction::And, value, intValue);
   andInst->setName(Twine(value->getName()) + "..And");
   return andInst;
+}
+
+Instruction *getDivInst(Value *value, unsigned int divisor) {
+  unsigned int width = getIntWidth(value);
+  ConstantInt *intValue = getConstantInt(divisor, width, value->getContext());
+  Instruction *divInst = 
+    BinaryOperator::Create(Instruction::UDiv, value, intValue);
+  divInst->setName(Twine(value->getName()) + "..Div");
+  return divInst;
+}
+
+Instruction *getModuloInst(Value *value, unsigned int modulo) {
+  unsigned int width = getIntWidth(value);
+  ConstantInt *intValue = getConstantInt(modulo, width, value->getContext());
+  Instruction *moduloInst = 
+    BinaryOperator::Create(Instruction::URem, value, intValue);
+  moduloInst->setName(Twine(value->getName()) + "..Rem");
+  return moduloInst;
 }
 

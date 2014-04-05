@@ -20,12 +20,12 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
   if (F.getName() != kernelName)
     return false;
 
-  PDT = &getAnalysis<PostDominatorTree>();
-  DT = &getAnalysis<DominatorTree>();
-  MDDA = &getAnalysis<MultiDimDivAnalysis>();
-  SDDA = &getAnalysis<SingleDimDivAnalysis>();
-  SE = &getAnalysis<ScalarEvolution>();
-  NDR = &getAnalysis<NDRange>();
+  pdt = &getAnalysis<PostDominatorTree>();
+  dt = &getAnalysis<DominatorTree>();
+  mdda = &getAnalysis<MultiDimDivAnalysis>();
+  sdda = &getAnalysis<SingleDimDivAnalysis>();
+  se = &getAnalysis<ScalarEvolution>();
+  ndr = &getAnalysis<NDRange>();
 
   visit(F);
   collector.dump();
@@ -33,14 +33,14 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
 }
 
 //------------------------------------------------------------------------------
-void OpenCLFeatureExtractor::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MultiDimDivAnalysis>();
-  AU.addRequired<SingleDimDivAnalysis>();
-  AU.addRequired<PostDominatorTree>();
-  AU.addRequired<DominatorTree>();
-  AU.addRequired<ScalarEvolution>();
-  AU.addRequired<NDRange>();
-  AU.setPreservesAll();
+void OpenCLFeatureExtractor::getAnalysisUsage(AnalysisUsage &au) const {
+  au.addRequired<MultiDimDivAnalysis>();
+  au.addRequired<SingleDimDivAnalysis>();
+  au.addRequired<PostDominatorTree>();
+  au.addRequired<DominatorTree>();
+  au.addRequired<ScalarEvolution>();
+  au.addRequired<NDRange>();
+  au.setPreservesAll();
 }
 
 //------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   BasicBlock *block = (BasicBlock *)&basicBlock;
   collector.instTypes["blocks"] += 1;
   collector.computeILP(block);
-  collector.computeMLP(block, DT, PDT);
+  collector.computeMLP(block, dt, pdt);
   collector.countInstsBlock(basicBlock);
   collector.countConstants(basicBlock);
   collector.countBarriers(basicBlock);
@@ -73,15 +73,15 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirectionCL);
+  collector.coalescingAnalysis(basicBlock, se, ndr, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitFunction(Function &function) {
   // Extract ThreadId values. 
-  collector.countDimensions(NDR);
+  collector.countDimensions(ndr);
   collector.countBranches(function);
   collector.countEdges(function);
-  collector.countDivInsts(function, MDDA, SDDA);
+  collector.countDivInsts(function, mdda, sdda);
   collector.countArgs(function);
 }

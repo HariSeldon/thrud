@@ -25,22 +25,24 @@ private:
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
 
 private:
-  const SCEV *ReplaceInExpr(const SCEV *Expr, const NDRangePoint &point,
-                            SCEVMap &Processed);
-  const SCEV *ReplaceInExpr(const SCEVAddRecExpr *Expr,
+  const SCEV *replaceInExpr(const SCEV *expr, const NDRangePoint &point,
+                            SCEVMap &processed);
+  const SCEV *replaceInExpr(const SCEVAddRecExpr *expr,
                             const NDRangePoint &point,
-                            SCEVMap &Processed);
-  const SCEV *ReplaceInExpr(const SCEVCommutativeExpr *Expr,
+                            SCEVMap &processed);
+  const SCEV *replaceInExpr(const SCEVCommutativeExpr *expr,
                             const NDRangePoint &point,
-                            SCEVMap &Processed);
-  const SCEV *ReplaceInExpr(const SCEVConstant *Expr, const NDRangePoint &point,
-                            SCEVMap &Processed);
-  const SCEV *ReplaceInExpr(const SCEVUnknown *Expr, const NDRangePoint &point,
-                            SCEVMap &Processed);
-  const SCEV *ReplaceInExpr(const SCEVUDivExpr *Expr, const NDRangePoint &point,
-                            SCEVMap &Processed);
-  const SCEV *ReplaceInPhi(PHINode *Phi, const NDRangePoint &point,
-                           SCEVMap &Processed);
+                            SCEVMap &processed);
+  const SCEV *replaceInExpr(const SCEVConstant *expr, const NDRangePoint &point,
+                            SCEVMap &processed);
+  const SCEV *replaceInExpr(const SCEVUnknown *expr, const NDRangePoint &point,
+                            SCEVMap &processed);
+  const SCEV *replaceInExpr(const SCEVUDivExpr *expr, const NDRangePoint &point,
+                            SCEVMap &processed);
+  const SCEV *replaceInExpr(const SCEVCastExpr *expr, const NDRangePoint &point,
+                            SCEVMap &processed);
+  const SCEV *replaceInPhi(PHINode *Phi, const NDRangePoint &point,
+                           SCEVMap &processed);
 };
 
 #endif

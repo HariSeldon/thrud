@@ -17,8 +17,9 @@ EXTRACTOR_INPUT=$THRUD_DIR/extractor_input.bc
 RANDOM_FILE=/tmp/tc_tmp${RANDOM}.cl
 OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl
 
-OCLDEF=$THRUD_DIR/ocldef.h
+OCLDEF=$THRUD_DIR/opencl_spir.h
 OPTIMIZATION=-O3
+TARGET=spir
 
 if [ $# -ne 6 ]
 then
@@ -35,7 +36,7 @@ COARSENING_STRIDE=$6
 
 # Compile kernel.
 $CLANG -x cl \
-       -target nvptx \
+       -target $TARGET \
        -include $OCLDEF \
        -O0 \
        $INPUT_FILE \
@@ -50,7 +51,7 @@ ${LLVM_DIS} -o ${RANDOM_FILE}
 ${AXTOR} ${RANDOM_FILE} -m OCL -o ${OUTPUT_FILE} &>  /dev/null
 
 $CLANG -x cl \
-       -target nvptx \
+       -target $TARGET \
        -include $OCLDEF \
        -O0 \
        $OUTPUT_FILE \
@@ -60,7 +61,7 @@ $CLANG -x cl \
 if [ $NVVM_MATH_FUNCTIONS -eq 1 ]
 then
   # Compile bridge.
-  $CLANG -target nvptx \
+  $CLANG -target $TARGET \
           ${BRIDGE_NAME}.cpp \
          -fno-builtin \
          -S -emit-llvm \

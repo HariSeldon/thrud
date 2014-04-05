@@ -1,3 +1,5 @@
 configure
 *.swp
 autoconf/autom4te.cache
+*.out
+*.files
