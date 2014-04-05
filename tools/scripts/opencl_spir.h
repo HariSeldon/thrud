@@ -5794,7 +5794,7 @@ void __attribute__((overloadable)) vstorea_half16_rtn(double16 data,size_t offse
 
 typedef uint cl_mem_fence_flags;
 
-void __attribute__((overloadable)) barrier(cl_mem_fence_flags flags);
+void barrier(cl_mem_fence_flags flags);
 
 // Explicit memory fence functions
 
