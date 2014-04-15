@@ -22,7 +22,7 @@ $OPT -mem2reg -instnamer \
      -coarsening-factor 2 \
      -coarsening-direction 0 \
      -coarsening-stride 1 \
-     -div-region-mgt=classic \
+     -div-region-mgt=merge-true \
      -o - | \
 ${LLVM_DIS} -o -  
 

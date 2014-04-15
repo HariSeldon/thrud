@@ -130,7 +130,8 @@ void ThreadCoarsening::replicateRegionTrueMerging(DivergentRegion *region) {
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
                                               unsigned int branchIndex) {
-//  errs() << "ThreadCoarsening::replicateRegionMerging\n";
+  errs() << "ThreadCoarsening::replicateRegionMerging\n";
+  region->dump();
 
   if (!region->areSubregionsDisjoint()) {
     assert(false && "Region merging is not possible");
@@ -164,6 +165,7 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
       std::bind1st(std::mem_fun(&ThreadCoarsening::replicateInst), this));
 
   RegionVector regions = sdda->getDivRegions(region, branchIndex);
+
   std::for_each(
       regions.begin(), regions.end(),
       std::bind1st(std::mem_fun(&ThreadCoarsening::replicateRegion), this));

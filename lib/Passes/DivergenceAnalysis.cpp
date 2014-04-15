@@ -190,15 +190,26 @@ RegionVector &DivergenceAnalysis::getOutermostDivRegions() {
 
 RegionVector DivergenceAnalysis::getDivRegions(DivergentRegion *region,
                                                unsigned int branchIndex) {
-  RegionVector result;
+
+  RegionVector tmpVector;
   DivergentRegion &r = *region;
   for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end();
        iter != iterEnd; ++iter) {
     DivergentRegion *currentRegion = *iter;
     if (containsInternally(r, currentRegion)) {
-      result.push_back(currentRegion);
+      tmpVector.push_back(currentRegion);
     }
   }
+
+  RegionVector result;
+  for (RegionVector::iterator iter = tmpVector.begin(), iterEnd = tmpVector.end();
+       iter != iterEnd; ++iter) {
+    DivergentRegion *region = *iter;
+    if (isOutermost(region, tmpVector)) {
+      result.push_back(region);
+    }
+  }
+
   return result;
 }
 

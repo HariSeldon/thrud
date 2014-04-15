@@ -209,22 +209,22 @@ DivergentRegion *DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
 void DivergentRegion::dump() {
   errs() << "Bounds: " << getHeader()->getName() << " -- "
          << getExiting()->getName() << "\n";
-  errs() << "Blocks: ";
-  for (DivergentRegion::iterator iter = begin(), iterEnd = end();
-       iter != iterEnd; ++iter) {
-    errs() << (*iter)->getName() << ", ";
-  }
-  errs() << "\nAlive: ";
-  dumpVector(alive);
-  errs() << "Condition: ";
-  switch (getCondition()) {
-  case DivergentRegion::EQ:
-    errs() << "EQUALS\n";
-    break;
-  case DivergentRegion::ND:
-    errs() << "ND\n";
-    break;
-  }
+//  errs() << "Blocks: ";
+//  for (DivergentRegion::iterator iter = begin(), iterEnd = end();
+//       iter != iterEnd; ++iter) {
+//    errs() << (*iter)->getName() << ", ";
+//  }
+//  errs() << "\nAlive: ";
+//  dumpVector(alive);
+//  errs() << "Condition: ";
+//  switch (getCondition()) {
+//  case DivergentRegion::EQ:
+//    errs() << "EQUALS\n";
+//    break;
+//  case DivergentRegion::ND:
+//    errs() << "ND\n";
+//    break;
+//  }
 }
 
 //------------------------------------------------------------------------------

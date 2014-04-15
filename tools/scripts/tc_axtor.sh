@@ -23,8 +23,6 @@ OCLDEF=$HOME/src/thrud/tools/scripts/opencl_spir.h
 OPTIMIZATION=-O0
 TMP_FILE=/tmp/tc_tmp${RANDOM}.cl
 
-echo $TMP_FILE
-
 $CLANG -x cl \
        -target spir \
        -include ${OCLDEF} \
