@@ -64,7 +64,7 @@ public:
   // Liveness ranges.
   std::vector<unsigned int> aliveOutBlocks;
   std::vector<float> avgLiveRange;
-  std::vector<int> memoryStrides;
+  std::vector<float> memoryStrides;
   void livenessAnalysis(BasicBlock &block);
   void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, NDRange *NDR,
                           int CoarseningDirection);

@@ -14,8 +14,8 @@ public:
   SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR, unsigned int Dir);
 
 public:
-  int AnalyzeSubscript(const SCEV *Scev);
-  int getThreadStride(Value *value);
+  int analyzeSubscript(const SCEV *Scev, std::vector<int> &result);
+  float getThreadStride(Value *value);
   bool isConsecutive(Value *value);
 
 private:
