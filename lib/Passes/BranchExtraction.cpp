@@ -89,9 +89,6 @@ bool BranchExtraction::runOnFunction(Function &F) {
     region->fillRegion(dt, pdt);
   }
 
-  dumpVector(regions);
-  errs() << "£££££££££££££££££££££££££££££££££££££££££££££££££\n";
-
   return regions.size() != 0;
 }
 

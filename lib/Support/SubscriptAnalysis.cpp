@@ -24,18 +24,8 @@ int SubscriptAnalysis::getThreadStride(Value *value) {
     return -1;
   }
 
-  value->dump();
-
   const SCEV *scev = SE->getSCEV(value);
-
-  scev->dump();
-
   int result = AnalyzeSubscript(scev);
-
-//  errs() << "Result: " << result << "\n";
-  exit(1);
-
-
   return result;
 }
 
@@ -45,13 +35,12 @@ bool SubscriptAnalysis::isConsecutive(Value *value) {
 
 //------------------------------------------------------------------------------
 int SubscriptAnalysis::AnalyzeSubscript(const SCEV *scev) {
+//  llvm::errs() << "Original SCEV: ";
+//  scev->dump();
   // Try with many points.
   for (unsigned int index = 0; index < WARP_SIZE - 1; ++index) {
     NDRangePoint firstPoint(index, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
     NDRangePoint secondPoint(index + 1, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
-  
-    //  llvm::errs() << "Original SCEV: ";
-    //  scev->dump();
   
     SCEVMap processed1;
     SCEVMap processed2;
@@ -181,14 +170,17 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVConstant *expr,
 const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
                                              const NDRangePoint &point,
                                              SCEVMap &processed) {
-  //  llvm::errs() << "SCEVUnknown: ";
-  //  expr->dump();
+//  llvm::errs() << "SCEVUnknown: ";
+//  expr->dump();
   Value *V = expr->getValue();
   // Implement actual replacement.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
 
     // Manage binary operations.
     if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
+//      llvm::errs() << "BinaryOperator: ";
+//      BinOp->dump();
+
       // Modulo.
       if (BinOp->getOpcode() == Instruction::URem) {
         const SCEV *Arg = SE->getSCEV(BinOp->getOperand(0));
@@ -206,7 +198,7 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
         return replaceInExpr(Div, point, processed);
       }
 
-      llvm::errs() << "Could not compute: ";
+      llvm::errs() << "Could not compute!\n";
       // All the rest.
       return SE->getCouldNotCompute();
     }
