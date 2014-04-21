@@ -40,7 +40,8 @@ float SubscriptAnalysis::getThreadStride(Value *value) {
   return analyzeSubscript(scev);
 }
 
-// FIXME this is broken.
+// FIXME this is broken. Restore the old function so to compute the interval
+// of consecutive threads.
 bool SubscriptAnalysis::isConsecutive(Value *value) {
   return getThreadStride(value) == 1.f;
 }
