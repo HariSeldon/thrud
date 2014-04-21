@@ -11,14 +11,23 @@
 #include <algorithm>
 #include <functional>
 
-const unsigned int WARP_SIZE = 32;
+int SubscriptAnalysis::WARP_SIZE = 32;
 
 SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR,
                                      unsigned int Dir)
     : SE(SE), NDR(NDR), Dir(Dir) {}
 
 //------------------------------------------------------------------------------
+int getTypeWidth(Type *type) {
+  assert(type->isPointerTy() && "Type is not a pointer");
+  type = type->getPointerElementType();
+  return type->getPrimitiveSizeInBits() / 8;
+}
+
+//------------------------------------------------------------------------------
 float SubscriptAnalysis::getThreadStride(Value *value) {
+  int width = getTypeWidth(value->getType());
+
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
   }
@@ -28,93 +37,133 @@ float SubscriptAnalysis::getThreadStride(Value *value) {
   }
 
   const SCEV *scev = SE->getSCEV(value);
-  std::vector<int> result;
-  analyzeSubscript(scev, result);
-
-//  for(unsigned int index = 0; index < result.size(); ++index) {
-//    errs() << result[index] << "\n";
-//  }
-
-  int numberOf4 = std::count_if(result.begin(), result.end(),
-                                std::bind1st(std::equal_to<int>(), 4));
-  int numberOfMinusOne = std::count_if(result.begin(), result.end(),
-                                       std::bind1st(std::equal_to<int>(), -1));
-
-  if(numberOfMinusOne >= 1) {
-    return -2.f;
-  } 
-   
-  if(numberOf4 >= 1) {
-    return numberOf4 / (float)result.size(); 
-  } 
-
-  return 0.f;
+  return analyzeSubscript(scev);
 }
 
+// FIXME this is broken.
 bool SubscriptAnalysis::isConsecutive(Value *value) {
   return getThreadStride(value) == 1.f;
 }
 
 //------------------------------------------------------------------------------
-int SubscriptAnalysis::analyzeSubscript(const SCEV *scev,
-                                        std::vector<int> &resultVector) {
-  resultVector.clear();
+float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
+  std::vector<const SCEV *> resultVector;
   resultVector.reserve(WARP_SIZE - 1);
 
-  //  llvm::errs() << "Original SCEV: ";
-  //  scev->dump();
-  // Try with many points.
   for (unsigned int index = 0; index < WARP_SIZE - 1; ++index) {
-    NDRangePoint firstPoint(index, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
-    NDRangePoint secondPoint(index + 1, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128,
-                             1);
+    NDRangePoint point(index, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
 
-    SCEVMap processed1;
-    SCEVMap processed2;
-    const SCEV *firstExpr = replaceInExpr(scev, firstPoint, processed1);
-    //llvm::errs() << "RESULT1: ";
-    //firstExpr->dump();
-    const SCEV *secondExpr = replaceInExpr(scev, secondPoint, processed2);
-    //llvm::errs() << "RESULT2: ";
-    //secondExpr->dump();
-
-    if (isa<SCEVCouldNotCompute>(firstExpr) ||
-        isa<SCEVCouldNotCompute>(secondExpr)) {
-      return -1;
+    SCEVMap processed;
+    const SCEV *expr = replaceInExpr(scev, point, processed);
+    if (isa<SCEVCouldNotCompute>(expr)) {
+      return 0;
     }
 
-    const SCEV *result = SE->getMinusSCEV(secondExpr, firstExpr);
-
-    //  llvm::errs() << "Difference result.\n";
-    //  result->dump();
-
-    if (result == NULL) {
-      return -1;
-    }
-
-    int numericResult = -1;
-    if (const SCEVAddRecExpr *AddRecSCEV = dyn_cast<SCEVAddRecExpr>(result)) {
-      result = AddRecSCEV->getStart();
-    }
-
-    if (const SCEVConstant *ConstSCEV = dyn_cast<SCEVConstant>(result)) {
-      const ConstantInt *value = ConstSCEV->getValue();
-      numericResult = (int)value->getValue().roundToDouble();
-    }
-
-    resultVector.push_back(numericResult);
+    resultVector.push_back(expr);
   }
-  return 0;
+
+  return analyzeRange(resultVector);
+}
+
+//------------------------------------------------------------------------------
+float SubscriptAnalysis::analyzeRange(const std::vector<const SCEV *> &scevs) {
+  const SCEV *first = scevs[0];
+  int width = getTypeWidth(first->getType());
+
+  const SCEV *unknown = getUnknownSCEV(first);
+  verifyUnknown(scevs, unknown);
+
+  // This could be done with a std::transform.
+  //std::transform(scevs.begin(), scevs.end(), scevs.begin(),
+  //std::bind2nd(std::mem_fun_ref(&SubscriptAnalysis::getMinusSCEV), unknown));
+  std::vector<const SCEV *> offsets;
+  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
+                                                 iterEnd = scevs.end();
+       iter != iterEnd; ++iter) {
+    const SCEV *currentSCEV = *iter;
+    offsets.push_back(SE->getMinusSCEV(currentSCEV, unknown));
+  }
+
+  std::vector<int> indices;
+  // This is a std::transform, again.
+  for (std::vector<const SCEV *>::const_iterator iter = offsets.begin(),
+                                                 iterEnd = offsets.end();
+       iter != iterEnd; ++iter) {
+
+    const SCEV *currentSCEV = *iter;
+
+    if (const SCEVAddRecExpr *AddRecSCEV =
+            dyn_cast<SCEVAddRecExpr>(currentSCEV)) {
+      currentSCEV = AddRecSCEV->getStart();
+    }
+
+    if (const SCEVConstant *ConstSCEV = dyn_cast<SCEVConstant>(currentSCEV)) {
+      const ConstantInt *value = ConstSCEV->getValue();
+      indices.push_back((int)value->getValue().roundToDouble());
+    }
+  }
+
+  std::transform(indices.begin(), indices.end(), indices.begin(),
+                 std::bind2nd(std::divides<int>(), width));
+
+  int min = *std::min_element(indices.begin(), indices.end());
+  int max = *std::max_element(indices.begin(), indices.end());
+
+  int firstCacheLine = min / WARP_SIZE;
+  int lastCacheLine = max / WARP_SIZE + 1;
+
+  float diff = (float)(lastCacheLine - firstCacheLine);
+  return (diff * width) / 4;
+}
+
+//------------------------------------------------------------------------------
+const SCEVUnknown *SubscriptAnalysis::getUnknownSCEV(const SCEV *scev) {
+  if (const SCEVUnknown *unknown = dyn_cast<SCEVUnknown>(scev)) {
+    return unknown;
+  }
+
+  if (const SCEVAddExpr *add = dyn_cast<SCEVAddExpr>(scev)) {
+    if (add->getNumOperands() != 2)
+      return NULL;
+
+    if (isa<SCEVConstant>(add->getOperand(0)) &&
+        isa<SCEVUnknown>(add->getOperand(1))) {
+      return dyn_cast<SCEVUnknown>(add->getOperand(1));
+    }
+
+    if (isa<SCEVConstant>(add->getOperand(1)) &&
+        isa<SCEVUnknown>(add->getOperand(0))) {
+      return dyn_cast<SCEVUnknown>(add->getOperand(0));
+    }
+
+    return NULL;
+  }
+
+  return NULL;
+}
+
+bool SubscriptAnalysis::verifyUnknown(const SCEV *scev, const SCEV *unknown) {
+  if (const SCEVAddExpr *add = dyn_cast<SCEVAddExpr>(scev)) {
+    return std::find(add->op_begin(), add->op_end(), unknown) != add->op_end();
+  }
+  return false;
+}
+
+bool SubscriptAnalysis::verifyUnknown(const std::vector<const SCEV *> &scevs,
+                                      const SCEV *unknown) {
+  bool ok = true;
+  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
+                                                 iterEnd = scevs.end();
+       iter != iterEnd; ++iter) {
+    ok &= verifyUnknown(*iter, unknown);
+  }
+  return ok;
 }
 
 //------------------------------------------------------------------------------
 const SCEV *SubscriptAnalysis::replaceInExpr(const SCEV *expr,
                                              const NDRangePoint &point,
                                              SCEVMap &processed) {
-
-  //  llvm::errs() << "Replace In Expr: ";
-  //  expr->dump();
-
   SCEVMap::iterator iter = processed.find(expr);
   if (iter != processed.end()) {
     return processed[expr];
@@ -137,10 +186,6 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEV *expr,
     result = replaceInExpr(tmp, point, processed);
 
   processed[expr] = result;
-  //  llvm::errs() << "-- expr: ";
-  //  expr->dump();
-  //  llvm::errs() << "-- Result: ";
-  //  result->dump();
 
   return result;
 }
@@ -296,3 +341,56 @@ const SCEV *SubscriptAnalysis::replaceInPhi(PHINode *Phi,
 
   return replaceInExpr(scev, point, processed);
 }
+
+////------------------------------------------------------------------------------
+//int SubscriptAnalysis::analyzeSubscript(const SCEV *scev,
+//                                        std::vector<int> &resultVector) {
+//  resultVector.clear();
+//  resultVector.reserve(WARP_SIZE - 1);
+//
+//  //  llvm::errs() << "Original SCEV: ";
+//  //  scev->dump();
+//  // Try with many points.
+//  for (unsigned int index = 0; index < WARP_SIZE - 1; ++index) {
+//    NDRangePoint firstPoint(index, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
+//    NDRangePoint secondPoint(index + 1, 0, 0, 0, 0, 0, 1024, 1024, 1, 128,
+// 128,
+//                             1);
+//
+//    SCEVMap processed1;
+//    SCEVMap processed2;
+//    const SCEV *firstExpr = replaceInExpr(scev, firstPoint, processed1);
+//    llvm::errs() << "RESULT1: ";
+//    firstExpr->dump();
+//    const SCEV *secondExpr = replaceInExpr(scev, secondPoint, processed2);
+//    llvm::errs() << "RESULT2: ";
+//    secondExpr->dump();
+//
+//    if (isa<SCEVCouldNotCompute>(firstExpr) ||
+//        isa<SCEVCouldNotCompute>(secondExpr)) {
+//      return -1;
+//    }
+//
+//    const SCEV *result = SE->getMinusSCEV(secondExpr, firstExpr);
+//
+//    //  llvm::errs() << "Difference result.\n";
+//    //  result->dump();
+//
+//    if (result == NULL) {
+//      return -1;
+//    }
+//
+//    int numericResult = -1;
+//    if (const SCEVAddRecExpr *AddRecSCEV = dyn_cast<SCEVAddRecExpr>(result)) {
+//      result = AddRecSCEV->getStart();
+//    }
+//
+//    if (const SCEVConstant *ConstSCEV = dyn_cast<SCEVConstant>(result)) {
+//      const ConstantInt *value = ConstSCEV->getValue();
+//      numericResult = (int)value->getValue().roundToDouble();
+//    }
+//
+//    resultVector.push_back(numericResult);
+//  }
+//  return 0;
+//}

@@ -14,7 +14,7 @@ public:
   SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR, unsigned int Dir);
 
 public:
-  int analyzeSubscript(const SCEV *Scev, std::vector<int> &result);
+  float analyzeSubscript(const SCEV *scev);
   float getThreadStride(Value *value);
   bool isConsecutive(Value *value);
 
@@ -23,8 +23,16 @@ private:
   NDRange *NDR;
   unsigned int Dir;
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
+  static int WARP_SIZE;
 
 private:
+  const SCEV* getMinusSCEV(const SCEV* first, const SCEV *second); 
+  float analyzeRange(const std::vector<const SCEV*> &scevs);
+  bool verifyUnknown(const SCEV* scev, const SCEV* unknown);
+  bool verifyUnknown(const std::vector<const SCEV*> &scevs, const SCEV* unknown);
+  const SCEVUnknown* getUnknownSCEV(const SCEV* scev);
+
+  // Replacing methods.
   const SCEV *replaceInExpr(const SCEV *expr, const NDRangePoint &point,
                             SCEVMap &processed);
   const SCEV *replaceInExpr(const SCEVAddRecExpr *expr,
