@@ -71,7 +71,17 @@ float SubscriptAnalysis::analyzeRange(const std::vector<const SCEV *> &scevs) {
   int width = getTypeWidth(first->getType());
 
   const SCEV *unknown = getUnknownSCEV(first);
+  if(unknown == NULL) {
+    return 32; 
+  }
+
   verifyUnknown(scevs, unknown);
+
+  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
+                                                 iterEnd = scevs.end();
+       iter != iterEnd; ++iter) {
+    (*iter)->dump();
+  }
 
   // This could be done with a std::transform.
   //std::transform(scevs.begin(), scevs.end(), scevs.begin(),
