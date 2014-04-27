@@ -21,7 +21,11 @@ SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR,
 int getTypeWidth(Type *type) {
   assert(type->isPointerTy() && "Type is not a pointer");
   type = type->getPointerElementType();
-  return type->getPrimitiveSizeInBits() / 8;
+  int result = type->getPrimitiveSizeInBits();
+  if(result == 0) {
+    return 32;
+  }
+  return result / 8;
 }
 
 //------------------------------------------------------------------------------
@@ -78,11 +82,11 @@ float SubscriptAnalysis::analyzeRange(const std::vector<const SCEV *> &scevs) {
 
   verifyUnknown(scevs, unknown);
 
-  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
-                                                 iterEnd = scevs.end();
-       iter != iterEnd; ++iter) {
-    (*iter)->dump();
-  }
+//  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
+//                                                 iterEnd = scevs.end();
+//       iter != iterEnd; ++iter) {
+//    (*iter)->dump();
+//  }
 
   // This could be done with a std::transform.
   //std::transform(scevs.begin(), scevs.end(), scevs.begin(),

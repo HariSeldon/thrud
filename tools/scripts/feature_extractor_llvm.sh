@@ -1,3 +1,5 @@
+#! /bin/bash
+
 CLANG=clang
 OPT=opt
 LLVM_DIS=llvm-dis
