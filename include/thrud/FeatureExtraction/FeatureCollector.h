@@ -64,7 +64,6 @@ public:
   // Liveness ranges.
   std::vector<unsigned int> aliveOutBlocks;
   std::vector<float> avgLiveRange;
-  std::vector<float> memoryStrides;
   void livenessAnalysis(BasicBlock &block);
   void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, NDRange *NDR,
                           int CoarseningDirection);
@@ -95,7 +94,11 @@ public:
   void loopCountBranches(const Function &function, LoopInfo *LI);
   void loopCountDivInsts(Function &function, MultiDimDivAnalysis *mdda,
                          SingleDimDivAnalysis *sdda, LoopInfo *LI);
-  
+public:
+  std::vector<float> loadStrides;
+  std::vector<float> storeStrides;
+  std::vector<float> localLoadStrides;
+  std::vector<float> localStoreStrides; 
 };
 
 #endif

@@ -74,7 +74,11 @@ template <> struct MappingTraits<FeatureCollector> {
     io.mapRequired("mlpPerBlock", collector.blockMLP);
     io.mapRequired("avgLiveRange", collector.avgLiveRange);
     io.mapRequired("aliveOut", collector.aliveOutBlocks);
-    io.mapRequired("memoryStrides", collector.memoryStrides);
+    // Memory strides.
+    io.mapRequired("loadStrides", collector.loadStrides);
+    io.mapRequired("storeStrides", collector.storeStrides);
+    io.mapRequired("localLoadStrides", collector.localLoadStrides);
+    io.mapRequired("localStoreStrides", collector.localStoreStrides);
   }
 };
 
@@ -423,22 +427,29 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
     llvm::Instruction *inst = iter;
+    // Load instruction.
     if (LoadInst *LI = dyn_cast<LoadInst>(inst)) {
       Value *pointer = LI->getOperand(0);
       if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if (gep->getPointerAddressSpace() == LOCAL_AS)
+        if (gep->getPointerAddressSpace() == LOCAL_AS) {
+          localLoadStrides.push_back(SA.getThreadStride(pointer));
           continue;
+        }
       }
 
-      memoryStrides.push_back(SA.getThreadStride(pointer));
+      loadStrides.push_back(SA.getThreadStride(pointer));
     }
+
+    // Store instruction.
     if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
       if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if (gep->getPointerAddressSpace() == LOCAL_AS)
+        if (gep->getPointerAddressSpace() == LOCAL_AS) {
+          localStoreStrides.push_back(SA.getThreadStride(pointer));
           continue;
+        }
       }
-      memoryStrides.push_back(SA.getThreadStride(pointer));
+      storeStrides.push_back(SA.getThreadStride(pointer));
     }
   }
 }
