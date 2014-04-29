@@ -435,9 +435,8 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
           localLoadStrides.push_back(SA.getThreadStride(pointer));
           continue;
         }
+        loadStrides.push_back(SA.getThreadStride(pointer));
       }
-
-      loadStrides.push_back(SA.getThreadStride(pointer));
     }
 
     // Store instruction.
@@ -448,8 +447,8 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
           localStoreStrides.push_back(SA.getThreadStride(pointer));
           continue;
         }
+        storeStrides.push_back(SA.getThreadStride(pointer));
       }
-      storeStrides.push_back(SA.getThreadStride(pointer));
     }
   }
 }
