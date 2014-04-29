@@ -24,10 +24,11 @@ private:
   unsigned int Dir;
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
   static int WARP_SIZE;
+  static int CACHELINE_SIZE;
 
 private:
   const SCEV* getMinusSCEV(const SCEV* first, const SCEV *second); 
-  float analyzeRange(const std::vector<const SCEV*> &scevs);
+  int computeTransactionNumber(const std::vector<const SCEV*> &scevs);
   bool verifyUnknown(const SCEV* scev, const SCEV* unknown);
   bool verifyUnknown(const std::vector<const SCEV*> &scevs, const SCEV* unknown);
   const SCEVUnknown* getUnknownSCEV(const SCEV* scev);

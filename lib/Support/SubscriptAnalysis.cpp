@@ -10,8 +10,12 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 
+// 32 threads in a warp.
 int SubscriptAnalysis::WARP_SIZE = 32;
+// 128 Bytes in a cache line.
+int SubscriptAnalysis::CACHELINE_SIZE = 128;
 
 SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR,
                                      unsigned int Dir)
@@ -53,9 +57,9 @@ bool SubscriptAnalysis::isConsecutive(Value *value) {
 //------------------------------------------------------------------------------
 float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
   std::vector<const SCEV *> resultVector;
-  resultVector.reserve(WARP_SIZE - 1);
+  resultVector.reserve(WARP_SIZE);
 
-  for (unsigned int index = 0; index < WARP_SIZE - 1; ++index) {
+  for (int index = 0; index < WARP_SIZE; ++index) {
     NDRangePoint point(index, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
 
     SCEVMap processed;
@@ -67,13 +71,16 @@ float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
     resultVector.push_back(expr);
   }
 
-  return analyzeRange(resultVector);
+  assert((int)resultVector.size() == WARP_SIZE && "Missing expressions");
+
+  return computeTransactionNumber(resultVector);
 }
 
 //------------------------------------------------------------------------------
-float SubscriptAnalysis::analyzeRange(const std::vector<const SCEV *> &scevs) {
+int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> &scevs) {
+  // Get type width.
   const SCEV *first = scevs[0];
-  int width = getTypeWidth(first->getType());
+//  int width = getTypeWidth(first->getType());
 
   const SCEV *unknown = getUnknownSCEV(first);
   if(unknown == NULL) {
@@ -81,12 +88,6 @@ float SubscriptAnalysis::analyzeRange(const std::vector<const SCEV *> &scevs) {
   }
 
   verifyUnknown(scevs, unknown);
-
-//  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
-//                                                 iterEnd = scevs.end();
-//       iter != iterEnd; ++iter) {
-//    (*iter)->dump();
-//  }
 
   // This could be done with a std::transform.
   //std::transform(scevs.begin(), scevs.end(), scevs.begin(),
@@ -119,16 +120,12 @@ float SubscriptAnalysis::analyzeRange(const std::vector<const SCEV *> &scevs) {
   }
 
   std::transform(indices.begin(), indices.end(), indices.begin(),
-                 std::bind2nd(std::divides<int>(), width));
+                 std::bind2nd(std::divides<int>(), CACHELINE_SIZE));
 
-  int min = *std::min_element(indices.begin(), indices.end());
-  int max = *std::max_element(indices.begin(), indices.end());
-
-  int firstCacheLine = min / WARP_SIZE;
-  int lastCacheLine = max / WARP_SIZE + 1;
-
-  float diff = (float)(lastCacheLine - firstCacheLine);
-  return (diff * width) / 4;
+  std::vector<int>::iterator uniqueEnd = std::unique(indices.begin(), indices.end());
+  int uniqueCacheLines = std::distance(indices.begin(), uniqueEnd);
+ 
+  return uniqueCacheLines;
 }
 
 //------------------------------------------------------------------------------
@@ -257,16 +254,14 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVConstant *expr,
 const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
                                              const NDRangePoint &point,
                                              SCEVMap &processed) {
-  //  llvm::errs() << "SCEVUnknown: ";
-  //  expr->dump();
   Value *V = expr->getValue();
   // Implement actual replacement.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
 
     // Manage binary operations.
     if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
-      //      llvm::errs() << "BinaryOperator: ";
-      //      BinOp->dump();
+      //llvm::errs() << "BinaryOperator: ";
+      //BinOp->dump();
 
       // Modulo.
       if (BinOp->getOpcode() == Instruction::URem) {
@@ -292,10 +287,8 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
 
     // Manage casts.
     if (IsIntCast(Inst)) {
-      //      llvm::errs() << "Cast!\n";
       CallInst *Call = dyn_cast<CallInst>(Inst);
       const SCEV *ArgSCEV = SE->getSCEV(Call->getArgOperand(0));
-      //      ArgSCEV->dump();
       return replaceInExpr(ArgSCEV, point, processed);
     }
 
@@ -308,8 +301,6 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
       return SE->getCouldNotCompute();
     unsigned int direction = NDR->getDirection(Inst);
     unsigned int coordinate = point.getCoordinate(type, direction);
-
-    //    llvm::errs() << "coo: " << type << " " << coordinate << "\n";
 
     return SE->getConstant(APInt(32, coordinate));
   }

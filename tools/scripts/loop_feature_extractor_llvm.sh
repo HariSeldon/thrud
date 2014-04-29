@@ -87,8 +87,8 @@ else
   $OPT $TMP_NAME \
        -instnamer \
        -mem2reg \
-       -inline -inline-threshold=10000 \
        $OPTIMIZATION \
+       -inline -inline-threshold=10000 \
        -load $LIB_THRUD -opencl-loop-instcount -count-loop-kernel-name $KERNEL_NAME -coarsening-direction 0 \
        -o /dev/null
 fi

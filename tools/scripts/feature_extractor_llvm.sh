@@ -18,7 +18,7 @@ RANDOM_FILE=/tmp/tc_tmp${RANDOM}.cl
 OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl
 
 OCLDEF=$THRUD_DIR/opencl_spir.h
-OPTIMIZATION=-O3
+OPTIMIZATION=-O0
 TARGET=spir
 
 if [ $# -ne 6 ]
@@ -87,8 +87,8 @@ else
   $OPT $TMP_NAME \
        -instnamer \
        -mem2reg \
-       -inline -inline-threshold=10000 \
        $OPTIMIZATION \
+       -inline -inline-threshold=10000 \
        -load $LIB_THRUD -opencl-instcount -count-kernel-name $KERNEL_NAME -coarsening-direction 0 \
        -o /dev/null
 fi

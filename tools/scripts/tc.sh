@@ -18,6 +18,7 @@ $CLANG -x cl \
        ${INPUT_FILE} \
        -S -emit-llvm -fno-builtin -o - | \
 $OPT -mem2reg -instnamer \
+     -inline -inline-threshold=10000 \
      -load $LIB_THRUD -be -tc \
      -coarsening-factor 2 \
      -coarsening-direction 0 \

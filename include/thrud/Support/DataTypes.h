@@ -1,3 +1,6 @@
+#ifndef DATA_TYPES_H
+#define DATA_TYPES_H
+
 #include "llvm/ADT/ValueMap.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -36,3 +39,5 @@ typedef std::stack<BasicBlock *> BlockStack;
 typedef std::deque<Instruction *> InstDeque;
 typedef std::deque<BasicBlock *> BlockDeque;
 typedef std::map<Instruction *, InstVector> CoarseningMap;
+
+#endif

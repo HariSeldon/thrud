@@ -36,67 +36,28 @@ void ThreadCoarsening::scaleSizes() {
 
 //------------------------------------------------------------------------------
 // Scaling function: origTid = [newTid / st] * cf * st + newTid % st + subid * st
-//void ThreadCoarsening::scaleIds() {
-//  unsigned int cfst = factor * stride;
-//
-//  InstVector tids = ndr->getTids(direction);
-//  for (InstVector::iterator instIter = tids.begin(), instEnd = tids.end();
-//       instIter != instEnd; ++instIter) {
-//    Instruction *inst = *instIter;
-//
-//    // Compute base of new tid.
-//    Instruction *div = getDivInst(inst, stride); 
-//    div->insertAfter(inst);
-//    Instruction *mul = getMulInst(div, cfst);
-//    mul->insertAfter(div);
-//    Instruction *modulo = getModuloInst(inst, stride);
-//    modulo->insertAfter(mul);
-//    Instruction *base = getAddInst(mul, modulo);
-//    base->insertAfter(modulo);
-//
-//    // Replace uses of the threadId with the new base.
-//    replaceUses(inst, base);
-//    modulo->setOperand(0, inst);
-//    div->setOperand(0, inst);
-//
-//    // Compute the remaining thread ids.
-//    cMap.insert(std::pair<Instruction *, InstVector>(inst, InstVector()));
-//    InstVector &current = cMap[base];
-//    current.reserve(factor - 1);
-//
-//    Instruction *bookmark = base;
-//    for (unsigned int index = 2; index <= factor; ++index) {
-//      Instruction *add = getAddInst(base, (index - 1) * stride);
-//      add->insertAfter(bookmark);
-//      current.push_back(add);
-//      bookmark = add;
-//    }
-//  }
-//}
-
 void ThreadCoarsening::scaleIds() {
-  unsigned int logST = log2(stride);
   unsigned int cfst = factor * stride;
-  unsigned int st1 = stride - 1;
 
   InstVector tids = ndr->getTids(direction);
   for (InstVector::iterator instIter = tids.begin(), instEnd = tids.end();
        instIter != instEnd; ++instIter) {
     Instruction *inst = *instIter;
 
-    Instruction *shift = getShiftInst(inst, logST);
-    shift->insertAfter(inst);
-    Instruction *mul = getMulInst(shift, cfst);
-    mul->insertAfter(shift);
-    Instruction *andOp = getAndInst(inst, st1);
-    andOp->insertAfter(mul);
-    Instruction *base = getAddInst(andOp, mul);
-    base->insertAfter(andOp);
+    // Compute base of new tid.
+    Instruction *div = getDivInst(inst, stride); 
+    div->insertAfter(inst);
+    Instruction *mul = getMulInst(div, cfst);
+    mul->insertAfter(div);
+    Instruction *modulo = getModuloInst(inst, stride);
+    modulo->insertAfter(mul);
+    Instruction *base = getAddInst(mul, modulo);
+    base->insertAfter(modulo);
 
     // Replace uses of the threadId with the new base.
     replaceUses(inst, base);
-    andOp->setOperand(0, inst);
-    shift->setOperand(0, inst);
+    modulo->setOperand(0, inst);
+    div->setOperand(0, inst);
 
     // Compute the remaining thread ids.
     cMap.insert(std::pair<Instruction *, InstVector>(inst, InstVector()));
@@ -112,6 +73,45 @@ void ThreadCoarsening::scaleIds() {
     }
   }
 }
+
+//void ThreadCoarsening::scaleIds() {
+//  unsigned int logST = log2(stride);
+//  unsigned int cfst = factor * stride;
+//  unsigned int st1 = stride - 1;
+//
+//  InstVector tids = ndr->getTids(direction);
+//  for (InstVector::iterator instIter = tids.begin(), instEnd = tids.end();
+//       instIter != instEnd; ++instIter) {
+//    Instruction *inst = *instIter;
+//
+//    Instruction *shift = getShiftInst(inst, logST);
+//    shift->insertAfter(inst);
+//    Instruction *mul = getMulInst(shift, cfst);
+//    mul->insertAfter(shift);
+//    Instruction *andOp = getAndInst(inst, st1);
+//    andOp->insertAfter(mul);
+//    Instruction *base = getAddInst(andOp, mul);
+//    base->insertAfter(andOp);
+//
+//    // Replace uses of the threadId with the new base.
+//    replaceUses(inst, base);
+//    andOp->setOperand(0, inst);
+//    shift->setOperand(0, inst);
+//
+//    // Compute the remaining thread ids.
+//    cMap.insert(std::pair<Instruction *, InstVector>(inst, InstVector()));
+//    InstVector &current = cMap[base];
+//    current.reserve(factor - 1);
+//
+//    Instruction *bookmark = base;
+//    for (unsigned int index = 2; index <= factor; ++index) {
+//      Instruction *add = getAddInst(base, (index - 1) * stride);
+//      add->insertAfter(bookmark);
+//      current.push_back(add);
+//      bookmark = add;
+//    }
+//  }
+//}
 
 //------------------------------------------------------------------------------
 void ThreadVectorizing::widenTids() {
