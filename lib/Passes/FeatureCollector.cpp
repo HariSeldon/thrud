@@ -420,9 +420,9 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::coalescingAnalysis(BasicBlock &block,
-                                          ScalarEvolution *SE, NDRange *NDR,
+                                          ScalarEvolution *SE, OpenCLEnvironment *ocl,
                                           int CoarseningDirection) {
-  SubscriptAnalysis SA(SE, NDR, CoarseningDirection);
+  SubscriptAnalysis SA(SE, ocl, CoarseningDirection);
 
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
@@ -435,6 +435,8 @@ void FeatureCollector::coalescingAnalysis(BasicBlock &block,
           localLoadStrides.push_back(SA.getThreadStride(pointer));
           continue;
         }
+        errs() << "!!!!! LOAD:\n";
+        inst->dump();
         loadStrides.push_back(SA.getThreadStride(pointer));
       }
     }

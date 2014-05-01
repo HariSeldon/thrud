@@ -88,7 +88,7 @@ bool NDRange::isTidInDirection(Instruction *inst, unsigned int direction) {
   return isLocalId || isGlobalId || isGroupId;
 }
 
-std::string NDRange::getType(Instruction *inst) {
+std::string NDRange::getType(Instruction *inst) const {
   if (isGlobal(inst))
     return GET_GLOBAL_ID;
   if (isLocal(inst))
@@ -104,7 +104,7 @@ std::string NDRange::getType(Instruction *inst) {
   return "";
 }
 
-unsigned int NDRange::getDirection(Instruction *inst) {
+unsigned int NDRange::getDirection(Instruction *inst) const {
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     bool result =
         isGlobal(inst, direction) || isLocal(inst, direction) ||
@@ -116,7 +116,7 @@ unsigned int NDRange::getDirection(Instruction *inst) {
   return -1;
 }
 
-bool NDRange::isGlobal(Instruction *inst) {
+bool NDRange::isGlobal(Instruction *inst) const {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGlobal(inst, direction);
@@ -124,7 +124,7 @@ bool NDRange::isGlobal(Instruction *inst) {
   return result;
 }
 
-bool NDRange::isLocal(Instruction *inst) {
+bool NDRange::isLocal(Instruction *inst) const {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isLocal(inst, direction);
@@ -132,7 +132,7 @@ bool NDRange::isLocal(Instruction *inst) {
   return result;
 }
 
-bool NDRange::isGlobalSize(Instruction *inst) {
+bool NDRange::isGlobalSize(Instruction *inst) const {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGlobalSize(inst, direction);
@@ -140,7 +140,7 @@ bool NDRange::isGlobalSize(Instruction *inst) {
   return result;
 }
 
-bool NDRange::isLocalSize(Instruction *inst) {
+bool NDRange::isLocalSize(Instruction *inst) const {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isLocalSize(inst, direction);
@@ -148,7 +148,7 @@ bool NDRange::isLocalSize(Instruction *inst) {
   return result;
 }
 
-bool NDRange::isGroupId(Instruction *inst) {
+bool NDRange::isGroupId(Instruction *inst) const {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGroupId(inst, direction);
@@ -156,7 +156,7 @@ bool NDRange::isGroupId(Instruction *inst) {
   return result;
 }
 
-bool NDRange::isGroupsNum(Instruction *inst) {
+bool NDRange::isGroupsNum(Instruction *inst) const {
   bool result = false;
   for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGroupsNum(inst, direction);
@@ -164,27 +164,27 @@ bool NDRange::isGroupsNum(Instruction *inst) {
   return result;
 }
 
-bool NDRange::isGlobal(Instruction *inst, unsigned int direction) {
+bool NDRange::isGlobal(Instruction *inst, unsigned int direction) const {
   return isPresentInDirection(inst, GET_GLOBAL_ID, direction);
 }
 
-bool NDRange::isLocal(Instruction *inst, unsigned int direction) {
+bool NDRange::isLocal(Instruction *inst, unsigned int direction) const {
   return isPresentInDirection(inst, GET_LOCAL_ID, direction);
 }
 
-bool NDRange::isGlobalSize(Instruction *inst, unsigned int direction) {
+bool NDRange::isGlobalSize(Instruction *inst, unsigned int direction) const {
   return isPresentInDirection(inst, GET_GLOBAL_SIZE, direction);
 }
 
-bool NDRange::isLocalSize(Instruction *inst, unsigned int direction) {
+bool NDRange::isLocalSize(Instruction *inst, unsigned int direction) const {
   return isPresentInDirection(inst, GET_LOCAL_SIZE, direction);
 }
 
-bool NDRange::isGroupId(Instruction *inst, unsigned int direction) {
+bool NDRange::isGroupId(Instruction *inst, unsigned int direction) const {
   return isPresentInDirection(inst, GET_GROUP_ID, direction);
 }
 
-bool NDRange::isGroupsNum(Instruction *inst, unsigned int direction) {
+bool NDRange::isGroupsNum(Instruction *inst, unsigned int direction) const {
   return isPresentInDirection(inst, GET_GROUPS_NUMBER, direction);
 }
 
@@ -229,9 +229,11 @@ void NDRange::init() {
 
 bool NDRange::isPresentInDirection(llvm::Instruction *inst,
                                    const std::string &functionName,
-                                   unsigned int direction) {
-  std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
-  const InstVector &insts = dirInsts[functionName];
+                                   unsigned int direction) const {
+  const std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
+  // Using find is the only way to query the map in a const way.
+  std::map<std::string, InstVector>::const_iterator iter = dirInsts.find(functionName);
+  const InstVector &insts = iter->second;
   return isPresent(inst, insts);
 }
 

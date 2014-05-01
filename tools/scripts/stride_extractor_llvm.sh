@@ -83,10 +83,11 @@ then
        -load $LIB_THRUD -opencl-instcount -count-kernel-name $KERNEL_NAME -coarsening-direction 0 \
        -o /dev/null
 else
+#  opt $TMP_NAME -instnamer -mem2reg -inline -inline-threshold=10000 -o - | llvm-dis -o -
   $OPT $TMP_NAME \
        -instnamer \
        -mem2reg \
-       -inline -inline-threshold=10000 \
+       -inline -inline-threshold=100000 \
        -load $LIB_THRUD -opencl-instcount -count-kernel-name $KERNEL_NAME -coarsening-direction 0 \
        -o /dev/null
 fi

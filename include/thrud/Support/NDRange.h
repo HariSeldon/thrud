@@ -30,22 +30,22 @@ public:
 
   bool isTid(Instruction *inst);
   bool isTidInDirection(Instruction *inst, unsigned int direction);
-  std::string getType(Instruction *inst);
-  unsigned int getDirection(Instruction *inst);
+  std::string getType(Instruction *inst) const;
+  unsigned int getDirection(Instruction *inst) const;
 
-  bool isGlobal(Instruction *inst);
-  bool isLocal(Instruction *inst);
-  bool isGlobalSize(Instruction *inst);
-  bool isLocalSize(Instruction *inst);
-  bool isGroupId(Instruction *inst);
-  bool isGroupsNum(Instruction *inst);
+  bool isGlobal(Instruction *inst) const;
+  bool isLocal(Instruction *inst) const;
+  bool isGlobalSize(Instruction *inst) const;
+  bool isLocalSize(Instruction *inst) const;
+  bool isGroupId(Instruction *inst) const;
+  bool isGroupsNum(Instruction *inst) const;
   
-  bool isGlobal(Instruction *inst, unsigned int direction);
-  bool isLocal(Instruction *inst, unsigned int direction);
-  bool isGlobalSize(Instruction *inst, unsigned int direction);
-  bool isLocalSize(Instruction *inst, unsigned int direction);
-  bool isGroupId(Instruction *inst, unsigned int direction);
-  bool isGroupsNum(Instruction *inst, unsigned int dimension);
+  bool isGlobal(Instruction *inst, unsigned int direction) const;
+  bool isLocal(Instruction *inst, unsigned int direction) const;
+  bool isGlobalSize(Instruction *inst, unsigned int direction) const;
+  bool isLocalSize(Instruction *inst, unsigned int direction) const;
+  bool isGroupId(Instruction *inst, unsigned int direction) const;
+  bool isGroupsNum(Instruction *inst, unsigned int dimension) const;
 
   void dump();
 
@@ -62,7 +62,7 @@ private:
   void init();
   bool isPresentInDirection(Instruction *inst,
                             const std::string &functionName,
-                            unsigned int direction);
+                            unsigned int direction) const;
   void findOpenCLFunctionCallsByNameAllDirs(std::string calleeName, Function *caller);
 
 

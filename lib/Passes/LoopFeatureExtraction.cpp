@@ -3,6 +3,7 @@
 #include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
 #include "thrud/Support/NDRange.h"
+#include "thrud/Support/OpenCLEnvironment.h"
 #include "thrud/Support/Utils.h"
 
 cl::opt<std::string> loopKernelName("count-loop-kernel-name", cl::init(""),
@@ -26,7 +27,8 @@ bool OpenCLLoopFeatureExtractor::runOnFunction(Function &F) {
   SDDA = &getAnalysis<SingleDimDivAnalysis>();
   LI = &getAnalysis<LoopInfo>();
   SE = &getAnalysis<ScalarEvolution>();
-  NDR = &getAnalysis<NDRange>();
+  ndr = &getAnalysis<NDRange>();
+  ocl = new OpenCLEnvironment(ndr);
 
   visit(F);
   collector.dump();
@@ -82,7 +84,7 @@ void OpenCLLoopFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, SE, NDR, CoarseningDirectionCL);
+  collector.coalescingAnalysis(basicBlock, SE, ocl, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------

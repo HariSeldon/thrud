@@ -7,6 +7,7 @@
 
 #include "thrud/Support/NDRange.h"
 #include "thrud/Support/NDRangePoint.h"
+#include "thrud/Support/OpenCLEnvironment.h"
 
 #include <algorithm>
 #include <functional>
@@ -17,9 +18,11 @@ int SubscriptAnalysis::WARP_SIZE = 32;
 // 128 Bytes in a cache line.
 int SubscriptAnalysis::CACHELINE_SIZE = 128;
 
-SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR,
+const int UNKNOWN_MEMORY_LOCATION = -1;
+
+SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, OpenCLEnvironment *ocl,
                                      unsigned int Dir)
-    : SE(SE), NDR(NDR), Dir(Dir) {}
+    : SE(SE), ocl(ocl), Dir(Dir) {}
 
 //------------------------------------------------------------------------------
 int getTypeWidth(Type *type) {
@@ -71,9 +74,14 @@ float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
     resultVector.push_back(expr);
   }
 
-  assert((int)resultVector.size() == WARP_SIZE && "Missing expressions");
 
-  return computeTransactionNumber(resultVector);
+  assert((int)resultVector.size() == WARP_SIZE && "Missing expressions");
+  int tn = computeTransactionNumber(resultVector);
+//  errs() << "Transaction number: " << tn << "\n";
+
+//  exit(1);
+
+  return tn;
 }
 
 //------------------------------------------------------------------------------
@@ -89,6 +97,8 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
 
   verifyUnknown(scevs, unknown);
 
+  assert((int)scevs.size() == WARP_SIZE && "Wrong number of SCEVs");
+
   // This could be done with a std::transform.
   //std::transform(scevs.begin(), scevs.end(), scevs.begin(),
   //std::bind2nd(std::mem_fun_ref(&SubscriptAnalysis::getMinusSCEV), unknown));
@@ -99,6 +109,15 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
     const SCEV *currentSCEV = *iter;
     offsets.push_back(SE->getMinusSCEV(currentSCEV, unknown));
   }
+
+  assert((int)offsets.size() == WARP_SIZE && "Wrong number of offsets");
+
+//  for (std::vector<const SCEV *>::const_iterator iter = offsets.begin(),
+//                                                 iterEnd = offsets.end();
+//       iter != iterEnd; ++iter) {
+//    errs() << "SCEV: ";
+//    (*iter)->dump();
+//  }
 
   std::vector<int> indices;
   // This is a std::transform, again.
@@ -112,12 +131,31 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
             dyn_cast<SCEVAddRecExpr>(currentSCEV)) {
       currentSCEV = AddRecSCEV->getStart();
     }
-
+ 
     if (const SCEVConstant *ConstSCEV = dyn_cast<SCEVConstant>(currentSCEV)) {
       const ConstantInt *value = ConstSCEV->getValue();
       indices.push_back((int)value->getValue().roundToDouble());
     }
+    else {
+      // The SCEV is not constant. I don't know which element is accessed.
+      indices.push_back(UNKNOWN_MEMORY_LOCATION);
+    }
   }
+
+  assert((int)indices.size() == WARP_SIZE && "Wrong number of indices");
+
+//  for(unsigned int index = 0; index < indices.size(); ++index) {
+//    errs() << indices[index] << " ";
+//  }
+//  errs() << "\n";
+
+  // If any of the indices is UNKNOWN_MEMORY_LOCATION do something special.
+  std::vector<int>::iterator unknownMemoryLocationPosition =
+      std::find(indices.begin(), indices.end(), UNKNOWN_MEMORY_LOCATION);
+
+  if(unknownMemoryLocationPosition != indices.end()) {
+    return WARP_SIZE;
+  } 
 
   std::transform(indices.begin(), indices.end(), indices.begin(),
                  std::bind2nd(std::divides<int>(), CACHELINE_SIZE));
@@ -254,9 +292,9 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVConstant *expr,
 const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
                                              const NDRangePoint &point,
                                              SCEVMap &processed) {
-  Value *V = expr->getValue();
+  Value *value = expr->getValue();
   // Implement actual replacement.
-  if (Instruction *Inst = dyn_cast<Instruction>(V)) {
+  if (Instruction *Inst = dyn_cast<Instruction>(value)) {
 
     // Manage binary operations.
     if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
@@ -280,7 +318,7 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
         return replaceInExpr(Div, point, processed);
       }
 
-      llvm::errs() << "Could not compute!\n";
+      //llvm::errs() << "Could not compute!\n";
       // All the rest.
       return SE->getCouldNotCompute();
     }
@@ -293,17 +331,28 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
     }
 
     // Manage phi nodes.
-    if (PHINode *phi = dyn_cast<PHINode>(V))
+    if (PHINode *phi = dyn_cast<PHINode>(value))
       return replaceInPhi(phi, point, processed);
 
-    std::string type = NDR->getType(Inst);
-    if (type == "")
+    const NDRange *ndr = ocl->getNDRange();
+    std::string type = ndr->getType(Inst);
+    if(type == "")
       return SE->getCouldNotCompute();
-    unsigned int direction = NDR->getDirection(Inst);
+
+    unsigned int direction = ndr->getDirection(Inst);
     unsigned int coordinate = point.getCoordinate(type, direction);
 
     return SE->getConstant(APInt(32, coordinate));
   }
+
+  if(Argument *argument = dyn_cast<Argument>(value)) {
+    std::map<llvm::Value*, int>& argMap = ocl->getMap();
+    std::map<llvm::Value*, int>::iterator iter = argMap.find(value);
+    if(iter != argMap.end()) {
+      return SE->getConstant(APInt(32, iter->second));
+    }
+  }
+
   return expr;
 }
 

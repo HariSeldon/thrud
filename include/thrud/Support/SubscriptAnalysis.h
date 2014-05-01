@@ -6,12 +6,12 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
-class NDRange;
 class NDRangePoint;
+class OpenCLEnvironment;
 
 class SubscriptAnalysis {
 public:
-  SubscriptAnalysis(ScalarEvolution *SE, NDRange *NDR, unsigned int Dir);
+  SubscriptAnalysis(ScalarEvolution *SE, OpenCLEnvironment *ocl, unsigned int Dir);
 
 public:
   float analyzeSubscript(const SCEV *scev);
@@ -20,7 +20,7 @@ public:
 
 private:
   ScalarEvolution *SE;
-  NDRange *NDR;
+  OpenCLEnvironment *ocl;
   unsigned int Dir;
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
   static int WARP_SIZE;

@@ -16,8 +16,8 @@ static RegisterPass<OpenCLFeatureExtractor> X("opencl-instcount",
                                               "Collect opencl features");
 
 //------------------------------------------------------------------------------
-bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
-  if (F.getName() != kernelName)
+bool OpenCLFeatureExtractor::runOnFunction(Function &function) {
+  if (function.getName() != kernelName)
     return false;
 
   pdt = &getAnalysis<PostDominatorTree>();
@@ -26,8 +26,10 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &F) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   se = &getAnalysis<ScalarEvolution>();
   ndr = &getAnalysis<NDRange>();
+  ocl = new OpenCLEnvironment(ndr);
+  ocl->setup(function);
 
-  visit(F);
+  visit(function);
   collector.dump();
   return false;
 }
@@ -73,7 +75,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, se, ndr, CoarseningDirectionCL);
+  collector.coalescingAnalysis(basicBlock, se, ocl, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------

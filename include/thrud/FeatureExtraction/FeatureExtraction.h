@@ -52,7 +52,8 @@ private:
   PostDominatorTree *pdt;
   DominatorTree *dt;
   ScalarEvolution *se;
-  NDRange *ndr;
   ValueVector TIds;
+  OpenCLEnvironment *ocl;
+  NDRange *ndr;
 };
 }

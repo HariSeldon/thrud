@@ -388,98 +388,104 @@ llvm::BinaryOperator *ThreadVectorizing::vectorizeBinaryOperator(
 }
 
 llvm::Value *ThreadVectorizing::vectorizeLoad(llvm::LoadInst *loadInst) {
-  // Get the load pointer.
-  llvm::Value *load_pointer = loadInst->getPointerOperand();
+  assert(false && "vectorizeLoad must be fixed");
+  return NULL;
 
-  llvm::GetElementPtrInst *gep =
-      llvm::dyn_cast<llvm::GetElementPtrInst>(load_pointer);
-
-  // If the store is not consecutive along the vectorizing dimension then
-  // it has to be replicated.
-  SubscriptAnalysis subscriptAnalysis(scalarEvolution, ndr, direction);
-  if (false == subscriptAnalysis.isConsecutive(gep)) {
-    return replicateInst(loadInst);
-  }
-
-  unsigned int operands_number = gep->getNumOperands();
-  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
-  last_operand = getVectorValue(last_operand);
-
-  last_operand = irBuilder->CreateExtractElement(
-      last_operand, irBuilder->getInt32(0), "extracted");
-
-  // Create the new gep.
-  llvm::GetElementPtrInst *new_gep =
-      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
-  new_gep->setOperand(operands_number - 1, last_operand);
-  load_pointer = irBuilder->Insert(new_gep);
-  load_pointer->setName("load_ptr");
-  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
-  toRemoveInsts.insert(gep);
-
-  llvm::Type *vector_load_type =
-      getVectorPointerType(loadInst->getPointerOperand()->getType());
-
-  load_pointer =
-      irBuilder->CreateBitCast(load_pointer, vector_load_type, "bitcast");
-
-  // Insert the vector load instruction into the function.
-  llvm::LoadInst *vector_load = new llvm::LoadInst(load_pointer);
-  vector_load->setAlignment(loadInst->getAlignment());
-  irBuilder->Insert(vector_load)->setName("vector_load");
-
-  return vector_load;
+//  // Get the load pointer.
+//  llvm::Value *load_pointer = loadInst->getPointerOperand();
+//
+//  llvm::GetElementPtrInst *gep =
+//      llvm::dyn_cast<llvm::GetElementPtrInst>(load_pointer);
+//
+//  // If the store is not consecutive along the vectorizing dimension then
+//  // it has to be replicated.
+//  SubscriptAnalysis subscriptAnalysis(scalarEvolution, ndr, direction);
+//  if (false == subscriptAnalysis.isConsecutive(gep)) {
+//    return replicateInst(loadInst);
+//  }
+//
+//  unsigned int operands_number = gep->getNumOperands();
+//  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
+//  last_operand = getVectorValue(last_operand);
+//
+//  last_operand = irBuilder->CreateExtractElement(
+//      last_operand, irBuilder->getInt32(0), "extracted");
+//
+//  // Create the new gep.
+//  llvm::GetElementPtrInst *new_gep =
+//      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
+//  new_gep->setOperand(operands_number - 1, last_operand);
+//  load_pointer = irBuilder->Insert(new_gep);
+//  load_pointer->setName("load_ptr");
+//  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
+//  toRemoveInsts.insert(gep);
+//
+//  llvm::Type *vector_load_type =
+//      getVectorPointerType(loadInst->getPointerOperand()->getType());
+//
+//  load_pointer =
+//      irBuilder->CreateBitCast(load_pointer, vector_load_type, "bitcast");
+//
+//  // Insert the vector load instruction into the function.
+//  llvm::LoadInst *vector_load = new llvm::LoadInst(load_pointer);
+//  vector_load->setAlignment(loadInst->getAlignment());
+//  irBuilder->Insert(vector_load)->setName("vector_load");
+//
+//  return vector_load;
 }
 
 llvm::Value *ThreadVectorizing::vectorizeStore(llvm::StoreInst *storeInst) {
-  // Get the store pointer.
-  llvm::Value *store_pointer = storeInst->getPointerOperand();
-  llvm::GetElementPtrInst *gep =
-      llvm::dyn_cast<llvm::GetElementPtrInst>(store_pointer);
+  assert(false && "vectorizeStore must be fixed");
+  return NULL;
 
-  // If the store is not consecutive along the vectorizing dimension then
-  // it has to be replicated.
-  SubscriptAnalysis subscriptAnalysis(scalarEvolution, ndr, direction);
-  if (false == subscriptAnalysis.isConsecutive(gep)) {
-    return replicateInst(storeInst);
-  }
-
-  unsigned int operands_number = gep->getNumOperands();
-  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
-  last_operand = getVectorValue(last_operand);
-
-  last_operand = irBuilder->CreateExtractElement(
-      last_operand, irBuilder->getInt32(0), "extracted");
-
-  // Create the new gep.
-  llvm::GetElementPtrInst *new_gep =
-      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
-  new_gep->setOperand(operands_number - 1, last_operand);
-  new_gep = irBuilder->Insert(new_gep);
-  new_gep->setName("store_ptr");
-  store_pointer = new_gep;
-  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
-  toRemoveInsts.insert(gep);
-
-  // Get the store type.
-  llvm::Type *scalar_store_type = new_gep->getPointerOperandType();
-
-  // Create the vector store pointer type.
-  llvm::Type *vector_store_type = getVectorPointerType(scalar_store_type);
-
-  store_pointer =
-      irBuilder->CreateBitCast(store_pointer, vector_store_type, "bitcast");
-
-  // Get the value to store to memory.
-  llvm::Value *to_store_value = getVectorValue(storeInst->getValueOperand());
-
-  // Insert the vector store instruction into the function.
-  llvm::StoreInst *vector_store =
-      irBuilder->CreateStore(to_store_value, store_pointer, "vector_store");
-  vector_store->setAlignment(storeInst->getAlignment());
-  vector_store->setVolatile(storeInst->isVolatile());
-
-  return vector_store;
+//  // Get the store pointer.
+//  llvm::Value *store_pointer = storeInst->getPointerOperand();
+//  llvm::GetElementPtrInst *gep =
+//      llvm::dyn_cast<llvm::GetElementPtrInst>(store_pointer);
+//
+//  // If the store is not consecutive along the vectorizing dimension then
+//  // it has to be replicated.
+//  SubscriptAnalysis subscriptAnalysis(scalarEvolution, ndr, direction);
+//  if (false == subscriptAnalysis.isConsecutive(gep)) {
+//    return replicateInst(storeInst);
+//  }
+//
+//  unsigned int operands_number = gep->getNumOperands();
+//  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
+//  last_operand = getVectorValue(last_operand);
+//
+//  last_operand = irBuilder->CreateExtractElement(
+//      last_operand, irBuilder->getInt32(0), "extracted");
+//
+//  // Create the new gep.
+//  llvm::GetElementPtrInst *new_gep =
+//      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
+//  new_gep->setOperand(operands_number - 1, last_operand);
+//  new_gep = irBuilder->Insert(new_gep);
+//  new_gep->setName("store_ptr");
+//  store_pointer = new_gep;
+//  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
+//  toRemoveInsts.insert(gep);
+//
+//  // Get the store type.
+//  llvm::Type *scalar_store_type = new_gep->getPointerOperandType();
+//
+//  // Create the vector store pointer type.
+//  llvm::Type *vector_store_type = getVectorPointerType(scalar_store_type);
+//
+//  store_pointer =
+//      irBuilder->CreateBitCast(store_pointer, vector_store_type, "bitcast");
+//
+//  // Get the value to store to memory.
+//  llvm::Value *to_store_value = getVectorValue(storeInst->getValueOperand());
+//
+//  // Insert the vector store instruction into the function.
+//  llvm::StoreInst *vector_store =
+//      irBuilder->CreateStore(to_store_value, store_pointer, "vector_store");
+//  vector_store->setAlignment(storeInst->getAlignment());
+//  vector_store->setVolatile(storeInst->isVolatile());
+//
+//  return vector_store;
 }
 
 llvm::SelectInst *
