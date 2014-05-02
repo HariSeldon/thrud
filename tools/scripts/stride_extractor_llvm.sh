@@ -88,7 +88,7 @@ else
        -instnamer \
        -mem2reg \
        -inline -inline-threshold=100000 \
-       -load $LIB_THRUD -opencl-instcount -count-kernel-name $KERNEL_NAME -coarsening-direction 0 \
+       -load $LIB_THRUD -symbolic-execution -symbolic-kernel-name $KERNEL_NAME \
        -o /dev/null
 fi
 

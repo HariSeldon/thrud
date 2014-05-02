@@ -66,8 +66,8 @@ public:
   std::vector<unsigned int> aliveOutBlocks;
   std::vector<float> avgLiveRange;
   void livenessAnalysis(BasicBlock &block);
-  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, OCLEnv *OCL,
-                          int CoarseningDirection);
+//  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, OCLEnv *OCL,
+//                          int CoarseningDirection);
 
   // Phis.
   // Map phi name with arg number.

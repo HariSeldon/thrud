@@ -418,42 +418,44 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
   aliveOutBlocks.push_back(aliveValues);
 }
 
-//------------------------------------------------------------------------------
-void FeatureCollector::coalescingAnalysis(BasicBlock &block,
-                                          ScalarEvolution *SE, OCLEnv *ocl,
-                                          int CoarseningDirection) {
-  SubscriptAnalysis SA(SE, ocl, CoarseningDirection);
-
-  for (BasicBlock::iterator iter = block.begin(), end = block.end();
-       iter != end; ++iter) {
-    llvm::Instruction *inst = iter;
-    // Load instruction.
-    if (LoadInst *LI = dyn_cast<LoadInst>(inst)) {
-      Value *pointer = LI->getOperand(0);
-      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if (gep->getPointerAddressSpace() == LOCAL_AS) {
-          localLoadStrides.push_back(SA.getThreadStride(pointer));
-          continue;
-        }
-        errs() << "!!!!! LOAD:\n";
-        inst->dump();
-        loadStrides.push_back(SA.getThreadStride(pointer));
-      }
-    }
-
-    // Store instruction.
-    if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
-      Value *pointer = SI->getOperand(1);
-      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if (gep->getPointerAddressSpace() == LOCAL_AS) {
-          localStoreStrides.push_back(SA.getThreadStride(pointer));
-          continue;
-        }
-        storeStrides.push_back(SA.getThreadStride(pointer));
-      }
-    }
-  }
-}
+////------------------------------------------------------------------------------
+//void FeatureCollector::coalescingAnalysis(BasicBlock &block,
+//                                          ScalarEvolution *se, OCLEnv *ocl,
+//                                          int CoarseningDirection) {
+//  SubscriptAnalysis sa(se, ocl, CoarseningDirection);
+//
+//  for (BasicBlock::iterator iter = block.begin(), end = block.end();
+//       iter != end; ++iter) {
+//    llvm::Instruction *inst = iter;
+//    // Load instruction.
+//    if (LoadInst *LI = dyn_cast<LoadInst>(inst)) {
+//      Value *pointer = LI->getOperand(0);
+//      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+//        if (gep->getPointerAddressSpace() == LOCAL_AS) {
+//          localLoadStrides.push_back(sa.getThreadStride(pointer));
+//          continue;
+//        }
+//        errs() << "LOAD:\n";
+//        inst->dump();
+//        loadStrides.push_back(sa.getThreadStride(pointer));
+//      }
+//    }
+//
+//    // Store instruction.
+//    if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
+//      Value *pointer = SI->getOperand(1);
+//      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+//        if (gep->getPointerAddressSpace() == LOCAL_AS) {
+//          localStoreStrides.push_back(sa.getThreadStride(pointer));
+//          continue;
+//        }
+//        errs() << "STORE:\n";
+//        inst->dump();
+//        storeStrides.push_back(sa.getThreadStride(pointer));
+//      }
+//    }
+//  }
+//}
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countDimensions(NDRange *NDR) {

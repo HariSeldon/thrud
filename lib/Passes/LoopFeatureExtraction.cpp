@@ -86,7 +86,7 @@ void OpenCLLoopFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, SE, ocl, CoarseningDirectionCL);
+  //collector.coalescingAnalysis(basicBlock, SE, ocl, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------

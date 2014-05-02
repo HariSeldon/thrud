@@ -51,6 +51,6 @@ int NDRangePoint::getCoordinate(const std::string &name, int direction) const {
 std::string NDRangePoint::toString() const {
   std::stringstream ss;
   ss << "Local: (" << local[0] << ", " << local[1] << ", " << local[2]
-     << ") Global: " << global[0] << ", " << global[1] << ", " << global[2] << ")\n";
+     << ") Global: (" << global[0] << ", " << global[1] << ", " << global[2] << ")\n";
   return ss.str();
 }

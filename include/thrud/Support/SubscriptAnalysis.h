@@ -11,7 +11,7 @@ class OCLEnv;
 
 class SubscriptAnalysis {
 public:
-  SubscriptAnalysis(ScalarEvolution *SE, OCLEnv *ocl, unsigned int Dir);
+  SubscriptAnalysis(ScalarEvolution *se, OCLEnv *ocl);
 
 public:
   float analyzeSubscript(const SCEV *scev);
@@ -19,9 +19,8 @@ public:
   bool isConsecutive(Value *value);
 
 private:
-  ScalarEvolution *SE;
+  ScalarEvolution *se;
   OCLEnv *ocl;
-  unsigned int Dir;
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
 
 private:

@@ -27,7 +27,7 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &function) {
   se = &getAnalysis<ScalarEvolution>();
   ndr = &getAnalysis<NDRange>();
  
-  NDRangeSpace ndrSpace(32, 1, 1, 1024, 1, 1);  
+  NDRangeSpace ndrSpace(4, 32, 1, 1024, 1024, 1);  
   ocl = new OCLEnv(function, ndr, ndrSpace);
 
   visit(function);
@@ -76,7 +76,7 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  collector.coalescingAnalysis(basicBlock, se, ocl, CoarseningDirectionCL);
+  //collector.coalescingAnalysis(basicBlock, se, ocl, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------
