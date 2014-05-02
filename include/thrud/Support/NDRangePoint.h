@@ -1,38 +1,41 @@
+#ifndef NDRANGE_POINT_H
+#define NDRANGE_POINT_H
+
 #include <string>
 #include <vector>
 
+class NDRangeSpace;
+
 class NDRangePoint {
 public:
-  NDRangePoint(unsigned int localX, unsigned int localY, unsigned int localZ,
-               unsigned int groupX, unsigned int groupY, unsigned int groupZ,
-               unsigned int localSizeX, unsigned int localSizeY,
-               unsigned int localSizeZ, unsigned int groupNumberX,
-               unsigned int groupNumberY, unsigned int groupNumberZ);
-  unsigned int getLocalX() const;
-  unsigned int getLocalY() const;
-  unsigned int getLocalZ() const;
-  unsigned int getGroupX() const;
-  unsigned int getGroupY() const;
-  unsigned int getGroupZ() const;
-  unsigned int getLocalSizeX() const;
-  unsigned int getLocalSizeY() const;
-  unsigned int getLocalSizeZ() const;
-  unsigned int getGroupNumberX() const;
-  unsigned int getGroupNumberY() const;
-  unsigned int getGroupNumberZ() const;
-  unsigned int getLocal(unsigned int direction) const;
-  unsigned int getGlobal(unsigned int direction) const;
-  unsigned int getGroup(unsigned int direction) const;
-  unsigned int getNumberGroups(unsigned int direction) const;
-  unsigned int getLocalSize(unsigned int direction) const;
-  unsigned int getGlobalSize(unsigned int direction) const;
-  unsigned int getGroupNumber(unsigned int direction) const;
-  unsigned int getCoordinate(const std::string &name,
-                             unsigned int direction) const;
+  NDRangePoint(int localX, int localY, int localZ, int groupX, int groupY,
+               int groupZ, const NDRangeSpace &ndRangeSpace); 
+
+  int getLocalX() const;
+  int getLocalY() const;
+  int getLocalZ() const;
+
+  int getGlobalX() const;
+  int getGlobalY() const;
+  int getGlobalZ() const;
+
+  int getGroupX() const;
+  int getGroupY() const;
+  int getGroupZ() const;
+
+  int getLocal(int direction) const;
+  int getGlobal(int direction) const;
+  int getGroup(int direction) const;
+
+  int getCoordinate(const std::string &name, int direction) const;
+
+  std::string toString() const;
 
 private:
-  std::vector<unsigned int> local;
-  std::vector<unsigned int> group;
-  std::vector<unsigned int> localSize;
-  std::vector<unsigned int> groupNumber;
+  std::vector<int> local;
+  std::vector<int> global;
+  std::vector<int> group;
+
 };
+
+#endif

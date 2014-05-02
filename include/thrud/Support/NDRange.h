@@ -25,13 +25,16 @@ public:
 public:
   InstVector getTids();
   InstVector getSizes();
-  InstVector getTids(unsigned int direction);
-  InstVector getSizes(unsigned int direction);
+  InstVector getTids(int direction);
+  InstVector getSizes(int direction);
 
   bool isTid(Instruction *inst);
-  bool isTidInDirection(Instruction *inst, unsigned int direction);
+  bool isTidInDirection(Instruction *inst, int direction);
   std::string getType(Instruction *inst) const;
-  unsigned int getDirection(Instruction *inst) const;
+  bool isCoordinate(Instruction *inst) const;
+  bool isSize(Instruction *inst) const;
+
+  int getDirection(Instruction *inst) const;
 
   bool isGlobal(Instruction *inst) const;
   bool isLocal(Instruction *inst) const;
@@ -40,12 +43,12 @@ public:
   bool isGroupId(Instruction *inst) const;
   bool isGroupsNum(Instruction *inst) const;
   
-  bool isGlobal(Instruction *inst, unsigned int direction) const;
-  bool isLocal(Instruction *inst, unsigned int direction) const;
-  bool isGlobalSize(Instruction *inst, unsigned int direction) const;
-  bool isLocalSize(Instruction *inst, unsigned int direction) const;
-  bool isGroupId(Instruction *inst, unsigned int direction) const;
-  bool isGroupsNum(Instruction *inst, unsigned int dimension) const;
+  bool isGlobal(Instruction *inst, int direction) const;
+  bool isLocal(Instruction *inst, int direction) const;
+  bool isGlobalSize(Instruction *inst, int direction) const;
+  bool isLocalSize(Instruction *inst, int direction) const;
+  bool isGroupId(Instruction *inst, int direction) const;
+  bool isGroupsNum(Instruction *inst, int dimension) const;
 
   void dump();
 
@@ -56,13 +59,13 @@ public:
   static std::string GET_LOCAL_SIZE;
   static std::string GET_GROUP_ID;
   static std::string GET_GROUPS_NUMBER;
-  static unsigned int DIRECTION_NUMBER;
+  static int DIRECTION_NUMBER;
 
 private:
   void init();
   bool isPresentInDirection(Instruction *inst,
                             const std::string &functionName,
-                            unsigned int direction) const;
+                            int direction) const;
   void findOpenCLFunctionCallsByNameAllDirs(std::string calleeName, Function *caller);
 
 
@@ -72,8 +75,8 @@ private:
 
 // Non-member functions.
 void findOpenCLFunctionCallsByName(std::string calleeName, Function *caller,
-                                   unsigned int dimension, InstVector &target);
+                                   int dimension, InstVector &target);
 void findOpenCLFunctionCalls(Function *callee, Function *caller,
-                             unsigned int dimension, InstVector &target);
+                             int dimension, InstVector &target);
 
 #endif

@@ -53,7 +53,7 @@ private:
   DominatorTree *dt;
   ScalarEvolution *se;
   ValueVector TIds;
-  OpenCLEnvironment *ocl;
+  OCLEnv *ocl;
   NDRange *ndr;
 };
 }

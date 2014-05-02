@@ -6,7 +6,7 @@ std::string NDRange::GET_GLOBAL_SIZE = "get_global_size";
 std::string NDRange::GET_LOCAL_SIZE = "get_local_size";
 std::string NDRange::GET_GROUP_ID = "get_group_id";
 std::string NDRange::GET_GROUPS_NUMBER = "get_num_groups";
-unsigned int NDRange::DIRECTION_NUMBER = 3;
+int NDRange::DIRECTION_NUMBER = 3;
 
 NDRange::NDRange() : FunctionPass(ID) {}
 
@@ -29,7 +29,7 @@ bool NDRange::runOnFunction(Function &function) {
 // -----------------------------------------------------------------------------
 InstVector NDRange::getTids() {
   InstVector result;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
     InstVector globalIds = dirInsts[GET_GLOBAL_ID];
     InstVector localIds = dirInsts[GET_LOCAL_ID];
@@ -41,7 +41,7 @@ InstVector NDRange::getTids() {
 
 InstVector NDRange::getSizes() {
   InstVector result;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
     InstVector globalSizes = dirInsts[GET_GLOBAL_SIZE];
     InstVector localSizes = dirInsts[GET_LOCAL_SIZE];
@@ -51,7 +51,7 @@ InstVector NDRange::getSizes() {
   return result;
 }
 
-InstVector NDRange::getTids(unsigned int direction) {
+InstVector NDRange::getTids(int direction) {
   InstVector result;
   std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
   InstVector globalIds = dirInsts[GET_GLOBAL_ID];
@@ -61,7 +61,7 @@ InstVector NDRange::getTids(unsigned int direction) {
   return result;
 }
 
-InstVector NDRange::getSizes(unsigned int direction) {
+InstVector NDRange::getSizes(int direction) {
   InstVector result;
   std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
   InstVector globalSizes = dirInsts[GET_GLOBAL_SIZE];
@@ -73,13 +73,13 @@ InstVector NDRange::getSizes(unsigned int direction) {
 
 bool NDRange::isTid(Instruction *inst) {
   bool result = false;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isTidInDirection(inst, direction);
   }
   return result;
 }
 
-bool NDRange::isTidInDirection(Instruction *inst, unsigned int direction) {
+bool NDRange::isTidInDirection(Instruction *inst, int direction) {
   // No bound checking is needed.
   std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
   bool isLocalId = isPresent(inst, dirInsts[GET_GLOBAL_ID]);
@@ -104,8 +104,16 @@ std::string NDRange::getType(Instruction *inst) const {
   return "";
 }
 
-unsigned int NDRange::getDirection(Instruction *inst) const {
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+bool NDRange::isCoordinate(Instruction *inst) const {
+  return isGlobal(inst) || isLocal(inst) || isGroupId(inst);
+}
+
+bool NDRange::isSize(Instruction *inst) const {
+  return isGlobalSize(inst) || isLocalSize(inst) || isGroupsNum(inst); 
+}
+
+int NDRange::getDirection(Instruction *inst) const {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     bool result =
         isGlobal(inst, direction) || isLocal(inst, direction) ||
         isGlobalSize(inst, direction) || isLocalSize(inst, direction) ||
@@ -118,7 +126,7 @@ unsigned int NDRange::getDirection(Instruction *inst) const {
 
 bool NDRange::isGlobal(Instruction *inst) const {
   bool result = false;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGlobal(inst, direction);
   }
   return result;
@@ -126,7 +134,7 @@ bool NDRange::isGlobal(Instruction *inst) const {
 
 bool NDRange::isLocal(Instruction *inst) const {
   bool result = false;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isLocal(inst, direction);
   }
   return result;
@@ -134,7 +142,7 @@ bool NDRange::isLocal(Instruction *inst) const {
 
 bool NDRange::isGlobalSize(Instruction *inst) const {
   bool result = false;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGlobalSize(inst, direction);
   }
   return result;
@@ -142,7 +150,7 @@ bool NDRange::isGlobalSize(Instruction *inst) const {
 
 bool NDRange::isLocalSize(Instruction *inst) const {
   bool result = false;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isLocalSize(inst, direction);
   }
   return result;
@@ -150,7 +158,7 @@ bool NDRange::isLocalSize(Instruction *inst) const {
 
 bool NDRange::isGroupId(Instruction *inst) const {
   bool result = false;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGroupId(inst, direction);
   }
   return result;
@@ -158,38 +166,38 @@ bool NDRange::isGroupId(Instruction *inst) const {
 
 bool NDRange::isGroupsNum(Instruction *inst) const {
   bool result = false;
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     result |= isGroupsNum(inst, direction);
   }
   return result;
 }
 
-bool NDRange::isGlobal(Instruction *inst, unsigned int direction) const {
+bool NDRange::isGlobal(Instruction *inst, int direction) const {
   return isPresentInDirection(inst, GET_GLOBAL_ID, direction);
 }
 
-bool NDRange::isLocal(Instruction *inst, unsigned int direction) const {
+bool NDRange::isLocal(Instruction *inst, int direction) const {
   return isPresentInDirection(inst, GET_LOCAL_ID, direction);
 }
 
-bool NDRange::isGlobalSize(Instruction *inst, unsigned int direction) const {
+bool NDRange::isGlobalSize(Instruction *inst, int direction) const {
   return isPresentInDirection(inst, GET_GLOBAL_SIZE, direction);
 }
 
-bool NDRange::isLocalSize(Instruction *inst, unsigned int direction) const {
+bool NDRange::isLocalSize(Instruction *inst, int direction) const {
   return isPresentInDirection(inst, GET_LOCAL_SIZE, direction);
 }
 
-bool NDRange::isGroupId(Instruction *inst, unsigned int direction) const {
+bool NDRange::isGroupId(Instruction *inst, int direction) const {
   return isPresentInDirection(inst, GET_GROUP_ID, direction);
 }
 
-bool NDRange::isGroupsNum(Instruction *inst, unsigned int direction) const {
+bool NDRange::isGroupsNum(Instruction *inst, int direction) const {
   return isPresentInDirection(inst, GET_GROUPS_NUMBER, direction);
 }
 
 void NDRange::dump() {
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
     llvm::errs() << "Direction: " << direction << " ========= \n";
     llvm::errs() << GET_GLOBAL_ID << "\n";
@@ -212,11 +220,11 @@ void NDRange::init() {
   oclInsts.clear();
   // A vector per dimension.
   oclInsts.reserve(DIRECTION_NUMBER);
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     oclInsts.push_back(std::map<std::string, InstVector>());
   }
   // Init the maps in every direction.
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
     dirInsts[GET_GLOBAL_ID] = InstVector();
     dirInsts[GET_LOCAL_ID] = InstVector();
@@ -229,7 +237,7 @@ void NDRange::init() {
 
 bool NDRange::isPresentInDirection(llvm::Instruction *inst,
                                    const std::string &functionName,
-                                   unsigned int direction) const {
+                                   int direction) const {
   const std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
   // Using find is the only way to query the map in a const way.
   std::map<std::string, InstVector>::const_iterator iter = dirInsts.find(functionName);
@@ -239,7 +247,7 @@ bool NDRange::isPresentInDirection(llvm::Instruction *inst,
 
 void NDRange::findOpenCLFunctionCallsByNameAllDirs(std::string calleeName,
                                                    Function *caller) {
-  for (unsigned int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
+  for (int direction = 0; direction < DIRECTION_NUMBER; ++direction) {
     std::map<std::string, InstVector> &dirInsts = oclInsts[direction];
     InstVector &insts = dirInsts[calleeName];
     findOpenCLFunctionCallsByName(calleeName, caller, direction, insts);
@@ -248,7 +256,7 @@ void NDRange::findOpenCLFunctionCallsByNameAllDirs(std::string calleeName,
 
 // -----------------------------------------------------------------------------
 void findOpenCLFunctionCallsByName(std::string calleeName, Function *caller,
-                                   unsigned int direction, InstVector &target) {
+                                   int direction, InstVector &target) {
   // Get function value.
   Function *callee = getOpenCLFunctionByName(calleeName, caller);
   if (callee == NULL)
@@ -259,7 +267,7 @@ void findOpenCLFunctionCallsByName(std::string calleeName, Function *caller,
 
 // -----------------------------------------------------------------------------
 void findOpenCLFunctionCalls(Function *callee, Function *caller,
-                             unsigned int direction, InstVector &target) {
+                             int direction, InstVector &target) {
   // Iterate over the uses of the function.
   for (Value::use_iterator iter = callee->use_begin(), end = callee->use_end();
        iter != end; ++iter) {

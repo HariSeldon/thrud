@@ -7,11 +7,11 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 class NDRangePoint;
-class OpenCLEnvironment;
+class OCLEnv;
 
 class SubscriptAnalysis {
 public:
-  SubscriptAnalysis(ScalarEvolution *SE, OpenCLEnvironment *ocl, unsigned int Dir);
+  SubscriptAnalysis(ScalarEvolution *SE, OCLEnv *ocl, unsigned int Dir);
 
 public:
   float analyzeSubscript(const SCEV *scev);
@@ -20,11 +20,9 @@ public:
 
 private:
   ScalarEvolution *SE;
-  OpenCLEnvironment *ocl;
+  OCLEnv *ocl;
   unsigned int Dir;
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
-  static int WARP_SIZE;
-  static int CACHELINE_SIZE;
 
 private:
   const SCEV* getMinusSCEV(const SCEV* first, const SCEV *second); 
@@ -52,6 +50,8 @@ private:
                             SCEVMap &processed);
   const SCEV *replaceInPhi(PHINode *Phi, const NDRangePoint &point,
                            SCEVMap &processed);
+
+  const SCEV *resolveInstruction(llvm::Instruction *instruction, const NDRangePoint &point);
 };
 
 #endif

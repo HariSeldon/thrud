@@ -3,7 +3,7 @@
 #include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
 #include "thrud/Support/NDRange.h"
-#include "thrud/Support/OpenCLEnvironment.h"
+#include "thrud/Support/OCLEnv.h"
 #include "thrud/Support/Utils.h"
 
 cl::opt<std::string> loopKernelName("count-loop-kernel-name", cl::init(""),
@@ -17,8 +17,8 @@ static RegisterPass<OpenCLLoopFeatureExtractor>
     X("opencl-loop-instcount", "Collect opencl features in loops");
 
 //------------------------------------------------------------------------------
-bool OpenCLLoopFeatureExtractor::runOnFunction(Function &F) {
-  if (F.getName() != loopKernelName)
+bool OpenCLLoopFeatureExtractor::runOnFunction(Function &function) {
+  if (function.getName() != loopKernelName)
     return false;
 
   PDT = &getAnalysis<PostDominatorTree>();
@@ -28,9 +28,11 @@ bool OpenCLLoopFeatureExtractor::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfo>();
   SE = &getAnalysis<ScalarEvolution>();
   ndr = &getAnalysis<NDRange>();
-  ocl = new OpenCLEnvironment(ndr);
 
-  visit(F);
+  NDRangeSpace ndrSpace(32, 1, 1, 1024, 1, 1);
+  ocl = new OCLEnv(function, ndr, ndrSpace);
+
+  visit(function);
   collector.dump();
   return false;
 }

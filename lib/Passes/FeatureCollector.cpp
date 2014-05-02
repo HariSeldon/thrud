@@ -420,7 +420,7 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::coalescingAnalysis(BasicBlock &block,
-                                          ScalarEvolution *SE, OpenCLEnvironment *ocl,
+                                          ScalarEvolution *SE, OCLEnv *ocl,
                                           int CoarseningDirection) {
   SubscriptAnalysis SA(SE, ocl, CoarseningDirection);
 

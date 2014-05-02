@@ -3,7 +3,7 @@
 
 #include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 #include "thrud/Support/NDRange.h"
-#include "thrud/Support/OpenCLEnvironment.h"
+#include "thrud/Support/OCLEnv.h"
 
 // Try to remove these two.
 #include "llvm/Analysis/Dominators.h"
@@ -66,7 +66,7 @@ public:
   std::vector<unsigned int> aliveOutBlocks;
   std::vector<float> avgLiveRange;
   void livenessAnalysis(BasicBlock &block);
-  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, OpenCLEnvironment *OCL,
+  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, OCLEnv *OCL,
                           int CoarseningDirection);
 
   // Phis.

@@ -7,20 +7,14 @@
 
 #include "thrud/Support/NDRange.h"
 #include "thrud/Support/NDRangePoint.h"
-#include "thrud/Support/OpenCLEnvironment.h"
+#include "thrud/Support/OCLEnv.h"
+#include "thrud/Support/Warp.h"
 
 #include <algorithm>
 #include <functional>
 #include <iterator>
 
-// 32 threads in a warp.
-int SubscriptAnalysis::WARP_SIZE = 32;
-// 128 Bytes in a cache line.
-int SubscriptAnalysis::CACHELINE_SIZE = 128;
-
-const int UNKNOWN_MEMORY_LOCATION = -1;
-
-SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, OpenCLEnvironment *ocl,
+SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *SE, OCLEnv *ocl,
                                      unsigned int Dir)
     : SE(SE), ocl(ocl), Dir(Dir) {}
 
@@ -37,7 +31,7 @@ int getTypeWidth(Type *type) {
 
 //------------------------------------------------------------------------------
 float SubscriptAnalysis::getThreadStride(Value *value) {
-  int width = getTypeWidth(value->getType());
+  //int width = getTypeWidth(value->getType());
 
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
@@ -60,22 +54,25 @@ bool SubscriptAnalysis::isConsecutive(Value *value) {
 //------------------------------------------------------------------------------
 float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
   std::vector<const SCEV *> resultVector;
-  resultVector.reserve(WARP_SIZE);
+  resultVector.reserve(OCLEnv::WARP_SIZE);
 
-  for (int index = 0; index < WARP_SIZE; ++index) {
-    NDRangePoint point(index, 0, 0, 0, 0, 0, 1024, 1024, 1, 128, 128, 1);
+  const NDRangeSpace &ndrSpace = ocl->getNDRangeSpace();
+  // Work on the first warp in the first work group.
+  Warp warp(0, 0, 0, 0, ndrSpace);
 
+  // Iterate over threads in a warp.
+  for (Warp::iterator iter = warp.begin(), iterEnd = warp.end();
+       iter != iterEnd; ++iter) {
+    NDRangePoint point = *iter;
     SCEVMap processed;
-    const SCEV *expr = replaceInExpr(scev, point, processed);
+    const SCEV *expr = replaceInExpr(scev, point, processed);    
     if (isa<SCEVCouldNotCompute>(expr)) {
       return 0;
     }
-
     resultVector.push_back(expr);
   }
 
-
-  assert((int)resultVector.size() == WARP_SIZE && "Missing expressions");
+  assert((int)resultVector.size() == OCLEnv::WARP_SIZE && "Missing expressions");
   int tn = computeTransactionNumber(resultVector);
 //  errs() << "Transaction number: " << tn << "\n";
 
@@ -97,7 +94,7 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
 
   verifyUnknown(scevs, unknown);
 
-  assert((int)scevs.size() == WARP_SIZE && "Wrong number of SCEVs");
+  assert((int)scevs.size() == OCLEnv::WARP_SIZE && "Wrong number of SCEVs");
 
   // This could be done with a std::transform.
   //std::transform(scevs.begin(), scevs.end(), scevs.begin(),
@@ -110,7 +107,7 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
     offsets.push_back(SE->getMinusSCEV(currentSCEV, unknown));
   }
 
-  assert((int)offsets.size() == WARP_SIZE && "Wrong number of offsets");
+  assert((int)offsets.size() == OCLEnv::WARP_SIZE && "Wrong number of offsets");
 
 //  for (std::vector<const SCEV *>::const_iterator iter = offsets.begin(),
 //                                                 iterEnd = offsets.end();
@@ -138,27 +135,22 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
     }
     else {
       // The SCEV is not constant. I don't know which element is accessed.
-      indices.push_back(UNKNOWN_MEMORY_LOCATION);
+      indices.push_back(OCLEnv::UNKNOWN_MEMORY_LOCATION);
     }
   }
 
-  assert((int)indices.size() == WARP_SIZE && "Wrong number of indices");
-
-//  for(unsigned int index = 0; index < indices.size(); ++index) {
-//    errs() << indices[index] << " ";
-//  }
-//  errs() << "\n";
+  assert((int)indices.size() == OCLEnv::WARP_SIZE && "Wrong number of indices");
 
   // If any of the indices is UNKNOWN_MEMORY_LOCATION do something special.
   std::vector<int>::iterator unknownMemoryLocationPosition =
-      std::find(indices.begin(), indices.end(), UNKNOWN_MEMORY_LOCATION);
+      std::find(indices.begin(), indices.end(), OCLEnv::UNKNOWN_MEMORY_LOCATION);
 
   if(unknownMemoryLocationPosition != indices.end()) {
-    return WARP_SIZE;
+    return OCLEnv::WARP_SIZE;
   } 
 
   std::transform(indices.begin(), indices.end(), indices.begin(),
-                 std::bind2nd(std::divides<int>(), CACHELINE_SIZE));
+                 std::bind2nd(std::divides<int>(), OCLEnv::CACHELINE_SIZE));
 
   std::vector<int>::iterator uniqueEnd = std::unique(indices.begin(), indices.end());
   int uniqueCacheLines = std::distance(indices.begin(), uniqueEnd);
@@ -294,10 +286,10 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
                                              SCEVMap &processed) {
   Value *value = expr->getValue();
   // Implement actual replacement.
-  if (Instruction *Inst = dyn_cast<Instruction>(value)) {
+  if (Instruction *instruction = dyn_cast<Instruction>(value)) {
 
     // Manage binary operations.
-    if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
+    if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(instruction)) {
       //llvm::errs() << "BinaryOperator: ";
       //BinOp->dump();
 
@@ -324,8 +316,8 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
     }
 
     // Manage casts.
-    if (IsIntCast(Inst)) {
-      CallInst *Call = dyn_cast<CallInst>(Inst);
+    if (IsIntCast(instruction)) {
+      CallInst *Call = dyn_cast<CallInst>(instruction);
       const SCEV *ArgSCEV = SE->getSCEV(Call->getArgOperand(0));
       return replaceInExpr(ArgSCEV, point, processed);
     }
@@ -334,26 +326,40 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
     if (PHINode *phi = dyn_cast<PHINode>(value))
       return replaceInPhi(phi, point, processed);
 
-    const NDRange *ndr = ocl->getNDRange();
-    std::string type = ndr->getType(Inst);
-    if(type == "")
-      return SE->getCouldNotCompute();
-
-    unsigned int direction = ndr->getDirection(Inst);
-    unsigned int coordinate = point.getCoordinate(type, direction);
-
-    return SE->getConstant(APInt(32, coordinate));
+    return resolveInstruction(instruction, point);
   }
 
-  if(Argument *argument = dyn_cast<Argument>(value)) {
-    std::map<llvm::Value*, int>& argMap = ocl->getMap();
-    std::map<llvm::Value*, int>::iterator iter = argMap.find(value);
-    if(iter != argMap.end()) {
-      return SE->getConstant(APInt(32, iter->second));
-    }
-  }
+  // If the value is a function argument query OCL.
+  if(isa<Argument>(value)) 
+    return SE->getConstant(APInt(32, ocl->resolveValue(value)));
 
   return expr;
+}
+
+//------------------------------------------------------------------------------
+const SCEV *
+SubscriptAnalysis::resolveInstruction(llvm::Instruction *instruction,
+                                      const NDRangePoint &point) {
+  const NDRange *ndr = ocl->getNDRange();
+  const NDRangeSpace &ndrSpace = ocl->getNDRangeSpace();
+  std::string type = ndr->getType(instruction);
+
+  // Check if the instruction is a coordinate querying the NDRangePoint class.
+  if(ndr->isCoordinate(instruction)) {
+    int direction = ndr->getDirection(instruction); 
+    int coordinate = point.getCoordinate(type, direction);
+    return SE->getConstant(APInt(32, coordinate));
+  } 
+
+  // Check if the instruction is a size querying the NDRange class. 
+  if(ndr->isSize(instruction)) {
+    int direction = ndr->getDirection(instruction); 
+    int size = ndrSpace.getSize(type, direction);
+    return SE->getConstant(APInt(32, size));
+  }
+
+  // If the instruction is neither a coordinate nor a size return CouldNotCompute.
+  return SE->getCouldNotCompute();
 }
 
 //------------------------------------------------------------------------------

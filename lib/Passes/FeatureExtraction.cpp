@@ -26,8 +26,9 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &function) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   se = &getAnalysis<ScalarEvolution>();
   ndr = &getAnalysis<NDRange>();
-  ocl = new OpenCLEnvironment(ndr);
-  ocl->setup(function);
+ 
+  NDRangeSpace ndrSpace(32, 1, 1, 1024, 1, 1);  
+  ocl = new OCLEnv(function, ndr, ndrSpace);
 
   visit(function);
   collector.dump();

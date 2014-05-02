@@ -57,7 +57,7 @@ private:
   LoopInfo *LI;
   ScalarEvolution *SE;
   NDRange *ndr;
-  OpenCLEnvironment *ocl;
+  OCLEnv *ocl;
   ValueVector TIds;
 };
 }

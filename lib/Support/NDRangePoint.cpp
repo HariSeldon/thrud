@@ -1,78 +1,56 @@
 #include "thrud/Support/NDRangePoint.h"
 
 #include "thrud/Support/NDRange.h"
+#include "thrud/Support/NDRangeSpace.h"
 
-NDRangePoint::NDRangePoint(unsigned int localX, unsigned int localY,
-                           unsigned int localZ, unsigned int groupX,
-                           unsigned int groupY, unsigned int groupZ,
-                           unsigned int localSizeX, unsigned int localSizeY,
-                           unsigned int localSizeZ, unsigned int groupNumberX,
-                           unsigned int groupNumberY,
-                           unsigned int groupNumberZ) {
+#include <sstream>
 
-  unsigned int tmpLocal[] = { localX, localY, localZ };
-  unsigned int tmpGroup[] = { groupX, groupY, groupZ };
-  unsigned int tmpLocalSize[] = { localSizeX, localSizeY, localSizeZ };
-  unsigned int tmpGroupNumber[] = { groupNumberX, groupNumberY, groupNumberZ };
+NDRangePoint::NDRangePoint(int localX, int localY, int localZ, int groupX,
+                           int groupY, int groupZ, const NDRangeSpace &ndRangeSpace) {
+
+  int tmpLocal[] = { localX, localY, localZ };
+  int tmpGroup[] = { groupX, groupY, groupZ };
+  int tmpGlobal[] = { localX + groupX * ndRangeSpace.getLocalSizeX(),
+                      localY + groupY * ndRangeSpace.getLocalSizeY(),
+                      localZ + groupZ * ndRangeSpace.getLocalSizeZ() };
 
   local.assign(tmpLocal, tmpLocal + NDRange::DIRECTION_NUMBER);
   group.assign(tmpGroup, tmpGroup + NDRange::DIRECTION_NUMBER);
-  localSize.assign(tmpLocalSize, tmpLocalSize + NDRange::DIRECTION_NUMBER);
-  groupNumber.assign(tmpGroupNumber,
-                     tmpGroupNumber + NDRange::DIRECTION_NUMBER);
+  global.assign(tmpGlobal, tmpGlobal + NDRange::DIRECTION_NUMBER);
 }
 
-unsigned int NDRangePoint::getLocalX() const { return local[0]; }
-unsigned int NDRangePoint::getLocalY() const { return local[1]; }
-unsigned int NDRangePoint::getLocalZ() const { return local[2]; }
-unsigned int NDRangePoint::getGroupX() const { return group[0]; }
-unsigned int NDRangePoint::getGroupY() const { return group[1]; }
-unsigned int NDRangePoint::getGroupZ() const { return group[2]; }
-unsigned int NDRangePoint::getLocalSizeX() const { return localSize[0]; }
-unsigned int NDRangePoint::getLocalSizeY() const { return localSize[1]; }
-unsigned int NDRangePoint::getLocalSizeZ() const { return localSize[2]; }
-unsigned int NDRangePoint::getGroupNumberX() const { return groupNumber[0]; }
-unsigned int NDRangePoint::getGroupNumberY() const { return groupNumber[1]; }
-unsigned int NDRangePoint::getGroupNumberZ() const { return groupNumber[2]; }
+int NDRangePoint::getLocalX() const { return local[0]; }
+int NDRangePoint::getLocalY() const { return local[1]; }
+int NDRangePoint::getLocalZ() const { return local[2]; }
 
-unsigned int NDRangePoint::getLocal(unsigned int direction) const {
-  return local[direction];
-}
+int NDRangePoint::getGlobalX() const { return global[0]; }
+int NDRangePoint::getGlobalY() const { return global[1]; }
+int NDRangePoint::getGlobalZ() const { return global[2]; }
 
-unsigned int NDRangePoint::getGlobal(unsigned int direction) const {
-  return local[direction] + group[direction] * localSize[direction];
-}
+int NDRangePoint::getGroupX() const { return group[0]; }
+int NDRangePoint::getGroupY() const { return group[1]; }
+int NDRangePoint::getGroupZ() const { return group[2]; }
 
-unsigned int NDRangePoint::getGroup(unsigned int direction) const {
-  return group[direction];
-}
+int NDRangePoint::getLocal(int direction) const { return local[direction]; }
 
-unsigned int NDRangePoint::getLocalSize(unsigned int direction) const {
-  return localSize[direction];
-}
+int NDRangePoint::getGlobal(int direction) const { return global[direction]; }
 
-unsigned int NDRangePoint::getGroupNumber(unsigned int direction) const {
-  return groupNumber[direction];
-}
+int NDRangePoint::getGroup(int direction) const { return group[direction]; }
 
-unsigned int NDRangePoint::getGlobalSize(unsigned int direction) const {
-  return localSize[direction] * groupNumber[direction];
-}
-
-unsigned int NDRangePoint::getCoordinate(const std::string &name,
-                                         unsigned int direction) const {
+int NDRangePoint::getCoordinate(const std::string &name, int direction) const {
   if (name == NDRange::GET_LOCAL_ID)
     return getLocal(direction);
+  if (name == NDRange::GET_GLOBAL_ID)
+    return getGlobal(direction);
   if (name == NDRange::GET_GROUP_ID)
     return getGroup(direction);
-  if (name == NDRange::GET_LOCAL_SIZE)
-    return getLocalSize(direction);
-  if (name == NDRange::GET_GLOBAL_SIZE)
-    return getLocalSize(direction);
-  if (name == NDRange::GET_GLOBAL_ID)
-    return getGlobal(direction); 
-  if (name == NDRange::GET_GROUPS_NUMBER)
-    return getGroupNumber(direction);
 
-  return 0;
+  return -1;
+}
+
+std::string NDRangePoint::toString() const {
+  std::stringstream ss;
+  ss << "Local: (" << local[0] << ", " << local[1] << ", " << local[2]
+     << ") Global: " << global[0] << ", " << global[1] << ", " << global[2] << ")\n";
+  return ss.str();
 }
