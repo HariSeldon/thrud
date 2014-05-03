@@ -63,15 +63,15 @@ float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
   for (Warp::iterator iter = warp.begin(), iterEnd = warp.end();
        iter != iterEnd; ++iter) {
     NDRangePoint point = *iter;
-    errs() << point.toString();
+//    errs() << point.toString();
     SCEVMap processed;
-    scev->dump();
+//    scev->dump();
     const SCEV *expr = replaceInExpr(scev, point, processed);    
     if (isa<SCEVCouldNotCompute>(expr)) {
       return 0;
     }
-    errs() << "Expr: ";
-    expr->dump();
+//    errs() << "Expr: ";
+//    expr->dump();
 
     resultVector.push_back(expr);
   }

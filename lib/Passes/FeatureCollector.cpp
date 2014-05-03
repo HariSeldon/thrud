@@ -3,6 +3,7 @@
 #include "thrud/Support/DataTypes.h"
 #include "thrud/Support/Graph.h"
 #include "thrud/Support/MathUtils.h"
+#include "thrud/Support/OCLEnv.h"
 #include "thrud/Support/Utils.h"
 #include "thrud/Support/SubscriptAnalysis.h"
 
@@ -42,7 +43,7 @@ namespace yaml {
 //------------------------------------------------------------------------------
 template <> struct MappingTraits<FeatureCollector> {
   static void mapping(IO &io, FeatureCollector &collector) {
-    for (std::map<std::string, unsigned int>::iterator
+    for (std::map<std::string, int>::iterator
              iter = collector.instTypes.begin(),
              end = collector.instTypes.end();
          iter != end; ++iter) {
@@ -52,18 +53,18 @@ template <> struct MappingTraits<FeatureCollector> {
     io.mapRequired("instsPerBlock", collector.blockInsts);
 
     // Dump Phi nodes.
-    std::vector<unsigned int> args;
+    std::vector<int> args;
 
     for (std::map<std::string, std::vector<std::string> >::iterator
              iter = collector.blockPhis.begin(),
              end = collector.blockPhis.end();
          iter != end; ++iter) {
       std::vector<std::string> phis = iter->second;
-      unsigned int argSum = 0;
+      int argSum = 0;
       for (std::vector<std::string>::iterator phiIter = phis.begin(),
                                               phiEnd = phis.end();
            phiIter != phiEnd; ++phiIter) {
-        unsigned int argNumber = collector.phiArgs[*phiIter];
+        int argNumber = collector.phiArgs[*phiIter];
         argSum += argNumber;
       }
       args.push_back(argSum);
@@ -88,22 +89,6 @@ template <> struct MappingTraits<std::pair<float, float> > {
     io.mapRequired("avg", avgVar.first);
     io.mapRequired("var", avgVar.second);
   }
-};
-
-//------------------------------------------------------------------------------
-// Sequence of unsigned ints.
-template <> struct SequenceTraits<std::vector<unsigned int> > {
-  static size_t size(IO &io, std::vector<unsigned int> &seq) {
-    return seq.size();
-  }
-  static unsigned int &element(IO &, std::vector<unsigned int> &seq,
-                               size_t index) {
-    if (index >= seq.size())
-      seq.resize(index + 1);
-    return seq[index];
-  }
-
-  static const bool flow = true;
 };
 
 //------------------------------------------------------------------------------
@@ -207,13 +192,13 @@ void FeatureCollector::countOutgoingEdges(const BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countInstsBlock(const BasicBlock &block) {
-  blockInsts.push_back(static_cast<unsigned int>(block.getInstList().size()));
+  blockInsts.push_back(static_cast<int>(block.getInstList().size()));
 }
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countEdges(const Function &function) {
-  unsigned int edges = 0;
-  unsigned int criticalEdges = 0;
+  int edges = 0;
+  int criticalEdges = 0;
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
     edges += block->getTerminator()->getNumSuccessors();
@@ -222,9 +207,9 @@ void FeatureCollector::countEdges(const Function &function) {
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
     const TerminatorInst *termInst = block->getTerminator();
-    unsigned int termNumber = termInst->getNumSuccessors();
+    int termNumber = termInst->getNumSuccessors();
 
-    for (unsigned int index = 0; index < termNumber; ++index) {
+    for (int index = 0; index < termNumber; ++index) {
       criticalEdges += isCriticalEdge(termInst, index);
     }
   }
@@ -235,8 +220,8 @@ void FeatureCollector::countEdges(const Function &function) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countBranches(const Function &function) {
-  unsigned int condBranches = 0;
-  unsigned int uncondBranches = 0;
+  int condBranches = 0;
+  int uncondBranches = 0;
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
     const TerminatorInst *term = block->getTerminator();
@@ -258,7 +243,7 @@ void FeatureCollector::countPhis(const BasicBlock &block) {
   for (BasicBlock::const_iterator inst = block.begin(); isa<PHINode>(inst);
        ++inst) {
     std::string name = inst->getName();
-    unsigned int argCount = inst->getNumOperands();
+    int argCount = inst->getNumOperands();
 
     phiArgs[name] = argCount;
     names.push_back(name);
@@ -269,9 +254,9 @@ void FeatureCollector::countPhis(const BasicBlock &block) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::countConstants(const BasicBlock &block) {
-  unsigned int fourB = instTypes["fourB"];
-  unsigned int eightB = instTypes["eightB"];
-  unsigned int fps = instTypes["fps"];
+  int fourB = instTypes["fourB"];
+  int eightB = instTypes["eightB"];
+  int fps = instTypes["fps"];
 
   for (BasicBlock::const_iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
@@ -336,11 +321,11 @@ void FeatureCollector::countLocalMemoryUsage(const BasicBlock &block) {
        iter != end; ++iter) {
     const Instruction *inst = iter;
     if (const LoadInst *loadInst = dyn_cast<LoadInst>(inst)) {
-      if (loadInst->getPointerAddressSpace() == LOCAL_AS)
+      if (loadInst->getPointerAddressSpace() == OCLEnv::LOCAL_AS)
         safeIncrement(instTypes, "localLoads");
     }
     if (const StoreInst *storeInst = dyn_cast<StoreInst>(inst)) {
-      if (storeInst->getPointerAddressSpace() == LOCAL_AS)
+      if (storeInst->getPointerAddressSpace() == OCLEnv::LOCAL_AS)
         safeIncrement(instTypes, "localStores");
     }
   }
@@ -354,7 +339,7 @@ void FeatureCollector::countDivInsts(Function &function,
   instTypes["divInsts"] = mdda->getDivInsts().size();
 
   // Insts in divergent regions.
-  unsigned int divRegionInsts = 0;
+  int divRegionInsts = 0;
   RegionVector &Regions = mdda->getDivRegions();
   for (RegionVector::iterator iter = Regions.begin(), iterEnd = Regions.end();
        iter != iterEnd; ++iter) {
@@ -364,7 +349,7 @@ void FeatureCollector::countDivInsts(Function &function,
   instTypes["divRegionInsts"] = divRegionInsts;
 
   // Count uniform loads.
-  unsigned int uniformLoads = 0;
+  int uniformLoads = 0;
   for (inst_iterator iter = inst_begin(function), iterEnd = inst_end(function);
        iter != iterEnd; ++iter) {
     Instruction *inst = &*iter;
@@ -380,7 +365,7 @@ void FeatureCollector::countArgs(const Function &function) {
 }
 
 //------------------------------------------------------------------------------
-unsigned int computeLiveRange(Instruction *inst) {
+int computeLiveRange(Instruction *inst) {
   Instruction *lastUser = findLastUser(inst);
 
   if (lastUser == NULL)
@@ -396,8 +381,8 @@ unsigned int computeLiveRange(Instruction *inst) {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::livenessAnalysis(BasicBlock &block) {
-  unsigned int aliveValues = 0;
-  std::vector<unsigned int> ranges;
+  int aliveValues = 0;
+  std::vector<int> ranges;
 
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
        iter != end; ++iter) {
@@ -409,7 +394,7 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
     aliveValues += isUsedElseWhere;
 
     if (!isUsedElseWhere) {
-      unsigned int liveRange = computeLiveRange(inst);
+      int liveRange = computeLiveRange(inst);
       ranges.push_back(liveRange);
     }
   }
@@ -418,52 +403,13 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
   aliveOutBlocks.push_back(aliveValues);
 }
 
-////------------------------------------------------------------------------------
-//void FeatureCollector::coalescingAnalysis(BasicBlock &block,
-//                                          ScalarEvolution *se, OCLEnv *ocl,
-//                                          int CoarseningDirection) {
-//  SubscriptAnalysis sa(se, ocl, CoarseningDirection);
-//
-//  for (BasicBlock::iterator iter = block.begin(), end = block.end();
-//       iter != end; ++iter) {
-//    llvm::Instruction *inst = iter;
-//    // Load instruction.
-//    if (LoadInst *LI = dyn_cast<LoadInst>(inst)) {
-//      Value *pointer = LI->getOperand(0);
-//      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-//        if (gep->getPointerAddressSpace() == LOCAL_AS) {
-//          localLoadStrides.push_back(sa.getThreadStride(pointer));
-//          continue;
-//        }
-//        errs() << "LOAD:\n";
-//        inst->dump();
-//        loadStrides.push_back(sa.getThreadStride(pointer));
-//      }
-//    }
-//
-//    // Store instruction.
-//    if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
-//      Value *pointer = SI->getOperand(1);
-//      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-//        if (gep->getPointerAddressSpace() == LOCAL_AS) {
-//          localStoreStrides.push_back(sa.getThreadStride(pointer));
-//          continue;
-//        }
-//        errs() << "STORE:\n";
-//        inst->dump();
-//        storeStrides.push_back(sa.getThreadStride(pointer));
-//      }
-//    }
-//  }
-//}
-
 //------------------------------------------------------------------------------
 void FeatureCollector::countDimensions(NDRange *NDR) {
   InstVector dir0 = NDR->getTids(0);
   InstVector dir1 = NDR->getTids(1);
   InstVector dir2 = NDR->getTids(2);
 
-  unsigned int dimensionNumber =
+  int dimensionNumber =
       (dir0.size() != 0) + (dir1.size() != 0) + (dir2.size() != 0);
 
   instTypes["dimensions"] = dimensionNumber;
@@ -477,11 +423,11 @@ void FeatureCollector::dump() {
 
 //------------------------------------------------------------------------------
 void FeatureCollector::loopCountEdges(const Function &function, LoopInfo *LI) {
-  unsigned int edges = 0;
-  unsigned int criticalEdges = 0;
+  int edges = 0;
+  int criticalEdges = 0;
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
-    if (!IsInLoop(block, LI))
+    if (!isInLoop(block, LI))
       continue;
     edges += block->getTerminator()->getNumSuccessors();
   }
@@ -489,13 +435,13 @@ void FeatureCollector::loopCountEdges(const Function &function, LoopInfo *LI) {
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
 
-    if (!IsInLoop(block, LI))
+    if (!isInLoop(block, LI))
       continue;
 
     const TerminatorInst *termInst = block->getTerminator();
-    unsigned int termNumber = termInst->getNumSuccessors();
+    int termNumber = termInst->getNumSuccessors();
 
-    for (unsigned int index = 0; index < termNumber; ++index) {
+    for (int index = 0; index < termNumber; ++index) {
       criticalEdges += isCriticalEdge(termInst, index);
     }
   }
@@ -507,12 +453,12 @@ void FeatureCollector::loopCountEdges(const Function &function, LoopInfo *LI) {
 //------------------------------------------------------------------------------
 void FeatureCollector::loopCountBranches(const Function &function,
                                          LoopInfo *LI) {
-  unsigned int condBranches = 0;
-  unsigned int uncondBranches = 0;
+  int condBranches = 0;
+  int uncondBranches = 0;
   for (Function::const_iterator block = function.begin(), end = function.end();
        block != end; ++block) {
 
-    if (!IsInLoop(block, LI))
+    if (!isInLoop(block, LI))
       continue;
 
     const TerminatorInst *term = block->getTerminator();
@@ -535,21 +481,21 @@ void FeatureCollector::loopCountDivInsts(Function &function,
   // Count divergent regions.
   RegionVector &Regions = mdda->getDivRegions();
   InstVector DivInsts = mdda->getDivInsts();
-  unsigned int divRegions = 0;
-  unsigned int divInsts = 0;
+  int divRegions = 0;
+  int divInsts = 0;
 
   for (InstVector::iterator iter = DivInsts.begin(), iterEnd = DivInsts.end();
        iter != iterEnd; ++iter) {
-    if (!IsInLoop(*iter, LI))
+    if (!isInLoop(*iter, LI))
       continue;
     ++divInsts;
   }
 
   // Insts in divergent regions.
-  unsigned int divRegionInsts = 0;
+  int divRegionInsts = 0;
   for (RegionVector::iterator iter = Regions.begin(), iterEnd = Regions.end();
        iter != iterEnd; ++iter) {
-    if (!IsInLoop((*iter)->getHeader(), LI))
+    if (!isInLoop((*iter)->getHeader(), LI))
       continue;
     divRegionInsts += (*iter)->size();
     ++divRegions;
@@ -558,12 +504,12 @@ void FeatureCollector::loopCountDivInsts(Function &function,
   instTypes["divRegionInsts"] = divRegionInsts;
 
   // Count uniform loads.
-  unsigned int uniformLoads = 0;
+  int uniformLoads = 0;
   for (inst_iterator iter = inst_begin(function), iterEnd = inst_end(function);
        iter != iterEnd; ++iter) {
     Instruction *inst = &*iter;
 
-    if (!IsInLoop(inst, LI))
+    if (!isInLoop(inst, LI))
       continue;
 
     uniformLoads += isa<LoadInst>(inst) && !sdda->isDivergent(inst);

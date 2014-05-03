@@ -54,7 +54,7 @@ void OpenCLLoopFeatureExtractor::getAnalysisUsage(AnalysisUsage &AU) const {
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   void OpenCLLoopFeatureExtractor::visit##OPCODE(CLASS &I) {                   \
     Instruction *inst = (Instruction *)&I;                                     \
-    if (!IsInLoop(inst, LI))                                                   \
+    if (!isInLoop(inst, LI))                                                   \
       return;                                                                  \
     collector.instTypes[#OPCODE] += 1;                                         \
     collector.instTypes["insts"] += 1;                                         \
@@ -71,7 +71,7 @@ void OpenCLLoopFeatureExtractor::visitInstruction(Instruction &inst) {
 void OpenCLLoopFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   BasicBlock *block = (BasicBlock *)&basicBlock;
   
-  if(!IsInLoop(block, LI))
+  if(!isInLoop(block, LI))
     return;
 
   collector.instTypes["blocks"] += 1;

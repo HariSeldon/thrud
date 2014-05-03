@@ -35,15 +35,11 @@ namespace yaml {
 //------------------------------------------------------------------------------
 template <> struct MappingTraits<SymbolicExecution> {
   static void mapping(IO &io, SymbolicExecution &exe) {
-    io.mapRequired("loadTransactions", exe.loadTransactions);
-    io.mapRequired("storeTransactions", exe.storeTransactions);
-    io.mapRequired("localLoadTransactions", exe.localLoadTransactions);
-    io.mapRequired("localStoreTransactions", exe.localStoreTransactions);
+    io.mapRequired("load_transactions", exe.loadTransactions);
+    io.mapRequired("store_transactions", exe.storeTransactions);
 
-    io.mapRequired("loopLoadTransactions", exe.loopLoadTransactions);
-    io.mapRequired("loopStoreTransactions", exe.loopStoreTransactions);
-    io.mapRequired("loopLocalLoadTransactions", exe.loopLocalLoadTransactions);
-    io.mapRequired("loopLocalStoreTransactions", exe.loopLocalStoreTransactions);
+    io.mapRequired("loop_load_transactions", exe.loopLoadTransactions);
+    io.mapRequired("loop_store_transactions", exe.loopStoreTransactions);
   }
 };
 
@@ -74,7 +70,7 @@ bool SymbolicExecution::runOnFunction(Function &function) {
 
   // Define the NDRange space.
   // FIXME: this is going to be read from a config file.
-  NDRangeSpace ndrSpace(4, 32, 1, 1024, 1024, 1);
+  NDRangeSpace ndrSpace(512, 1, 1, 1024, 1024, 1);
   ocl = new OCLEnv(function, ndr, ndrSpace);
 
   init();
@@ -90,13 +86,9 @@ bool SymbolicExecution::runOnFunction(Function &function) {
 void SymbolicExecution::init() {
   loadTransactions.clear();
   storeTransactions.clear();
-  localLoadTransactions.clear();
-  localStoreTransactions.clear();
 
   loopLoadTransactions.clear();
   loopStoreTransactions.clear();
-  loopLocalLoadTransactions.clear();
-  loopLocalStoreTransactions.clear();
 }
 
 //------------------------------------------------------------------------------
@@ -110,19 +102,17 @@ void SymbolicExecution::getAnalysisUsage(AnalysisUsage &au) const {
 //------------------------------------------------------------------------------
 void SymbolicExecution::visitBasicBlock(BasicBlock &basicBlock) {
   BasicBlock *block = (BasicBlock *)&basicBlock;
-  if (!IsInLoop(block, loopInfo))
-    memoryAccessAnalysis(basicBlock, loadTransactions, storeTransactions,
-                         localLoadTransactions, localStoreTransactions);
-  else
+  if (isInLoop(block, loopInfo))
     memoryAccessAnalysis(basicBlock, loopLoadTransactions,
-                         loopStoreTransactions, loopLocalLoadTransactions,
-                         loopLocalStoreTransactions);
+                         loopStoreTransactions);
+  else
+    memoryAccessAnalysis(basicBlock, loadTransactions, storeTransactions);
 }
 
 //------------------------------------------------------------------------------
-void SymbolicExecution::memoryAccessAnalysis(
-    BasicBlock &block, std::vector<int> &loadTrans, std::vector<int> &storeTrans,
-    std::vector<int> &localLoadTrans, std::vector<int> &localStoreTrans) {
+void SymbolicExecution::memoryAccessAnalysis(BasicBlock &block,
+                                             std::vector<int> &loadTrans,
+                                             std::vector<int> &storeTrans) {
   SubscriptAnalysis sa(se, ocl);
 
   for (BasicBlock::iterator iter = block.begin(), end = block.end();
@@ -131,11 +121,11 @@ void SymbolicExecution::memoryAccessAnalysis(
     // Load instruction.
     if (LoadInst *LI = dyn_cast<LoadInst>(inst)) {
       Value *pointer = LI->getOperand(0);
-      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if (gep->getPointerAddressSpace() == LOCAL_AS) {
-          localLoadTrans.push_back(sa.getThreadStride(pointer));
-          continue;
-        }
+      if (isa<GetElementPtrInst>(pointer)) {
+        //if (gep->getPointerAddressSpace() == LOCAL_AS) {
+        //  localLoadTrans.push_back(sa.getThreadStride(pointer));
+        //  continue;
+        //}
         errs() << "LOAD:\n";
         inst->dump();
         loadTrans.push_back(sa.getThreadStride(pointer));
@@ -145,11 +135,11 @@ void SymbolicExecution::memoryAccessAnalysis(
     // Store instruction.
     if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
       Value *pointer = SI->getOperand(1);
-      if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-        if (gep->getPointerAddressSpace() == LOCAL_AS) {
-          localStoreTrans.push_back(sa.getThreadStride(pointer));
-          continue;
-        }
+      if (isa<GetElementPtrInst>(pointer)) {
+        //if (gep->getPointerAddressSpace() == LOCAL_AS) {
+        //  localStoreTrans.push_back(sa.getThreadStride(pointer));
+        //  continue;
+        //}
         errs() << "STORE:\n";
         inst->dump();
         storeTrans.push_back(sa.getThreadStride(pointer));

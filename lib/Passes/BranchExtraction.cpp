@@ -52,7 +52,7 @@ void BranchExtraction::getAnalysisUsage(AnalysisUsage &au) const {
 //------------------------------------------------------------------------------
 bool BranchExtraction::runOnFunction(Function &F) {
   // Apply the pass to kernels only.
-  if (!IsKernel((const Function *)&F))
+  if (!isKernel((const Function *)&F))
     return false;
 
   std::string FunctionName = F.getName();

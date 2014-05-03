@@ -19,6 +19,7 @@ public:
   static const int WARP_SIZE;
   static const int CACHELINE_SIZE;
   static const int UNKNOWN_MEMORY_LOCATION;
+  static unsigned const int LOCAL_AS;
 
 public:
   OCLEnv(Function &function, const NDRange *ndRange, const NDRangeSpace &ndRangeSpace);

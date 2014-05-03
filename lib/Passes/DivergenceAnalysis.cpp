@@ -269,7 +269,7 @@ void SingleDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
 bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
   Function *function = (Function *)&functionRef;
   // Apply the pass to kernels only.
-  if (!IsKernel(function))
+  if (!isKernel(function))
     return false;
 
   init();
@@ -310,7 +310,7 @@ void MultiDimDivAnalysis::getAnalysisUsage(AnalysisUsage &au) const {
 bool MultiDimDivAnalysis::runOnFunction(Function &functionRef) {
   Function *function = (Function *)&functionRef;
   // Apply the pass to kernels only.
-  if (!IsKernel(function))
+  if (!isKernel(function))
     return false;
 
   init();

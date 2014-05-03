@@ -2,6 +2,7 @@
 
 #include "thrud/Support/DivergentRegion.h"
 #include "thrud/Support/RegionBounds.h"
+#include "thrud/Support/OCLEnv.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -27,27 +28,29 @@
 const char *BARRIER = "barrier";
 
 //------------------------------------------------------------------------------
-bool IsInLoop(const Instruction *I, LoopInfo *LI) {
-  const BasicBlock *P = I->getParent();
-  return LI->getLoopFor(P) != NULL;
+bool isInLoop(const Instruction *inst, LoopInfo *loopInfo) {
+  const BasicBlock *block = inst->getParent();
+  return loopInfo->getLoopFor(block) != NULL;
 }
 
 //------------------------------------------------------------------------------
-bool IsInLoop(const BasicBlock *BB, LoopInfo *LI) {
-  return LI->getLoopFor(BB) != NULL;
+bool isInLoop(const BasicBlock *block, LoopInfo *loopInfo) {
+  return loopInfo->getLoopFor(block) != NULL;
 }
 
 //------------------------------------------------------------------------------
-bool IsKernel(const Function *F) {
-  const Module *M = F->getParent();
-  const llvm::NamedMDNode *KernsMD = M->getNamedMetadata("opencl.kernels");
+bool isKernel(const Function *function) {
+  const Module *module = function->getParent();
+  const llvm::NamedMDNode *kernelsMD =
+      module->getNamedMetadata("opencl.kernels");
 
-  if (!KernsMD)
+  if (!kernelsMD)
     return false;
 
-  for (unsigned I = 0, E = KernsMD->getNumOperands(); I != E; ++I) {
-    const llvm::MDNode &KernMD = *KernsMD->getOperand(I);
-    if (KernMD.getOperand(0) == F)
+  for (int index = 0, end = kernelsMD->getNumOperands(); index != end;
+       ++index) {
+    const llvm::MDNode &kernelMD = *kernelsMD->getOperand(index);
+    if (kernelMD.getOperand(0) == function)
       return true;
   }
 
@@ -476,7 +479,7 @@ bool isLocalMemoryAccess(Instruction *I) {
 //------------------------------------------------------------------------------
 bool isLocalMemoryStore(Instruction *I) {
   if (StoreInst *S = dyn_cast<StoreInst>(I)) {
-    return (S->getPointerAddressSpace() == LOCAL_AS);
+    return (S->getPointerAddressSpace() == OCLEnv::LOCAL_AS);
   }
   return false;
 }
@@ -484,7 +487,7 @@ bool isLocalMemoryStore(Instruction *I) {
 //------------------------------------------------------------------------------
 bool isLocalMemoryLoad(Instruction *I) {
   if (LoadInst *L = dyn_cast<LoadInst>(I)) {
-    return (L->getPointerAddressSpace() == LOCAL_AS);
+    return (L->getPointerAddressSpace() == OCLEnv::LOCAL_AS);
   }
   return false;
 }
@@ -541,8 +544,8 @@ bool isMathName(std::string fName) {
 }
 
 //------------------------------------------------------------------------------
-void safeIncrement(std::map<std::string, unsigned int> &map, std::string key) {
-  std::map<std::string, unsigned int>::iterator iter = map.find(key);
+void safeIncrement(std::map<std::string, int> &map, std::string key) {
+  std::map<std::string, int>::iterator iter = map.find(key);
   if (iter == map.end())
     map[key] = 1;
   else
@@ -599,14 +602,14 @@ Instruction *findLastUser(Instruction *I) {
   InstVector users = findUsers(I);
   users = filterUsers(I, users);
   Instruction *lastUser = NULL;
-  unsigned int maxDistance = 0;
+  int maxDistance = 0;
 
   BasicBlock::iterator begin(I);
   for (InstVector::iterator iter = users.begin(), end = users.end();
        iter != end; ++iter) {
     Instruction *inst = *iter;
     BasicBlock::iterator blockIter(inst);
-    unsigned int currentDist = std::distance(begin, blockIter);
+    int currentDist = std::distance(begin, blockIter);
     if (currentDist > maxDistance) {
       maxDistance = currentDist;
       lastUser = inst;
@@ -622,14 +625,14 @@ Instruction *findLastUser(Instruction *I) {
 Instruction *findFirstUser(Instruction *I) {
   InstVector users = findUsers(I);
   Instruction *firstUser = NULL;
-  unsigned int minDistance = I->getParent()->size();
+  int minDistance = I->getParent()->size();
 
   BasicBlock::iterator begin(I);
   for (InstVector::iterator iter = users.begin(), end = users.end();
        iter != end; ++iter) {
     Instruction *inst = *iter;
     BasicBlock::iterator blockIter(inst);
-    unsigned int currentDist = std::distance(begin, blockIter);
+    int currentDist = std::distance(begin, blockIter);
     if (currentDist < minDistance) {
       minDistance = currentDist;
       firstUser = inst;
@@ -653,8 +656,7 @@ bool IsIntCast(Instruction *I) {
 }
 
 //------------------------------------------------------------------------------
-void renameValueWithFactor(Value *value, StringRef oldName,
-                           unsigned int index) {
+void renameValueWithFactor(Value *value, StringRef oldName, unsigned int index) {
   if (!oldName.empty())
     value->setName(oldName + "..cf" + Twine(index + 2));
 }

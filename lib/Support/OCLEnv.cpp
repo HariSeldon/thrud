@@ -7,6 +7,7 @@
 const int OCLEnv::WARP_SIZE = 32;
 const int OCLEnv::CACHELINE_SIZE = 128;
 const int OCLEnv::UNKNOWN_MEMORY_LOCATION = -1;
+const unsigned int OCLEnv::LOCAL_AS = 3;
 
 OCLEnv::OCLEnv(Function &function, const NDRange *ndRange, const NDRangeSpace &ndRangeSpace)
     : ndRange(ndRange), ndRangeSpace(ndRangeSpace) {

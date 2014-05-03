@@ -20,18 +20,16 @@
 
 using namespace llvm;
 
-#define LOCAL_AS 3
-
 extern const char *BARRIER;
 
 // Loop management.
-bool IsInLoop(const Instruction *inst, LoopInfo *loopInfo);
-bool IsInLoop(const BasicBlock *block, LoopInfo *loopInfo);
+bool isInLoop(const Instruction *inst, LoopInfo *loopInfo);
+bool isInLoop(const BasicBlock *block, LoopInfo *loopInfo);
 
 // OpenCL management.
-bool IsKernel(const Function *F);
+bool isKernel(const Function *function);
 
-void safeIncrement(std::map<std::string, unsigned int> &inputMap,
+void safeIncrement(std::map<std::string, int> &inputMap,
                    std::string key);
 
 // Map management.

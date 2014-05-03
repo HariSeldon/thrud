@@ -40,19 +40,13 @@ public:
 public:
   std::vector<int> loadTransactions;
   std::vector<int> storeTransactions;
-  std::vector<int> localLoadTransactions;
-  std::vector<int> localStoreTransactions;
 
   std::vector<int> loopLoadTransactions;
   std::vector<int> loopStoreTransactions;
-  std::vector<int> loopLocalLoadTransactions;
-  std::vector<int> loopLocalStoreTransactions;
 
 private:
   void memoryAccessAnalysis(BasicBlock &block, std::vector<int> &loadTrans,
-                            std::vector<int> &storeTrans,
-                            std::vector<int> &localLoadTrans,
-                            std::vector<int> &localStoreTrans);
+                            std::vector<int> &storeTrans);
   void init();
   void dump();
 

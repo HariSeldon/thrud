@@ -32,7 +32,7 @@ public:
   void dump();
 
 public:
-  std::map<std::string, unsigned int> instTypes;
+  std::map<std::string, int> instTypes;
 
   // Overall counters.
   // Map block with estimated ILP.
@@ -46,16 +46,16 @@ public:
   void computeMLP(BasicBlock *block, DominatorTree *DT, PostDominatorTree *PDT);
 
   // Map block with number of incoming edges.
-  std::map<std::string, unsigned int> blockIncoming;
+  std::map<std::string, int> blockIncoming;
   void countIncomingEdges(const BasicBlock &block);
 
   // Map block with number of outgoing edges.
-  std::map<std::string, unsigned int> blockOutgoing;
+  std::map<std::string, int> blockOutgoing;
   void countOutgoingEdges(const BasicBlock &block);
 
   // Number of instructions per block.
-  //std::map<std::string, unsigned int> blockInsts;
-  std::vector<unsigned int> blockInsts;
+  //std::map<std::string, int> blockInsts;
+  std::vector<int> blockInsts;
   void countInstsBlock(const BasicBlock &block);
 
   // Function calls.
@@ -63,7 +63,7 @@ public:
   void countMathFunctions(const BasicBlock &block);
 
   // Liveness ranges.
-  std::vector<unsigned int> aliveOutBlocks;
+  std::vector<int> aliveOutBlocks;
   std::vector<float> avgLiveRange;
   void livenessAnalysis(BasicBlock &block);
 //  void coalescingAnalysis(BasicBlock &block, ScalarEvolution *SE, OCLEnv *OCL,
@@ -71,7 +71,7 @@ public:
 
   // Phis.
   // Map phi name with arg number.
-  std::map<std::string, unsigned int> phiArgs;
+  std::map<std::string, int> phiArgs;
   // Map block with phi.
   std::map<std::string, std::vector<std::string> > blockPhis;
   void countPhis(const BasicBlock &block);

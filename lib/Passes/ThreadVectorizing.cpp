@@ -67,7 +67,7 @@ bool ThreadVectorizing::doFinalization(llvm::Module &function) {
 //------------------------------------------------------------------------------
 bool ThreadVectorizing::runOnFunction(llvm::Function &function) {
   // Apply the pass to kernels only.
-  if (!IsKernel((const Function *)&function))
+  if (!isKernel((const Function *)&function))
     return false;
 
   // Apply the pass to the selected kernel only.
