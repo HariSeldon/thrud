@@ -16,7 +16,7 @@ TMP_NAME=$THRUD_DIR/tmp.ll
 OCLDEF=$THRUD_DIR/opencl_spir.h
 TARGET=spir
 
-if [ $# -ne 11 ]
+if [ $# -ne 5 ]
 then
   echo "Must specify: input file, kernel name, cd, cf, st"
 exit 1;
@@ -24,15 +24,9 @@ fi
 
 inputFile=$1
 kernelName=$2
-numberOfGroupsX=$3
-numberOfGroupsY=$4
-numberOfGroupsZ=$5
-localX=$6
-localY=$7
-localZ=$8
-coarseningDirection=$9
-coarseningFactor=${10}
-coarseningStride=${11}
+coarseningDirection=$3
+coarseningFactor=$4
+coarseningStride=$5
 
 # Compile kernel.
 $CLANG -x cl \
@@ -51,6 +45,4 @@ $OPT -instnamer \
      -mem2reg \
      -inline -inline-threshold=100000 \
      -load $LIB_THRUD -symbolic-execution -symbolic-kernel-name ${kernelName} \
-     -localSizeX ${localX} -localSizeY ${localY} -localSizeZ ${localZ} \
-     -numberOfGroupsX ${numberOfGroupsX} -numberOfGroupsY ${numberOfGroupsY} -numberOfGroupsZ ${numberOfGroupsZ} \
      -o /dev/null

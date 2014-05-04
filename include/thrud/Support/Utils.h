@@ -23,6 +23,7 @@ using namespace llvm;
 extern const char *BARRIER;
 
 // Loop management.
+bool isInLoop(const Instruction &inst, LoopInfo *loopInfo);
 bool isInLoop(const Instruction *inst, LoopInfo *loopInfo);
 bool isInLoop(const BasicBlock *block, LoopInfo *loopInfo);
 

@@ -2,6 +2,7 @@
 #define SUBSCRIPT_ANALYSIS_H
 
 #include "thrud/Support/Utils.h"
+#include "thrud/Support/Warp.h"
 
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -11,20 +12,19 @@ class OCLEnv;
 
 class SubscriptAnalysis {
 public:
-  SubscriptAnalysis(ScalarEvolution *se, OCLEnv *ocl);
+  SubscriptAnalysis(ScalarEvolution *se, OCLEnv *ocl, const Warp &warp);
 
 public:
+  int getTransactionNumber(Value *value);
   float analyzeSubscript(const SCEV *scev);
-  float getThreadStride(Value *value);
-  bool isConsecutive(Value *value);
 
 private:
-  ScalarEvolution *se;
+  ScalarEvolution *scalarEvolution;
   OCLEnv *ocl;
+  Warp warp;
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
 
 private:
-  const SCEV* getMinusSCEV(const SCEV* first, const SCEV *second); 
   int computeTransactionNumber(const std::vector<const SCEV*> &scevs);
   bool verifyUnknown(const SCEV* scev, const SCEV* unknown);
   bool verifyUnknown(const std::vector<const SCEV*> &scevs, const SCEV* unknown);

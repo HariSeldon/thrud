@@ -2,7 +2,7 @@
 
 #include "llvm/Analysis/ScalarEvolution.h"
 
-#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instructions.h"
 
 #include "thrud/Support/NDRange.h"
 #include "thrud/Support/NDRangeSpace.h"
@@ -16,6 +16,23 @@
 static cl::opt<std::string>
     kernelName("symbolic-kernel-name", cl::init(""), cl::Hidden,
                cl::desc("Name of the kernel to analyze"));
+
+static cl::opt<int> localSizeX("localSizeX", cl::init(128), cl::Hidden,
+                               cl::desc("localSizeX for symbolic execution"));
+static cl::opt<int> localSizeY("localSizeY", cl::init(1), cl::Hidden,
+                               cl::desc("localSizeY for symbolic execution"));
+static cl::opt<int> localSizeZ("localSizeZ", cl::init(1), cl::Hidden,
+                               cl::desc("localSizeZ for symbolic execution"));
+
+static cl::opt<int>
+    numberOfGroupsX("numberOfGroupsX", cl::init(1024), cl::Hidden,
+                    cl::desc("numberOfGroupsX for symbolic execution"));
+static cl::opt<int>
+    numberOfGroupsY("numberOfGroupsY", cl::init(1024), cl::Hidden,
+                    cl::desc("numberOfGroupsY for symbolic execution"));
+static cl::opt<int>
+    numberOfGroupsZ("numberOfGroupsZ", cl::init(1024), cl::Hidden,
+                    cl::desc("numberOfGroupsZ for symbolic execution"));
 
 char SymbolicExecution::ID = 0;
 static RegisterPass<SymbolicExecution>
@@ -59,34 +76,40 @@ template <> struct SequenceTraits<std::vector<int> > {
 }
 }
 
+SymbolicExecution::SymbolicExecution()
+    : FunctionPass(ID),
+      ndrSpace(localSizeX, localSizeY, localSizeZ, numberOfGroupsX,
+               numberOfGroupsY, numberOfGroupsZ) {
+}
+
+SymbolicExecution::~SymbolicExecution() {
+  delete ocl;
+}
+
 //------------------------------------------------------------------------------
 bool SymbolicExecution::runOnFunction(Function &function) {
   if (function.getName() != kernelName)
     return false;
 
   loopInfo = &getAnalysis<LoopInfo>();
-  se = &getAnalysis<ScalarEvolution>();
+  scalarEvolution = &getAnalysis<ScalarEvolution>();
   ndr = &getAnalysis<NDRange>();
 
-  // Define the NDRange space.
-  // FIXME: this is going to be read from a config file.
-  NDRangeSpace ndrSpace(512, 1, 1, 1024, 1024, 1);
   ocl = new OCLEnv(function, ndr, ndrSpace);
+  Warp warp(0, 0, 0, 0, ndrSpace);
+  subscriptAnalysis = new SubscriptAnalysis(scalarEvolution, ocl, warp);
 
-  init();
-
+  initBuffers();
   visit(function);
-
   dump();
 
   return false;
 }
 
 //------------------------------------------------------------------------------
-void SymbolicExecution::init() {
+void SymbolicExecution::initBuffers() {
   loadTransactions.clear();
   storeTransactions.clear();
-
   loopLoadTransactions.clear();
   loopStoreTransactions.clear();
 }
@@ -100,52 +123,32 @@ void SymbolicExecution::getAnalysisUsage(AnalysisUsage &au) const {
 }
 
 //------------------------------------------------------------------------------
-void SymbolicExecution::visitBasicBlock(BasicBlock &basicBlock) {
-  BasicBlock *block = (BasicBlock *)&basicBlock;
-  if (isInLoop(block, loopInfo))
-    memoryAccessAnalysis(basicBlock, loopLoadTransactions,
-                         loopStoreTransactions);
-  else
-    memoryAccessAnalysis(basicBlock, loadTransactions, storeTransactions);
+void SymbolicExecution::visitMemoryInst(Value *pointer,
+                                        std::vector<int> &resultVector) {
+  if(const GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+    // Ignore operations to local memory.
+    if(gep->getPointerAddressSpace() == OCLEnv::LOCAL_AS)
+      return;
+
+    resultVector.push_back(subscriptAnalysis->getTransactionNumber(pointer));
+  } 
 }
-
-//------------------------------------------------------------------------------
-void SymbolicExecution::memoryAccessAnalysis(BasicBlock &block,
-                                             std::vector<int> &loadTrans,
-                                             std::vector<int> &storeTrans) {
-  SubscriptAnalysis sa(se, ocl);
-
-  for (BasicBlock::iterator iter = block.begin(), end = block.end();
-       iter != end; ++iter) {
-    llvm::Instruction *inst = iter;
-    // Load instruction.
-    if (LoadInst *LI = dyn_cast<LoadInst>(inst)) {
-      Value *pointer = LI->getOperand(0);
-      if (isa<GetElementPtrInst>(pointer)) {
-        //if (gep->getPointerAddressSpace() == LOCAL_AS) {
-        //  localLoadTrans.push_back(sa.getThreadStride(pointer));
-        //  continue;
-        //}
-        errs() << "LOAD:\n";
-        inst->dump();
-        loadTrans.push_back(sa.getThreadStride(pointer));
-      }
-    }
-
-    // Store instruction.
-    if (StoreInst *SI = dyn_cast<StoreInst>(inst)) {
-      Value *pointer = SI->getOperand(1);
-      if (isa<GetElementPtrInst>(pointer)) {
-        //if (gep->getPointerAddressSpace() == LOCAL_AS) {
-        //  localStoreTrans.push_back(sa.getThreadStride(pointer));
-        //  continue;
-        //}
-        errs() << "STORE:\n";
-        inst->dump();
-        storeTrans.push_back(sa.getThreadStride(pointer));
-      }
-    }
+void SymbolicExecution::visitStoreInst(StoreInst &storeInst) {
+  errs() << "SymbolicExecution::visitStoreInst\n";
+  Value *pointer = storeInst.getOperand(1);
+  if (isInLoop(storeInst, loopInfo))
+    visitMemoryInst(pointer, loopStoreTransactions);
+  else {
+    visitMemoryInst(pointer, storeTransactions);
   }
+}
+void SymbolicExecution::visitLoadInst(LoadInst &loadInst) {
+  errs() << "SymbolicExecution::visitLoadInst\n";
+  Value *pointer = loadInst.getOperand(0);
+  if (isInLoop(loadInst, loopInfo))
+    visitMemoryInst(pointer, loopLoadTransactions);
+  else
+    visitMemoryInst(pointer, loadTransactions);
 }
 
 //------------------------------------------------------------------------------

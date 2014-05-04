@@ -13,7 +13,7 @@ Warp::Warp(int groupX, int groupY, int groupZ, int warpIndex,
   int localSizeY = ndrSpace.getLocalSizeY();
   int localSizeZ = ndrSpace.getLocalSizeZ();
   int localArea = localSizeX * localSizeY;
-  int localVolume = localArea * localSizeZ;
+//  int localVolume = localArea * localSizeZ;
 
   // Compute global_id of first thread in the work group.
 //  int firstThreadInGroup =

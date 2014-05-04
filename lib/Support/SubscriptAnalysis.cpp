@@ -1,7 +1,6 @@
 #include "thrud/Support/SubscriptAnalysis.h"
 
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -14,8 +13,9 @@
 #include <functional>
 #include <iterator>
 
-SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *se, OCLEnv *ocl)
-    : se(se), ocl(ocl) {}
+SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *scalarEvolution, OCLEnv *ocl,
+                                     const Warp &warp)
+    : scalarEvolution(scalarEvolution), ocl(ocl), warp(warp) {}
 
 //------------------------------------------------------------------------------
 int getTypeWidth(Type *type) {
@@ -29,25 +29,20 @@ int getTypeWidth(Type *type) {
 }
 
 //------------------------------------------------------------------------------
-float SubscriptAnalysis::getThreadStride(Value *value) {
+int SubscriptAnalysis::getTransactionNumber(Value *value) {
+  errs() << "SubscriptAnalysis::getTransactionNumber\n"; 
   //int width = getTypeWidth(value->getType());
 
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
   }
 
-  if (!se->isSCEVable(value->getType())) {
+  if (!scalarEvolution->isSCEVable(value->getType())) {
     return -1;
   }
 
-  const SCEV *scev = se->getSCEV(value);
+  const SCEV *scev = scalarEvolution->getSCEV(value);
   return analyzeSubscript(scev);
-}
-
-// FIXME this is broken. Restore the old function so to compute the interval
-// of consecutive threads.
-bool SubscriptAnalysis::isConsecutive(Value *value) {
-  return getThreadStride(value) == 1.f;
 }
 
 //------------------------------------------------------------------------------
@@ -55,30 +50,22 @@ float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
   std::vector<const SCEV *> resultVector;
   resultVector.reserve(OCLEnv::WARP_SIZE);
 
-  const NDRangeSpace &ndrSpace = ocl->getNDRangeSpace();
-  // Work on the first warp in the first work group.
-  Warp warp(0, 0, 0, 0, ndrSpace);
-
   // Iterate over threads in a warp.
   for (Warp::iterator iter = warp.begin(), iterEnd = warp.end();
        iter != iterEnd; ++iter) {
     NDRangePoint point = *iter;
-//    errs() << point.toString();
+    errs() << point.toString();
     SCEVMap processed;
-//    scev->dump();
     const SCEV *expr = replaceInExpr(scev, point, processed);    
     if (isa<SCEVCouldNotCompute>(expr)) {
       return 0;
     }
-//    errs() << "Expr: ";
-//    expr->dump();
-
     resultVector.push_back(expr);
   }
 
   assert((int)resultVector.size() == OCLEnv::WARP_SIZE && "Missing expressions");
   int tn = computeTransactionNumber(resultVector);
-//  errs() << "Transaction number: " << tn << "\n";
+  errs() << "Transaction number: " << tn << "\n";
 
 //  exit(1);
 
@@ -98,12 +85,12 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
 
   verifyUnknown(scevs, unknown);
 
-//  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
-//                                                 iterEnd = scevs.end();
-//       iter != iterEnd; ++iter) {
-//    errs() << "SCEV: ";
-//    (*iter)->dump();
-//  }
+  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
+                                                 iterEnd = scevs.end();
+       iter != iterEnd; ++iter) {
+    errs() << "SCEV: ";
+    (*iter)->dump();
+  }
 
   assert((int)scevs.size() == OCLEnv::WARP_SIZE && "Wrong number of SCEVs");
 
@@ -115,7 +102,7 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
                                                  iterEnd = scevs.end();
        iter != iterEnd; ++iter) {
     const SCEV *currentSCEV = *iter;
-    offsets.push_back(se->getMinusSCEV(currentSCEV, unknown));
+    offsets.push_back(scalarEvolution->getMinusSCEV(currentSCEV, unknown));
   }
 
   assert((int)offsets.size() == OCLEnv::WARP_SIZE && "Wrong number of offsets");
@@ -249,7 +236,7 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVAddRecExpr *expr,
                                              SCEVMap &processed) {
   //  expr->dump();
   const SCEV *start = expr->getStart();
-  // const SCEV* step = addRecExpr->getStepRecurrence(*se);
+  // const SCEV* step = addRecExpr->getStepRecurrence(*scalarEvolution);
   // Check that the step is independent of the TID. TODO.
   return replaceInExpr(start, point, processed);
 }
@@ -267,19 +254,19 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVCommutativeExpr *expr,
        I != E; ++I) {
     const SCEV *NewOperand = replaceInExpr(*I, point, processed);
     if (isa<SCEVCouldNotCompute>(NewOperand))
-      return se->getCouldNotCompute();
+      return scalarEvolution->getCouldNotCompute();
     operands.push_back(NewOperand);
   }
   const SCEV *result = NULL;
 
   if (isa<SCEVAddExpr>(expr))
-    result = se->getAddExpr(operands);
+    result = scalarEvolution->getAddExpr(operands);
   if (isa<SCEVMulExpr>(expr))
-    result = se->getMulExpr(operands);
+    result = scalarEvolution->getMulExpr(operands);
   if (isa<SCEVSMaxExpr>(expr))
-    result = se->getSMaxExpr(operands);
+    result = scalarEvolution->getSMaxExpr(operands);
   if (isa<SCEVUMaxExpr>(expr))
-    result = se->getUMaxExpr(operands);
+    result = scalarEvolution->getUMaxExpr(operands);
 
   return (result);
 }
@@ -306,30 +293,30 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
 
       // Modulo.
       if (BinOp->getOpcode() == Instruction::URem) {
-        const SCEV *Arg = se->getSCEV(BinOp->getOperand(0));
-        const SCEV *Modulo = se->getSCEV(BinOp->getOperand(1));
-        const SCEV *Result = se->getMinusSCEV(
-            Arg, se->getMulExpr(se->getUDivExpr(Arg, Modulo), Modulo));
+        const SCEV *Arg = scalarEvolution->getSCEV(BinOp->getOperand(0));
+        const SCEV *Modulo = scalarEvolution->getSCEV(BinOp->getOperand(1));
+        const SCEV *Result = scalarEvolution->getMinusSCEV(
+            Arg, scalarEvolution->getMulExpr(scalarEvolution->getUDivExpr(Arg, Modulo), Modulo));
         return replaceInExpr(Result, point, processed);
       }
 
       // Signed division.
       if (BinOp->getOpcode() == Instruction::SDiv) {
-        const SCEV *First = se->getSCEV(BinOp->getOperand(0));
-        const SCEV *Second = se->getSCEV(BinOp->getOperand(1));
-        const SCEV *Div = se->getUDivExpr(First, Second);
+        const SCEV *First = scalarEvolution->getSCEV(BinOp->getOperand(0));
+        const SCEV *Second = scalarEvolution->getSCEV(BinOp->getOperand(1));
+        const SCEV *Div = scalarEvolution->getUDivExpr(First, Second);
         return replaceInExpr(Div, point, processed);
       }
 
       //llvm::errs() << "Could not compute!\n";
       // All the rest.
-      return se->getCouldNotCompute();
+      return scalarEvolution->getCouldNotCompute();
     }
 
     // Manage casts.
     if (IsIntCast(instruction)) {
       CallInst *Call = dyn_cast<CallInst>(instruction);
-      const SCEV *ArgSCEV = se->getSCEV(Call->getArgOperand(0));
+      const SCEV *ArgSCEV = scalarEvolution->getSCEV(Call->getArgOperand(0));
       return replaceInExpr(ArgSCEV, point, processed);
     }
 
@@ -342,7 +329,7 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUnknown *expr,
 
   // If the value is a function argument query OCL.
   if(isa<Argument>(value) && value->getType()->isIntegerTy()) 
-    return se->getConstant(APInt(32, ocl->resolveValue(value)));
+    return scalarEvolution->getConstant(APInt(32, ocl->resolveValue(value)));
 
   return expr;
 }
@@ -359,18 +346,18 @@ SubscriptAnalysis::resolveInstruction(llvm::Instruction *instruction,
   if(ndr->isCoordinate(instruction)) {
     int direction = ndr->getDirection(instruction); 
     int coordinate = point.getCoordinate(type, direction);
-    return se->getConstant(APInt(32, coordinate));
+    return scalarEvolution->getConstant(APInt(32, coordinate));
   } 
 
   // Check if the instruction is a size querying the NDRange class. 
   if(ndr->isSize(instruction)) {
     int direction = ndr->getDirection(instruction); 
     int size = ndrSpace.getSize(type, direction);
-    return se->getConstant(APInt(32, size));
+    return scalarEvolution->getConstant(APInt(32, size));
   }
 
   // If the instruction is neither a coordinate nor a size return CouldNotCompute.
-  return se->getCouldNotCompute();
+  return scalarEvolution->getCouldNotCompute();
 }
 
 //------------------------------------------------------------------------------
@@ -382,12 +369,12 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUDivExpr *expr,
   //  Expr->dump();
   const SCEV *newLHS = replaceInExpr(expr->getLHS(), point, processed);
   if (isa<SCEVCouldNotCompute>(newLHS))
-    return se->getCouldNotCompute();
+    return scalarEvolution->getCouldNotCompute();
   const SCEV *newRHS = replaceInExpr(expr->getRHS(), point, processed);
   if (isa<SCEVCouldNotCompute>(newRHS))
-    return se->getCouldNotCompute();
+    return scalarEvolution->getCouldNotCompute();
 
-  return se->getUDivExpr(newLHS, newRHS);
+  return scalarEvolution->getUDivExpr(newLHS, newRHS);
 }
 
 //------------------------------------------------------------------------------
@@ -405,11 +392,11 @@ const SCEV *SubscriptAnalysis::replaceInPhi(PHINode *Phi,
   //  Phi->dump();
   // FIXME: Pick the first argument of the phi node.
   Value *param = Phi->getIncomingValue(0);
-  assert(se->isSCEVable(param->getType()) && "PhiNode argument non-SCEVable");
+  assert(scalarEvolution->isSCEVable(param->getType()) && "PhiNode argument non-SCEVable");
 
-  const SCEV *scev = se->getSCEV(param);
+  const SCEV *scev = scalarEvolution->getSCEV(param);
 
-  processed[se->getSCEV(Phi)] = scev;
+  processed[scalarEvolution->getSCEV(Phi)] = scev;
 
   return replaceInExpr(scev, point, processed);
 }
@@ -443,7 +430,7 @@ const SCEV *SubscriptAnalysis::replaceInPhi(PHINode *Phi,
 //      return -1;
 //    }
 //
-//    const SCEV *result = se->getMinusSCEV(secondExpr, firstExpr);
+//    const SCEV *result = scalarEvolution->getMinusSCEV(secondExpr, firstExpr);
 //
 //    //  llvm::errs() << "Difference result.\n";
 //    //  result->dump();

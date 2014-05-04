@@ -13,26 +13,32 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "thrud/Support/NDRangeSpace.h"
+
 using namespace llvm;
 
-namespace llvm { class Function; }
+namespace llvm {
+class Function;
+class StoreInst;
+class LoadInst;
+}
 
 class MultiDimDivAnalysis;
 class NDRange;
 class OCLEnv;
+class SubscriptAnalysis;
 
 /// Collect information about the kernel function.
 namespace {
 class SymbolicExecution : public FunctionPass,
-                               public InstVisitor<SymbolicExecution> {
+                          public InstVisitor<SymbolicExecution> {
 
   friend class InstVisitor<SymbolicExecution>;
 
-  void visitBasicBlock(BasicBlock &block);
-
 public:
-  static char ID; 
-  SymbolicExecution() : FunctionPass(ID) {}
+  static char ID;
+  SymbolicExecution();
+  ~SymbolicExecution();
 
   virtual bool runOnFunction(Function &F);
   virtual void getAnalysisUsage(AnalysisUsage &AU) const;
@@ -48,14 +54,20 @@ private:
   void memoryAccessAnalysis(BasicBlock &block, std::vector<int> &loadTrans,
                             std::vector<int> &storeTrans);
   void init();
+  void initBuffers();
+  void initOCLSpace();
+  void visitLoadInst(LoadInst &loadInst);
+  void visitStoreInst(StoreInst &storeInst);
+  void visitMemoryInst(Value *pointer, std::vector<int> &resultVector);
   void dump();
 
 private:
-  ScalarEvolution *se;
+  ScalarEvolution *scalarEvolution;
+  SubscriptAnalysis *subscriptAnalysis;
   OCLEnv *ocl;
   NDRange *ndr;
   LoopInfo *loopInfo;
-
+  NDRangeSpace ndrSpace;
 };
 }
 

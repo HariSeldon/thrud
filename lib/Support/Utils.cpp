@@ -28,6 +28,11 @@
 const char *BARRIER = "barrier";
 
 //------------------------------------------------------------------------------
+bool isInLoop(const Instruction &inst, LoopInfo *loopInfo) {
+  const BasicBlock *block = inst.getParent();
+  return loopInfo->getLoopFor(block) != NULL;
+}
+
 bool isInLoop(const Instruction *inst, LoopInfo *loopInfo) {
   const BasicBlock *block = inst->getParent();
   return loopInfo->getLoopFor(block) != NULL;
