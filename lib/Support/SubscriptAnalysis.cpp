@@ -13,24 +13,15 @@
 #include <functional>
 #include <iterator>
 
+int getTypeWidth(const Type *type);
+
+//------------------------------------------------------------------------------
 SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *scalarEvolution, OCLEnv *ocl,
                                      const Warp &warp)
     : scalarEvolution(scalarEvolution), ocl(ocl), warp(warp) {}
 
 //------------------------------------------------------------------------------
-int getTypeWidth(Type *type) {
-  assert(type->isPointerTy() && "Type is not a pointer");
-  type = type->getPointerElementType();
-  int result = type->getPrimitiveSizeInBits();
-  if(result == 0) {
-    return 32;
-  }
-  return result / 8;
-}
-
-//------------------------------------------------------------------------------
 int SubscriptAnalysis::getTransactionNumber(Value *value) {
-  errs() << "SubscriptAnalysis::getTransactionNumber\n"; 
   //int width = getTypeWidth(value->getType());
 
   if (!isa<GetElementPtrInst>(value)) {
@@ -54,7 +45,7 @@ float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
   for (Warp::iterator iter = warp.begin(), iterEnd = warp.end();
        iter != iterEnd; ++iter) {
     NDRangePoint point = *iter;
-    errs() << point.toString();
+//    errs() << point.toString();
     SCEVMap processed;
     const SCEV *expr = replaceInExpr(scev, point, processed);    
     if (isa<SCEVCouldNotCompute>(expr)) {
@@ -65,7 +56,7 @@ float SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
 
   assert((int)resultVector.size() == OCLEnv::WARP_SIZE && "Missing expressions");
   int tn = computeTransactionNumber(resultVector);
-  errs() << "Transaction number: " << tn << "\n";
+//  errs() << "Transaction number: " << tn << "\n";
 
 //  exit(1);
 
@@ -85,12 +76,12 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
 
   verifyUnknown(scevs, unknown);
 
-  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
-                                                 iterEnd = scevs.end();
-       iter != iterEnd; ++iter) {
-    errs() << "SCEV: ";
-    (*iter)->dump();
-  }
+//  for (std::vector<const SCEV *>::const_iterator iter = scevs.begin(),
+//                                                 iterEnd = scevs.end();
+//       iter != iterEnd; ++iter) {
+//    errs() << "SCEV: ";
+//    (*iter)->dump();
+//  }
 
   assert((int)scevs.size() == OCLEnv::WARP_SIZE && "Wrong number of SCEVs");
 
@@ -106,13 +97,6 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
   }
 
   assert((int)offsets.size() == OCLEnv::WARP_SIZE && "Wrong number of offsets");
-
-//  for (std::vector<const SCEV *>::const_iterator iter = offsets.begin(),
-//                                                 iterEnd = offsets.end();
-//       iter != iterEnd; ++iter) {
-//    errs() << "SCEV: ";
-//    (*iter)->dump();
-//  }
 
   std::vector<int> indices;
   // This is a std::transform, again.
@@ -150,7 +134,9 @@ int SubscriptAnalysis::computeTransactionNumber(const std::vector<const SCEV *> 
   std::transform(indices.begin(), indices.end(), indices.begin(),
                  std::bind2nd(std::divides<int>(), OCLEnv::CACHELINE_SIZE));
 
+  std::sort(indices.begin(), indices.end());
   std::vector<int>::iterator uniqueEnd = std::unique(indices.begin(), indices.end());
+
   int uniqueCacheLines = std::distance(indices.begin(), uniqueEnd);
  
   return uniqueCacheLines;
@@ -399,6 +385,17 @@ const SCEV *SubscriptAnalysis::replaceInPhi(PHINode *Phi,
   processed[scalarEvolution->getSCEV(Phi)] = scev;
 
   return replaceInExpr(scev, point, processed);
+}
+
+//------------------------------------------------------------------------------
+int getTypeWidth(const Type *type) {
+  assert(type->isPointerTy() && "Type is not a pointer");
+  const Type* pointedType = type->getPointerElementType();
+  int result = pointedType->getPrimitiveSizeInBits();
+  if(result == 0) {
+    return 32;
+  }
+  return result / 8;
 }
 
 ////------------------------------------------------------------------------------

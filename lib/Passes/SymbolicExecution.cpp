@@ -134,7 +134,7 @@ void SymbolicExecution::visitMemoryInst(Value *pointer,
   } 
 }
 void SymbolicExecution::visitStoreInst(StoreInst &storeInst) {
-  errs() << "SymbolicExecution::visitStoreInst\n";
+//  errs() << "SymbolicExecution::visitStoreInst\n";
   Value *pointer = storeInst.getOperand(1);
   if (isInLoop(storeInst, loopInfo))
     visitMemoryInst(pointer, loopStoreTransactions);
@@ -143,7 +143,7 @@ void SymbolicExecution::visitStoreInst(StoreInst &storeInst) {
   }
 }
 void SymbolicExecution::visitLoadInst(LoadInst &loadInst) {
-  errs() << "SymbolicExecution::visitLoadInst\n";
+//  errs() << "SymbolicExecution::visitLoadInst\n";
   Value *pointer = loadInst.getOperand(0);
   if (isInLoop(loadInst, loopInfo))
     visitMemoryInst(pointer, loopLoadTransactions);
