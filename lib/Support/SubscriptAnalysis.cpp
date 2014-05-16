@@ -33,6 +33,7 @@ int SubscriptAnalysis::getTransactionNumber(Value *value) {
   }
 
   const SCEV *scev = scalarEvolution->getSCEV(value);
+  //scev->dump();
   return analyzeSubscript(scev);
 }
 
@@ -220,7 +221,7 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEV *expr,
 const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVAddRecExpr *expr,
                                              const NDRangePoint &point,
                                              SCEVMap &processed) {
-  //  expr->dump();
+  //expr->dump();
   const SCEV *start = expr->getStart();
   // const SCEV* step = addRecExpr->getStepRecurrence(*scalarEvolution);
   // Check that the step is independent of the TID. TODO.
@@ -231,10 +232,8 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVAddRecExpr *expr,
 const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVCommutativeExpr *expr,
                                              const NDRangePoint &point,
                                              SCEVMap &processed) {
-
-  //  llvm::errs() << "SCEVCommutativeExpr:";
-  //  expr->dump();
-
+  //llvm::errs() << "SCEVCommutativeExpr:";
+  //expr->dump();
   SmallVector<const SCEV *, 8> operands;
   for (SCEVNAryExpr::op_iterator I = expr->op_begin(), E = expr->op_end();
        I != E; ++I) {
@@ -245,6 +244,12 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVCommutativeExpr *expr,
   }
   const SCEV *result = NULL;
 
+  //for (SmallVector<const SCEV *, 8>::iterator iter = operands.begin(),
+  //                                            iterEnd = operands.end();
+  //     iter != iterEnd; ++iter) {
+  //  (*iter)->dump();
+  //}
+
   if (isa<SCEVAddExpr>(expr))
     result = scalarEvolution->getAddExpr(operands);
   if (isa<SCEVMulExpr>(expr))
@@ -254,7 +259,7 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVCommutativeExpr *expr,
   if (isa<SCEVUMaxExpr>(expr))
     result = scalarEvolution->getUMaxExpr(operands);
 
-  return (result);
+  return result;
 }
 
 //------------------------------------------------------------------------------
@@ -367,15 +372,15 @@ const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVUDivExpr *expr,
 const SCEV *SubscriptAnalysis::replaceInExpr(const SCEVCastExpr *expr,
                                              const NDRangePoint &point,
                                              SCEVMap &processed) {
-  return expr->getOperand();
+  return replaceInExpr(expr->getOperand(), point, processed);
 }
 
 //------------------------------------------------------------------------------
 const SCEV *SubscriptAnalysis::replaceInPhi(PHINode *Phi,
                                             const NDRangePoint &point,
                                             SCEVMap &processed) {
-  //  llvm::errs() << "Phi: ";
-  //  Phi->dump();
+  //llvm::errs() << "Phi: ";
+  //Phi->dump();
   // FIXME: Pick the first argument of the phi node.
   Value *param = Phi->getIncomingValue(0);
   assert(scalarEvolution->isSCEVable(param->getType()) && "PhiNode argument non-SCEVable");
