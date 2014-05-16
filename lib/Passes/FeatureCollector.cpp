@@ -75,11 +75,6 @@ template <> struct MappingTraits<FeatureCollector> {
     io.mapRequired("mlpPerBlock", collector.blockMLP);
     io.mapRequired("avgLiveRange", collector.avgLiveRange);
     io.mapRequired("aliveOut", collector.aliveOutBlocks);
-    // Memory strides.
-    io.mapRequired("loadStrides", collector.loadStrides);
-    io.mapRequired("storeStrides", collector.storeStrides);
-    io.mapRequired("localLoadStrides", collector.localLoadStrides);
-    io.mapRequired("localStoreStrides", collector.localStoreStrides);
   }
 };
 
@@ -163,8 +158,6 @@ FeatureCollector::FeatureCollector() {
   instTypes["divInsts"] = 0;
   instTypes["divRegionInsts"] = 0;
   instTypes["uniformLoads"] = 0;
-  instTypes["coalescedLoads"] = 0;
-  instTypes["coalescedStores"] = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -403,17 +396,17 @@ void FeatureCollector::livenessAnalysis(BasicBlock &block) {
   aliveOutBlocks.push_back(aliveValues);
 }
 
-//------------------------------------------------------------------------------
-void FeatureCollector::countDimensions(NDRange *NDR) {
-  InstVector dir0 = NDR->getTids(0);
-  InstVector dir1 = NDR->getTids(1);
-  InstVector dir2 = NDR->getTids(2);
-
-  int dimensionNumber =
-      (dir0.size() != 0) + (dir1.size() != 0) + (dir2.size() != 0);
-
-  instTypes["dimensions"] = dimensionNumber;
-}
+////------------------------------------------------------------------------------
+//void FeatureCollector::countDimensions(NDRange *NDR) {
+//  InstVector dir0 = NDR->getTids(0);
+//  InstVector dir1 = NDR->getTids(1);
+//  InstVector dir2 = NDR->getTids(2);
+//
+//  int dimensionNumber =
+//      (dir0.size() != 0) + (dir1.size() != 0) + (dir2.size() != 0);
+//
+//  instTypes["dimensions"] = dimensionNumber;
+//}
 
 //------------------------------------------------------------------------------
 void FeatureCollector::dump() {
@@ -481,15 +474,18 @@ void FeatureCollector::loopCountDivInsts(Function &function,
   // Count divergent regions.
   RegionVector &Regions = mdda->getDivRegions();
   InstVector DivInsts = mdda->getDivInsts();
-  int divRegions = 0;
-  int divInsts = 0;
+  
+  int divRegionsCounter = 0;
+  int divInstsCounter = 0;
 
   for (InstVector::iterator iter = DivInsts.begin(), iterEnd = DivInsts.end();
        iter != iterEnd; ++iter) {
     if (!isInLoop(*iter, LI))
       continue;
-    ++divInsts;
+    ++divInstsCounter;
   }
+
+  instTypes["divInsts"] = divInstsCounter;
 
   // Insts in divergent regions.
   int divRegionInsts = 0;
@@ -498,8 +494,10 @@ void FeatureCollector::loopCountDivInsts(Function &function,
     if (!isInLoop((*iter)->getHeader(), LI))
       continue;
     divRegionInsts += (*iter)->size();
-    ++divRegions;
+    ++divRegionsCounter;
   }
+ 
+  instTypes["divRegions"] = divRegionsCounter;
 
   instTypes["divRegionInsts"] = divRegionInsts;
 

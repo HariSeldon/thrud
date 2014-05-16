@@ -56,8 +56,6 @@ private:
   DominatorTree *DT;
   LoopInfo *LI;
   ScalarEvolution *SE;
-  NDRange *ndr;
-  OCLEnv *ocl;
   ValueVector TIds;
 };
 }

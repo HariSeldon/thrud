@@ -3,7 +3,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 
 #include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
-#include "thrud/Support/NDRange.h"
 #include "thrud/Support/Utils.h"
 
 cl::opt<std::string> kernelName("count-kernel-name", cl::init(""), cl::Hidden,
@@ -25,11 +24,7 @@ bool OpenCLFeatureExtractor::runOnFunction(Function &function) {
   mdda = &getAnalysis<MultiDimDivAnalysis>();
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   se = &getAnalysis<ScalarEvolution>();
-  ndr = &getAnalysis<NDRange>();
  
-  NDRangeSpace ndrSpace(4, 32, 1, 1024, 1024, 1);  
-  ocl = new OCLEnv(function, ndr, ndrSpace);
-
   visit(function);
   collector.dump();
   return false;
@@ -42,7 +37,6 @@ void OpenCLFeatureExtractor::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<PostDominatorTree>();
   au.addRequired<DominatorTree>();
   au.addRequired<ScalarEvolution>();
-  au.addRequired<NDRange>();
   au.setPreservesAll();
 }
 
@@ -76,13 +70,11 @@ void OpenCLFeatureExtractor::visitBasicBlock(BasicBlock &basicBlock) {
   collector.countLocalMemoryUsage(basicBlock);
   collector.countPhis(basicBlock);
   collector.livenessAnalysis(basicBlock);
-  //collector.coalescingAnalysis(basicBlock, se, ocl, CoarseningDirectionCL);
 }
 
 //------------------------------------------------------------------------------
 void OpenCLFeatureExtractor::visitFunction(Function &function) {
   // Extract ThreadId values. 
-  collector.countDimensions(ndr);
   collector.countBranches(function);
   collector.countEdges(function);
   collector.countDivInsts(function, mdda, sdda);

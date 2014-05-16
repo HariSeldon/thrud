@@ -83,7 +83,7 @@ public:
   void countLocalMemoryUsage(const BasicBlock &block);
 
   // Function counters.
-  void countDimensions(NDRange *NDR);
+  //void countDimensions(NDRange *NDR);
   void countEdges(const Function &function);
   void countBranches(const Function &function);
   void countDivInsts(Function &function, MultiDimDivAnalysis *mdda,
@@ -95,11 +95,6 @@ public:
   void loopCountBranches(const Function &function, LoopInfo *LI);
   void loopCountDivInsts(Function &function, MultiDimDivAnalysis *mdda,
                          SingleDimDivAnalysis *sdda, LoopInfo *LI);
-public:
-  std::vector<float> loadStrides;
-  std::vector<float> storeStrides;
-  std::vector<float> localLoadStrides;
-  std::vector<float> localStoreStrides; 
 };
 
 #endif

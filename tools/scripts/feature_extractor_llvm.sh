@@ -18,7 +18,7 @@ RANDOM_FILE=/tmp/tc_tmp${RANDOM}.cl
 OUTPUT_FILE=/tmp/tc_output${RANDOM}.cl
 
 OCLDEF=$THRUD_DIR/opencl_spir.h
-OPTIMIZATION=-O0
+OPTIMIZATION=-O3
 TARGET=spir
 
 if [ $# -ne 6 ]

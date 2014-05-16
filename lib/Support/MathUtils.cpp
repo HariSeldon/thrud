@@ -22,7 +22,7 @@ float getAverage(const std::vector<integerType> &elements) {
   return average;
 }
 
-template float getAverage(const std::vector<unsigned int> &elements);
+template float getAverage(const std::vector<int> &elements);
 
 //------------------------------------------------------------------------------
 template <typename integerType>
