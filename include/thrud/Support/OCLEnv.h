@@ -8,7 +8,7 @@
 #include <map>
 
 namespace llvm {
-  class Function;
+class Function;
 }
 
 using namespace llvm;
@@ -16,18 +16,20 @@ using namespace llvm;
 class OCLEnv {
 
 public:
+  static const int BANK_NUMBER;
   static const int WARP_SIZE;
   static const int CACHELINE_SIZE;
   static const int UNKNOWN_MEMORY_LOCATION;
   static unsigned const int LOCAL_AS;
 
 public:
-  OCLEnv(Function &function, const NDRange *ndRange, const NDRangeSpace &ndRangeSpace);
- 
+  OCLEnv(Function &function, const NDRange *ndRange,
+         const NDRangeSpace &ndRangeSpace);
+
 public:
-  const NDRange* getNDRange() const;
-  const NDRangeSpace& getNDRangeSpace() const;
-  int resolveValue(llvm::Value*) const; 
+  const NDRange *getNDRange() const;
+  const NDRangeSpace &getNDRangeSpace() const;
+  int resolveValue(llvm::Value *) const;
 
 private:
   void setup(Function &function);
@@ -35,8 +37,7 @@ private:
 private:
   const NDRange *ndRange;
   NDRangeSpace ndRangeSpace;
-  std::map<llvm::Value*, int> argumentMap;
-
+  std::map<llvm::Value *, int> argumentMap;
 };
 
 #endif

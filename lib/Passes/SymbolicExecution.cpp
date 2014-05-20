@@ -57,6 +57,11 @@ template <> struct MappingTraits<SymbolicExecution> {
 
     io.mapRequired("loop_load_transactions", exe.loopLoadTransactions);
     io.mapRequired("loop_store_transactions", exe.loopStoreTransactions);
+
+    io.mapRequired("load_bank_conflicts", exe.loadBankConflicts);
+    io.mapRequired("store_bank_conflicts", exe.storeBankConflicts);
+    io.mapRequired("loop_load_bank_conflicts", exe.loopLoadBankConflicts);
+    io.mapRequired("loop_store_bank_conflicts", exe.loopStoreBankConflicts);
   }
 };
 
@@ -112,6 +117,11 @@ void SymbolicExecution::initBuffers() {
   storeTransactions.clear();
   loopLoadTransactions.clear();
   loopStoreTransactions.clear();
+
+  loadBankConflicts.clear();
+  storeBankConflicts.clear();
+  loopLoadBankConflicts.clear();
+  loopStoreBankConflicts.clear();
 }
 
 //------------------------------------------------------------------------------
@@ -123,32 +133,53 @@ void SymbolicExecution::getAnalysisUsage(AnalysisUsage &au) const {
 }
 
 //------------------------------------------------------------------------------
+void SymbolicExecution::visitLocalMemoryInst(Value *pointer, 
+                                             std::vector<int> &resultVector) {
+  resultVector.push_back(subscriptAnalysis->getBankConflictNumber(pointer));
+}
+
 void SymbolicExecution::visitMemoryInst(Value *pointer,
                                         std::vector<int> &resultVector) {
-  if(const GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
-    // Ignore operations to local memory.
-    if(gep->getPointerAddressSpace() == OCLEnv::LOCAL_AS)
-      return;
-
-    resultVector.push_back(subscriptAnalysis->getTransactionNumber(pointer));
-  } 
+  resultVector.push_back(subscriptAnalysis->getTransactionNumber(pointer));
 }
+
 void SymbolicExecution::visitStoreInst(StoreInst &storeInst) {
-//  errs() << "SymbolicExecution::visitStoreInst\n";
   Value *pointer = storeInst.getOperand(1);
-  if (isInLoop(storeInst, loopInfo))
-    visitMemoryInst(pointer, loopStoreTransactions);
-  else {
-    visitMemoryInst(pointer, storeTransactions);
+
+  if (const GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+    if (gep->getPointerAddressSpace() == OCLEnv::LOCAL_AS) {
+      if (isInLoop(storeInst, loopInfo))
+        visitLocalMemoryInst(pointer, loopStoreBankConflicts);
+      else {
+        visitLocalMemoryInst(pointer, storeBankConflicts);
+      }
+    } else {
+      if (isInLoop(storeInst, loopInfo))
+        visitMemoryInst(pointer, loopStoreTransactions);
+      else {
+        visitMemoryInst(pointer, storeTransactions);
+      }
+    }
   }
 }
+
 void SymbolicExecution::visitLoadInst(LoadInst &loadInst) {
-//  errs() << "SymbolicExecution::visitLoadInst\n";
   Value *pointer = loadInst.getOperand(0);
-  if (isInLoop(loadInst, loopInfo))
-    visitMemoryInst(pointer, loopLoadTransactions);
-  else
-    visitMemoryInst(pointer, loadTransactions);
+
+  if (const GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
+    if (gep->getPointerAddressSpace() == OCLEnv::LOCAL_AS) {
+      if (isInLoop(loadInst, loopInfo))
+        visitLocalMemoryInst(pointer, loopLoadBankConflicts);
+      else {
+        visitLocalMemoryInst(pointer, loadBankConflicts);
+      }
+    } else {
+      if (isInLoop(loadInst, loopInfo))
+        visitMemoryInst(pointer, loopLoadTransactions);
+      else
+        visitMemoryInst(pointer, loadTransactions);
+    }
+  }
 }
 
 //------------------------------------------------------------------------------

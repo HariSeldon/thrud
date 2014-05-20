@@ -50,6 +50,12 @@ public:
   std::vector<int> loopLoadTransactions;
   std::vector<int> loopStoreTransactions;
 
+  std::vector<int> loadBankConflicts;
+  std::vector<int> storeBankConflicts;
+
+  std::vector<int> loopLoadBankConflicts;
+  std::vector<int> loopStoreBankConflicts;
+
 private:
   void memoryAccessAnalysis(BasicBlock &block, std::vector<int> &loadTrans,
                             std::vector<int> &storeTrans);
@@ -59,6 +65,7 @@ private:
   void visitLoadInst(LoadInst &loadInst);
   void visitStoreInst(StoreInst &storeInst);
   void visitMemoryInst(Value *pointer, std::vector<int> &resultVector);
+  void visitLocalMemoryInst(Value *pointer, std::vector<int> &resultVector);
   void dump();
 
 private:

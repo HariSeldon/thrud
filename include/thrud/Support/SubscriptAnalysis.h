@@ -15,8 +15,8 @@ public:
   SubscriptAnalysis(ScalarEvolution *se, OCLEnv *ocl, const Warp &warp);
 
 public:
+  int getBankConflictNumber(Value *value);
   int getTransactionNumber(Value *value);
-  float analyzeSubscript(const SCEV *scev);
 
 private:
   ScalarEvolution *scalarEvolution;
@@ -25,7 +25,10 @@ private:
   typedef std::map<const SCEV*, const SCEV*> SCEVMap;
 
 private:
+  std::vector<int> getMemoryOffsets(std::vector<const SCEV *> scevs, const SCEV *unknown);
+  std::vector<const SCEV *> analyzeSubscript(const SCEV *scev);
   int computeTransactionNumber(const std::vector<const SCEV*> &scevs);
+  int computeBankConflictNumber(const std::vector<const SCEV*> &scevs);
   bool verifyUnknown(const SCEV* scev, const SCEV* unknown);
   bool verifyUnknown(const std::vector<const SCEV*> &scevs, const SCEV* unknown);
   const SCEVUnknown* getUnknownSCEV(const SCEV* scev);
