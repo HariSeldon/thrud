@@ -127,6 +127,7 @@ ValueVector ToValueVector(InstVector &Insts);
 
 template <class type> void dumpSet(const std::set<type *> &toDump);
 template <class type> void dumpVector(const std::vector<type *> &toDump);
+void dumpIntVector(const std::vector<int> &toDump);
 
 bool IsGreaterThan(CmpInst::Predicate Pred);
 bool IsEquals(CmpInst::Predicate Pred);

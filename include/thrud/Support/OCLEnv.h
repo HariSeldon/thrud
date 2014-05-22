@@ -17,6 +17,7 @@ class OCLEnv {
 
 public:
   static const int BANK_NUMBER;
+  static const int BANK_WIDTH;
   static const int WARP_SIZE;
   static const int CACHELINE_SIZE;
   static const int UNKNOWN_MEMORY_LOCATION;

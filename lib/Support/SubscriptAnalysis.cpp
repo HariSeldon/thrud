@@ -22,6 +22,7 @@ SubscriptAnalysis::SubscriptAnalysis(ScalarEvolution *scalarEvolution,
 
 //------------------------------------------------------------------------------
 int SubscriptAnalysis::getBankConflictNumber(Value *value) {
+  //errs() << "SubscriptAnalysis::getBankConflictNumber\n";
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
   }
@@ -100,9 +101,64 @@ int SubscriptAnalysis::computeBankConflictNumber(
     return OCLEnv::BANK_NUMBER;
   }
 
-  // This is the actual computation of the number of bank conflicts. 
+  std::vector<int> rows;
+  std::vector<int> columns;
 
-  return 0;
+  rows.reserve(OCLEnv::WARP_SIZE);
+  columns.reserve(OCLEnv::WARP_SIZE);
+
+  const int LOCAL_MEMORY_WIDTH = OCLEnv::BANK_NUMBER * OCLEnv::BANK_WIDTH;
+
+  // This is the actual computation of the number of bank conflicts.
+  for (std::vector<int>::iterator iter = indices.begin(),
+                                  iterEnd = indices.end();
+       iter != iterEnd; ++iter) {
+    columns.push_back(*iter % (OCLEnv::BANK_NUMBER));
+  }
+
+  std::transform(indices.begin(), indices.end(), std::back_inserter(rows),
+                 std::bind2nd(std::divides<int>(), LOCAL_MEMORY_WIDTH));
+
+  assert((int)rows.size() == OCLEnv::WARP_SIZE && "Wrong number of rows");
+  assert(rows.size() == columns.size() && "Rows and Columns don't match");
+
+  std::map<int, std::vector<int> > localMemory;
+
+  for (int index = 0; index < OCLEnv::WARP_SIZE; ++index) {
+    int row = rows[index];
+    int column = columns[index];
+
+    localMemory[column].push_back(row); 
+  }
+
+  for (std::map<int, std::vector<int> >::iterator iter = localMemory.begin(),
+                                                  iterEnd = localMemory.end();
+       iter != iterEnd; ++iter) {
+    errs() << iter->first << " -- ";
+    dumpIntVector(iter->second);
+    errs() << "\n";
+  }
+
+  int conflictNumber = 0;
+
+  for (std::map<int, std::vector<int> >::iterator iter = localMemory.begin(),
+                                                  iterEnd = localMemory.end();
+       iter != iterEnd; ++iter) {
+
+    std::vector<int> &currentRows = iter->second;
+    std::sort(currentRows.begin(), currentRows.end());
+
+    std::vector<int>::iterator uniqueEnd =
+        std::unique(currentRows.begin(), currentRows.end());
+  
+    int uniqueRows = std::distance(currentRows.begin(), uniqueEnd);
+    --uniqueRows;
+
+    conflictNumber = std::max(conflictNumber, uniqueRows);
+
+  }
+
+  return conflictNumber;
 }
 
 //------------------------------------------------------------------------------
@@ -431,6 +487,10 @@ SubscriptAnalysis::getMemoryOffsets(std::vector<const SCEV *> scevs,
     }
   }
   
+//  for (std::vector<int>::iterator iter = indices.begin(), iterEnd = indices.end(); iter != iterEnd; ++iter) {
+//    errs() << *iter << "\n";
+//  }
+
   assert(indices.size() == scevs.size() && "Wrong number of indices");
   return indices;
 }

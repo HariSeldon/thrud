@@ -264,6 +264,13 @@ template void dumpVector(const std::vector<DivergentRegion *> &toDump);
 template void dumpVector(const std::vector<PHINode *> &toDump);
 template void dumpVector(const std::vector<Value *> &toDump);
 
+void dumpIntVector(const std::vector<int> &toDump) {
+  for (std::vector<int>::const_iterator iter = toDump.begin(), iterEnd = toDump.end();
+       iter != iterEnd; ++iter) {
+    errs() << *iter << ", ";
+  }
+}
+
 //-----------------------------------------------------------------------------
 // This is black magic. Don't touch it.
 void CloneDominatorInfo(BasicBlock *BB, Map &map, DominatorTree *DT) {

@@ -144,6 +144,7 @@ void SymbolicExecution::visitMemoryInst(Value *pointer,
 }
 
 void SymbolicExecution::visitStoreInst(StoreInst &storeInst) {
+  errs() << "Store!\n";
   Value *pointer = storeInst.getOperand(1);
 
   if (const GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {
@@ -164,6 +165,7 @@ void SymbolicExecution::visitStoreInst(StoreInst &storeInst) {
 }
 
 void SymbolicExecution::visitLoadInst(LoadInst &loadInst) {
+  errs() << "Load!\n";
   Value *pointer = loadInst.getOperand(0);
 
   if (const GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(pointer)) {

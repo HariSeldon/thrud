@@ -5,6 +5,7 @@
 #include "llvm/IR/Function.h"
 
 const int OCLEnv::BANK_NUMBER = 32;
+const int OCLEnv::BANK_WIDTH = 4;
 const int OCLEnv::WARP_SIZE = 32;
 const int OCLEnv::CACHELINE_SIZE = 128;
 const int OCLEnv::UNKNOWN_MEMORY_LOCATION = -1;
