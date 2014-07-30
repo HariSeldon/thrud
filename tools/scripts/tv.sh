@@ -5,6 +5,7 @@ OPT=opt
 LLVM_DIS=llvm-dis
 AXTOR=axtor
 LIB_THRUD=$HOME/root/lib/libThrud.so
+TMP_FILE=/tmp/tc_tmp${RANDOM}.cl
 
 INPUT_FILE=$1
 
@@ -23,5 +24,7 @@ $OPT -mem2reg -instnamer \
      -vectorizing-direction 0 \
      -div-region-mgt=classic \
      -o - | \
-#${LLVM_DIS} -o -  
-${OPT} -dot-cfg
+${LLVM_DIS} -o ${TMP_FILE}
+${AXTOR} ${TMP_FILE} -m OCL -o ${OUTPUT_FILE}
+
+rm ${TMP_FILE}
