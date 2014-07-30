@@ -4,6 +4,9 @@
 
 #include "thrud/DivergenceAnalysis/DivergenceAnalysis.h"
 
+#include "thrud/Support/NDRange.h"
+#include "thrud/Support/NDRangeSpace.h"
+#include "thrud/Support/OCLEnv.h"
 #include "thrud/Support/SubscriptAnalysis.h"
 
 #include "llvm/IR/Function.h"
@@ -38,7 +41,8 @@ cl::opt<unsigned int> VectorizingWidthCL("vectorizing-width", cl::init(1),
 extern cl::opt<std::string> KernelNameCL;
 extern cl::opt<ThreadVectorizing::DivRegionOption> DivRegionOptionCL;
 
-ThreadVectorizing::ThreadVectorizing() : FunctionPass(ID) {}
+ThreadVectorizing::ThreadVectorizing()
+    : FunctionPass(ID), ndrSpace(1024, 1024, 1024, 1024, 1024, 1024) {}
 
 void ThreadVectorizing::getAnalysisUsage(llvm::AnalysisUsage &au) const {
   au.addRequired<LoopInfo>();
@@ -49,16 +53,19 @@ void ThreadVectorizing::getAnalysisUsage(llvm::AnalysisUsage &au) const {
   au.addRequired<NDRange>();
 }
 
+// -----------------------------------------------------------------------------
 const char *ThreadVectorizing::getPassName() const {
   return THREAD_VECTORIZER_PASS_NAME;
 }
 
+// -----------------------------------------------------------------------------
 bool ThreadVectorizing::doInitialization(llvm::Module &module) {
   // Initialize the IR builder with the context from the current module.
   irBuilder = new llvm::IRBuilder<>(module.getContext());
   return false;
 }
 
+// -----------------------------------------------------------------------------
 bool ThreadVectorizing::doFinalization(llvm::Module &function) {
   delete irBuilder;
   return false;
@@ -86,6 +93,10 @@ bool ThreadVectorizing::runOnFunction(llvm::Function &function) {
   sdda = &getAnalysis<SingleDimDivAnalysis>();
   ndr = &getAnalysis<NDRange>();
   scalarEvolution = &getAnalysis<ScalarEvolution>();
+
+  ocl = new OCLEnv(function, ndr, ndrSpace);
+  Warp warp(0, 0, 0, 0, ndrSpace);
+  subscriptAnalysis = new SubscriptAnalysis(scalarEvolution, ocl, warp);
 
   init();
 
@@ -154,7 +165,7 @@ llvm::Value *ThreadVectorizing::widenValue(llvm::Value *value) {
          iter != iterEnd; ++iter) {
       llvm::User *user = *iter;
 
-      if(!isa<llvm::Instruction>(user)) {
+      if (!isa<llvm::Instruction>(user)) {
         continue;
       }
 
@@ -162,7 +173,8 @@ llvm::Value *ThreadVectorizing::widenValue(llvm::Value *value) {
           llvm::cast<llvm::Instruction>(user)->getParent();
 
       // If the user is not in the current kernel skip it.
-      if (block == NULL || block->getParent() != kernelFunction || block->getParent() != dominator->getParent()) {
+      if (block == NULL || block->getParent() != kernelFunction ||
+          block->getParent() != dominator->getParent()) {
         continue;
       }
 
@@ -387,107 +399,103 @@ llvm::BinaryOperator *ThreadVectorizing::vectorizeBinaryOperator(
   return vector_operator;
 }
 
+// -----------------------------------------------------------------------------
 llvm::Value *ThreadVectorizing::vectorizeLoad(llvm::LoadInst *loadInst) {
-  assert(false && "vectorizeLoad must be fixed");
-  return NULL;
+  // Get the load pointer.
+  llvm::Value *load_pointer = loadInst->getPointerOperand();
 
-//  // Get the load pointer.
-//  llvm::Value *load_pointer = loadInst->getPointerOperand();
-//
-//  llvm::GetElementPtrInst *gep =
-//      llvm::dyn_cast<llvm::GetElementPtrInst>(load_pointer);
-//
-//  // If the store is not consecutive along the vectorizing dimension then
-//  // it has to be replicated.
-//  SubscriptAnalysis subscriptAnalysis(scalarEvolution, ndr, direction);
-//  if (false == subscriptAnalysis.isConsecutive(gep)) {
-//    return replicateInst(loadInst);
-//  }
-//
-//  unsigned int operands_number = gep->getNumOperands();
-//  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
-//  last_operand = getVectorValue(last_operand);
-//
-//  last_operand = irBuilder->CreateExtractElement(
-//      last_operand, irBuilder->getInt32(0), "extracted");
-//
-//  // Create the new gep.
-//  llvm::GetElementPtrInst *new_gep =
-//      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
-//  new_gep->setOperand(operands_number - 1, last_operand);
-//  load_pointer = irBuilder->Insert(new_gep);
-//  load_pointer->setName("load_ptr");
-//  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
-//  toRemoveInsts.insert(gep);
-//
-//  llvm::Type *vector_load_type =
-//      getVectorPointerType(loadInst->getPointerOperand()->getType());
-//
-//  load_pointer =
-//      irBuilder->CreateBitCast(load_pointer, vector_load_type, "bitcast");
-//
-//  // Insert the vector load instruction into the function.
-//  llvm::LoadInst *vector_load = new llvm::LoadInst(load_pointer);
-//  vector_load->setAlignment(loadInst->getAlignment());
-//  irBuilder->Insert(vector_load)->setName("vector_load");
-//
-//  return vector_load;
+  llvm::GetElementPtrInst *gep =
+      llvm::dyn_cast<llvm::GetElementPtrInst>(load_pointer);
+
+  // If the store is not consecutive along the vectorizing dimension then
+  // it has to be replicated.
+  if (false == subscriptAnalysis->isConsecutive(gep)) {
+    return replicateInst(loadInst);
+  }
+
+  unsigned int operands_number = gep->getNumOperands();
+  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
+  last_operand = getVectorValue(last_operand);
+
+  last_operand = irBuilder->CreateExtractElement(
+      last_operand, irBuilder->getInt32(0), "extracted");
+
+  // Create the new gep.
+  llvm::GetElementPtrInst *new_gep =
+      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
+  new_gep->setOperand(operands_number - 1, last_operand);
+  load_pointer = irBuilder->Insert(new_gep);
+  load_pointer->setName("load_ptr");
+  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
+  toRemoveInsts.insert(gep);
+
+  llvm::Type *vector_load_type =
+      getVectorPointerType(loadInst->getPointerOperand()->getType());
+
+  load_pointer =
+      irBuilder->CreateBitCast(load_pointer, vector_load_type, "bitcast");
+
+  // Insert the vector load instruction into the function.
+  llvm::LoadInst *vector_load = new llvm::LoadInst(load_pointer);
+  vector_load->setAlignment(loadInst->getAlignment());
+  irBuilder->Insert(vector_load)->setName("vector_load");
+
+  return vector_load;
 }
 
+// -----------------------------------------------------------------------------
 llvm::Value *ThreadVectorizing::vectorizeStore(llvm::StoreInst *storeInst) {
-  assert(false && "vectorizeStore must be fixed");
-  return NULL;
+  // Get the store pointer.
+  llvm::Value *store_pointer = storeInst->getPointerOperand();
+  llvm::GetElementPtrInst *gep =
+      llvm::dyn_cast<llvm::GetElementPtrInst>(store_pointer);
 
-//  // Get the store pointer.
-//  llvm::Value *store_pointer = storeInst->getPointerOperand();
-//  llvm::GetElementPtrInst *gep =
-//      llvm::dyn_cast<llvm::GetElementPtrInst>(store_pointer);
-//
-//  // If the store is not consecutive along the vectorizing dimension then
-//  // it has to be replicated.
-//  SubscriptAnalysis subscriptAnalysis(scalarEvolution, ndr, direction);
-//  if (false == subscriptAnalysis.isConsecutive(gep)) {
-//    return replicateInst(storeInst);
-//  }
-//
-//  unsigned int operands_number = gep->getNumOperands();
-//  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
-//  last_operand = getVectorValue(last_operand);
-//
-//  last_operand = irBuilder->CreateExtractElement(
-//      last_operand, irBuilder->getInt32(0), "extracted");
-//
-//  // Create the new gep.
-//  llvm::GetElementPtrInst *new_gep =
-//      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
-//  new_gep->setOperand(operands_number - 1, last_operand);
-//  new_gep = irBuilder->Insert(new_gep);
-//  new_gep->setName("store_ptr");
-//  store_pointer = new_gep;
-//  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
-//  toRemoveInsts.insert(gep);
-//
-//  // Get the store type.
-//  llvm::Type *scalar_store_type = new_gep->getPointerOperandType();
-//
-//  // Create the vector store pointer type.
-//  llvm::Type *vector_store_type = getVectorPointerType(scalar_store_type);
-//
-//  store_pointer =
-//      irBuilder->CreateBitCast(store_pointer, vector_store_type, "bitcast");
-//
-//  // Get the value to store to memory.
-//  llvm::Value *to_store_value = getVectorValue(storeInst->getValueOperand());
-//
-//  // Insert the vector store instruction into the function.
-//  llvm::StoreInst *vector_store =
-//      irBuilder->CreateStore(to_store_value, store_pointer, "vector_store");
-//  vector_store->setAlignment(storeInst->getAlignment());
-//  vector_store->setVolatile(storeInst->isVolatile());
-//
-//  return vector_store;
+  // If the store is not consecutive along the vectorizing dimension then
+  // it has to be replicated.
+  if (false == subscriptAnalysis->isConsecutive(gep)) {
+    return replicateInst(storeInst);
+  }
+
+  unsigned int operands_number = gep->getNumOperands();
+  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
+  last_operand = getVectorValue(last_operand);
+
+  last_operand = irBuilder->CreateExtractElement(
+      last_operand, irBuilder->getInt32(0), "extracted");
+
+  // Create the new gep.
+  llvm::GetElementPtrInst *new_gep =
+      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
+  new_gep->setOperand(operands_number - 1, last_operand);
+  new_gep = irBuilder->Insert(new_gep);
+  new_gep->setName("store_ptr");
+  store_pointer = new_gep;
+  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
+  toRemoveInsts.insert(gep);
+
+  // Get the store type.
+  llvm::Type *scalar_store_type = new_gep->getPointerOperandType();
+
+  // Create the vector store pointer type.
+  llvm::Type *vector_store_type = getVectorPointerType(scalar_store_type);
+
+  store_pointer =
+      irBuilder->CreateBitCast(store_pointer, vector_store_type, "bitcast");
+
+  // Get the value to store to memory.
+  llvm::Value *to_store_value =
+ getVectorValue(storeInst->getValueOperand());
+
+  // Insert the vector store instruction into the function.
+  llvm::StoreInst *vector_store =
+      irBuilder->CreateStore(to_store_value, store_pointer, "vector_store");
+  vector_store->setAlignment(storeInst->getAlignment());
+  vector_store->setVolatile(storeInst->isVolatile());
+
+  return vector_store;
 }
 
+// -----------------------------------------------------------------------------
 llvm::SelectInst *
 ThreadVectorizing::vectorizeSelect(llvm::SelectInst *select_inst) {
   llvm::Value *condition = select_inst->getOperand(0);
@@ -516,6 +524,7 @@ ThreadVectorizing::vectorizeSelect(llvm::SelectInst *select_inst) {
   return result;
 }
 
+// -----------------------------------------------------------------------------
 llvm::CmpInst *ThreadVectorizing::vectorizeCmp(llvm::CmpInst *cmp_inst) {
   // Get the compare operands.
   llvm::Value *first_operand = cmp_inst->getOperand(0);
@@ -540,6 +549,7 @@ llvm::CmpInst *ThreadVectorizing::vectorizeCmp(llvm::CmpInst *cmp_inst) {
   return result;
 }
 
+// -----------------------------------------------------------------------------
 llvm::CastInst *ThreadVectorizing::vectorizeCast(llvm::CastInst *cast_inst) {
   // Get the cast operand.
   llvm::Value *operand = cast_inst->getOperand(0);
@@ -558,6 +568,7 @@ llvm::CastInst *ThreadVectorizing::vectorizeCast(llvm::CastInst *cast_inst) {
   return result;
 }
 
+// -----------------------------------------------------------------------------
 llvm::Value *ThreadVectorizing::replicateInst(llvm::Instruction *inst) {
   assert(false == inst->getType()->isVectorTy() &&
          "Cannot replicate instructions of vector type");
@@ -608,6 +619,7 @@ llvm::Value *ThreadVectorizing::replicateInst(llvm::Instruction *inst) {
   return result;
 }
 
+// -----------------------------------------------------------------------------
 ValueVector ThreadVectorizing::getWidenedOperands(llvm::Instruction *inst) {
   // Generate the list of operands for the replicated instructions.
   ValueVector operands;
@@ -629,6 +641,7 @@ ValueVector ThreadVectorizing::getWidenedOperands(llvm::Instruction *inst) {
   return operands;
 }
 
+// -----------------------------------------------------------------------------
 llvm::Type *
 ThreadVectorizing::getVectorPointerType(llvm::Type *scalar_pointer_type) {
   // The input type must be a pointer type.
@@ -652,6 +665,7 @@ ThreadVectorizing::getVectorPointerType(llvm::Type *scalar_pointer_type) {
   return vector_pointer_type;
 }
 
+// -----------------------------------------------------------------------------
 void ThreadVectorizing::removeScalarInsts() {
   // Go through the list of instructions to be removed.
   for (InstSet::iterator iter = toRemoveInsts.begin(),
@@ -666,6 +680,7 @@ void ThreadVectorizing::removeScalarInsts() {
   }
 }
 
+// -----------------------------------------------------------------------------
 void ThreadVectorizing::removeVectorPlaceholders() {
   // Go through the placeholder map.
   for (V2VMap::iterator iter = phMap.begin(), iterEnd = phMap.end();
@@ -681,6 +696,7 @@ void ThreadVectorizing::removeVectorPlaceholders() {
   }
 }
 
+// -----------------------------------------------------------------------------
 void ThreadVectorizing::replicateRegion(DivergentRegion *region) {
   assert(dt->dominates(region->getHeader(), region->getExiting()) &&
          "Header does not dominates Exiting");

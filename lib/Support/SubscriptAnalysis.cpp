@@ -37,6 +37,13 @@ int SubscriptAnalysis::getBankConflictNumber(Value *value) {
 }
 
 //------------------------------------------------------------------------------
+// FIXME: this is used by the vectorization pass. 
+// It might not cover all the cases. For the moment is good enough.
+bool SubscriptAnalysis::isConsecutive(Value *value) {
+  return getTransactionNumber(value) == 1;
+}
+
+//------------------------------------------------------------------------------
 int SubscriptAnalysis::getTransactionNumber(Value *value) {
   if (!isa<GetElementPtrInst>(value)) {
     return 0;

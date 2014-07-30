@@ -15,6 +15,7 @@ public:
   SubscriptAnalysis(ScalarEvolution *se, OCLEnv *ocl, const Warp &warp);
 
 public:
+  bool isConsecutive(Value *value);
   int getBankConflictNumber(Value *value);
   int getTransactionNumber(Value *value);
 

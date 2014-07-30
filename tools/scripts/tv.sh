@@ -8,7 +8,7 @@ LIB_THRUD=$HOME/root/lib/libThrud.so
 
 INPUT_FILE=$1
 
-OCLDEF=$HOME/src/thrud/tools/scripts/ocldef_intel.h
+OCLDEF=$HOME/src/thrud/tools/scripts/opencl_spir.h
 OPTIMIZATION=-O0
 
 $CLANG -x cl \
