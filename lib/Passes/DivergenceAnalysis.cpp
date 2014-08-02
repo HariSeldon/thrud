@@ -28,6 +28,7 @@
 using namespace llvm;
 
 extern cl::opt<unsigned int> CoarseningDirectionCL;
+extern cl::opt<unsigned int> VectorizingDirectionCL;
 
 // Support functions.
 // -----------------------------------------------------------------------------
@@ -287,7 +288,23 @@ bool SingleDimDivAnalysis::runOnFunction(Function &functionRef) {
 }
 
 InstVector SingleDimDivAnalysis::getTids() {
-  return ndr->getTids(CoarseningDirectionCL);
+  assert((CoarseningDirectionCL == 0 ||
+         VectorizingDirectionCL == 0) &&
+             "Both coarsening and vectorization direction are specified in "
+             "command line");
+
+  unsigned int direction = 0; 
+
+  if(CoarseningDirectionCL == 0 && VectorizingDirectionCL == 0) 
+    direction = 0;
+
+  if(CoarseningDirectionCL != 0)
+    direction = CoarseningDirectionCL;
+
+  if(VectorizingDirectionCL != 0) 
+    direction = VectorizingDirectionCL;
+
+  return ndr->getTids(direction);
 }
 
 char SingleDimDivAnalysis::ID = 0;

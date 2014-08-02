@@ -37,10 +37,62 @@ int SubscriptAnalysis::getBankConflictNumber(Value *value) {
 }
 
 //------------------------------------------------------------------------------
-// FIXME: this is used by the vectorization pass. 
 // It might not cover all the cases. For the moment is good enough.
-bool SubscriptAnalysis::isConsecutive(Value *value) {
-  return getTransactionNumber(value) == 1;
+bool SubscriptAnalysis::isConsecutive(Value *value, int direction) {
+  assert((direction == 0 || direction == 1) && "Unsupported direction");
+
+  if (!isa<GetElementPtrInst>(value)) {
+    return 0;
+  }
+
+  if (!scalarEvolution->isSCEVable(value->getType())) {
+    return -1;
+  }
+
+  const SCEV *scev = scalarEvolution->getSCEV(value);
+
+  const int TEST_NUMBER = 64;
+  std::vector<const SCEV *> addresses;
+  addresses.reserve(OCLEnv::WARP_SIZE);
+  
+  NDRangeSpace ndrSpace(1024, 1024, 1024, 1024, 1024, 1024);
+
+  // Increment along direction. 
+  for (int index = 0; index < TEST_NUMBER; ++index) {
+    NDRangePoint point((1 - direction) * index, direction * index, 0, 0, 0, 0, ndrSpace);
+    SCEVMap processed;
+    const SCEV *expr = replaceInExpr(scev, point, processed);
+    addresses.push_back(expr);
+  }
+
+  assert(addresses.size() == TEST_NUMBER && "Missing addresses");
+
+  const SCEV *first = addresses[0];
+  int typeWidth = getTypeWidth(first->getType());
+
+  const SCEV *unknown = getUnknownSCEV(first);
+  if (unknown == NULL) {
+    return OCLEnv::WARP_SIZE;
+  }
+
+  verifyUnknown(addresses, unknown);
+
+  std::vector<int> indices = getMemoryOffsets(addresses, unknown);
+
+  // If any of the indices is UNKNOWN_MEMORY_LOCATION do something special.
+  std::vector<int>::iterator unknownMemoryLocationPosition = std::find(
+      indices.begin(), indices.end(), OCLEnv::UNKNOWN_MEMORY_LOCATION);
+
+  if (unknownMemoryLocationPosition != indices.end()) {
+    return false;
+  }
+
+  for (int index = 0; index < (int)(indices.size() - 1); ++index) {
+    if(indices[index] + typeWidth != indices[index + 1])
+      return false;
+  }
+
+  return true;
 }
 
 //------------------------------------------------------------------------------
@@ -70,9 +122,6 @@ SubscriptAnalysis::analyzeSubscript(const SCEV *scev) {
     NDRangePoint point = *iter;
     SCEVMap processed;
     const SCEV *expr = replaceInExpr(scev, point, processed);
-//    if (isa<SCEVCouldNotCompute>(expr)) {
-//      return 0;
-//    }
     resultVector.push_back(expr);
   }
 
@@ -172,7 +221,6 @@ int SubscriptAnalysis::computeBankConflictNumber(
 int SubscriptAnalysis::computeTransactionNumber(
     const std::vector<const SCEV *> &scevs) {
   const SCEV *first = scevs[0];
-  //  int width = getTypeWidth(first->getType());
 
   const SCEV *unknown = getUnknownSCEV(first);
   if (unknown == NULL) {

@@ -128,13 +128,13 @@ void ThreadVectorizing::widenTids() {
 }
 
 void ThreadVectorizing::widenTid(llvm::Instruction *tid) {
-  llvm::Instruction *scaled_tid = multiplyTid(tid);
-  llvm::Instruction *widened_tid =
-      llvm::dyn_cast<llvm::Instruction>(widenValue(scaled_tid));
-  llvm::Instruction *vector_tid = createConsecutiveVector(widened_tid);
+  llvm::Instruction *scaledTid = multiplyTid(tid);
+  llvm::Instruction *widenedTid =
+      llvm::dyn_cast<llvm::Instruction>(widenValue(scaledTid));
+  llvm::Instruction *vectorTid = createConsecutiveVector(widenedTid);
 
   // Manage the mapping between the new and the old tid instruction.
-  vectorMap[tid] = vector_tid;
+  vectorMap[tid] = vectorTid;
 }
 
 llvm::Instruction *ThreadVectorizing::multiplyTid(

@@ -320,8 +320,8 @@ llvm::Value *ThreadVectorizing::getVectorValue(llvm::Value *scalar) {
   } else {
     // If the value to widen is a varying instruction that is not in the
     // map then it is going to be widended in the future.
-    // To prevent dependency cycles create a placeholder and place them
-    //	is a suitable map.
+    // To prevent dependency cycles create a placeholder and place it
+    // in a map.
     if (llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(scalar)) {
       if (true == sdda->isDivergent(inst)) {
         if (true == phMap.count(scalar)) {
@@ -409,7 +409,7 @@ llvm::Value *ThreadVectorizing::vectorizeLoad(llvm::LoadInst *loadInst) {
 
   // If the store is not consecutive along the vectorizing dimension then
   // it has to be replicated.
-  if (false == subscriptAnalysis->isConsecutive(gep)) {
+  if (false == subscriptAnalysis->isConsecutive(gep, (int)(VectorizingDirectionCL))) {
     return replicateInst(loadInst);
   }
 
@@ -452,7 +452,7 @@ llvm::Value *ThreadVectorizing::vectorizeStore(llvm::StoreInst *storeInst) {
 
   // If the store is not consecutive along the vectorizing dimension then
   // it has to be replicated.
-  if (false == subscriptAnalysis->isConsecutive(gep)) {
+  if (false == subscriptAnalysis->isConsecutive(gep, (int)(VectorizingDirectionCL))) {
     return replicateInst(storeInst);
   }
 
