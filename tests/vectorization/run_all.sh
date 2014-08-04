@@ -21,6 +21,8 @@ function runTest {
   GREEN='\e[0;32m'
   BLANK='\e[0m'
 
+  OUTPUT_STRING="runTest $INPUT_FILE $KERNEL_NAME $VECTOR_WIDTH $VECTOR_DIRECTION"
+
   $CLANG -x cl \
          -target spir \
          -include ${OCLDEF} \
@@ -36,11 +38,13 @@ function runTest {
        -o /dev/null 2> /dev/null
   if [ $? == 0 ] 
   then 
-    echo -e "${GREEN}runTest $INPUT_FILE $KERNEL_NAME $VECTOR_WIDTH $VECTOR_DIRECTION Ok!${BLANK}"
+    echo -e "${GREEN}runTest $OUTPUT_STRING Ok!${BLANK}"
   else
-    echo -e "${RED}runTest $INPUT_FILE $KERNEL_NAME $VECTOR_WIDTH $VECTOR_DIRECTION Error${BLANK}"
+    echo -e "${RED}runTest $OUTPUT_STRING Error${BLANK}"
   fi 
 }
+
+# List all test cases.
 
 runTest kernels/memset.cl memset1 4 0 
 runTest kernels/memset.cl memset2 4 0 

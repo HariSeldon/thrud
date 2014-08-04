@@ -120,6 +120,7 @@ bool ThreadVectorizing::performVectorization(llvm::Function &function) {
   widenTids();
   vectorizeFunction();
   removeVectorPlaceholders();
+  removeScalarInsts();
 
   return true;
 }
@@ -149,7 +150,7 @@ llvm::Value *ThreadVectorizing::widenValue(llvm::Value *value) {
   // The widening of the value will be placed in the block that
   // immediatelly dominates all the used of the value.
   // Only if the value is not an instruction.
-  llvm::IRBuilderBase::InsertPoint original_ip = irBuilder->saveIP();
+  llvm::IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
   if (NULL == inst) {
     // The widening of the value will be placed in the block that
@@ -183,7 +184,7 @@ llvm::Value *ThreadVectorizing::widenValue(llvm::Value *value) {
       dominator = dt->findNearestCommonDominator(dominator, block);
     }
 
-    //    llvm::IRBuilderBase::InsertPoint original_ip = irBuilder->saveIP();
+    //    llvm::IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
     irBuilder->SetInsertPoint(dominator->getFirstNonPHI());
   }
 
@@ -193,15 +194,15 @@ llvm::Value *ThreadVectorizing::widenValue(llvm::Value *value) {
       irBuilder->CreateInsertElement(undefined_value, value, zero, "inserted");
 
   // Replicate the original value to all the positions of the vector.
-  llvm::Value *widened_vector = irBuilder->CreateShuffleVector(
+  llvm::Value *widenedVector = irBuilder->CreateShuffleVector(
       single_element_array, undefined_value, zero_vector, "widened");
 
   if (NULL == inst) {
     // Restore the previous insertion point.
-    irBuilder->restoreIP(original_ip);
+    irBuilder->restoreIP(originalIp);
   }
 
-  return widened_vector;
+  return widenedVector;
 }
 
 //------------------------------------------------------------------------------
@@ -214,10 +215,9 @@ void ThreadVectorizing::vectorizeFunction() {
        iter != iterEnd; ++iter) {
     llvm::Instruction *inst = *iter;
     setInsertPoint(inst);
-    llvm::Value *vector_result = vectorizeInst(inst);
-    if (NULL != vector_result) {
-      vectorMap[inst] = vector_result;
-      //insert_sorted<llvm::Instruction>(toRemoveInsts, inst);
+    llvm::Value *vectorResult = vectorizeInst(inst);
+    if (NULL != vectorResult) {
+      vectorMap[inst] = vectorResult;
       toRemoveInsts.insert(inst);
     }
   }
@@ -229,7 +229,7 @@ void ThreadVectorizing::vectorizeFunction() {
 
   fixPhiNodes();
 
-  removeScalarInsts();
+//  removeScalarInsts();
 }
 
 //------------------------------------------------------------------------------
@@ -329,17 +329,18 @@ llvm::Value *ThreadVectorizing::getVectorValue(llvm::Value *scalar) {
         }
 
         // Widen the scalar value generating the place holder.
-        llvm::Value *widened_value = widenValue(scalar);
-        phMap[scalar] = widened_value;
-        return widened_value;
+        llvm::Value *widenedValue = widenValue(scalar);
+        phMap[scalar] = widenedValue;
+
+        return widenedValue;
       }
     }
   }
 
   // Widen the scalar value.
-  llvm::Value *widened_value = widenValue(scalar);
-  vectorMap[scalar] = widened_value;
-  return widened_value;
+  llvm::Value *widenedValue = widenValue(scalar);
+  vectorMap[scalar] = widenedValue;
+  return widenedValue;
 }
 
 llvm::PHINode *ThreadVectorizing::vectorizePhiNode(llvm::PHINode *phiNode) {
