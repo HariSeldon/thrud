@@ -228,8 +228,6 @@ void ThreadVectorizing::vectorizeFunction() {
       std::bind1st(std::mem_fun(&ThreadVectorizing::replicateRegion), this));
 
   fixPhiNodes();
-
-//  removeScalarInsts();
 }
 
 //------------------------------------------------------------------------------
@@ -668,11 +666,37 @@ ThreadVectorizing::getVectorPointerType(llvm::Type *scalar_pointer_type) {
 
 // -----------------------------------------------------------------------------
 void ThreadVectorizing::removeScalarInsts() {
+  // Do a first sweep to find the users of values to be removed.
+  // Add these to the toRemoveInsts set.
+
+  InstSet newToRemove(toRemoveInsts);
+  InstSet tmp;
+
+  do {
+    tmp = newToRemove;
+    newToRemove.clear();
+    for (InstSet::iterator iter = tmp.begin(), iterEnd = tmp.end();
+         iter != iterEnd; ++iter) {
+      llvm::Instruction *inst = *iter;
+      for (llvm::Value::use_iterator useIter = inst->use_begin(),
+                                     useIterEnd = inst->use_end();
+           useIter != useIterEnd; ++useIter) {
+        User *user = *useIter;
+        if (Instruction *userInst = dyn_cast<Instruction>(user)) {
+          newToRemove.insert(userInst);
+          toRemoveInsts.insert(userInst);
+        }
+      }
+    }
+  } while (!newToRemove.empty());
+
+  // Actually remove all the instructions.
   // Go through the list of instructions to be removed.
   for (InstSet::iterator iter = toRemoveInsts.begin(),
                          iterEnd = toRemoveInsts.end();
        iter != iterEnd; ++iter) {
     llvm::Instruction *inst = *iter;
+      
     // Remove the current instruction from the function.
     if (false == inst->getType()->isVoidTy()) {
       inst->replaceAllUsesWith(llvm::Constant::getNullValue(inst->getType()));
