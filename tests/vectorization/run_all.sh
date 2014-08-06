@@ -35,7 +35,7 @@ function runTest {
        -vectorizing-direction ${VECTOR_DIRECTION} \
        -div-region-mgt classic \
        -kernel-name ${KERNEL_NAME} \
-       -o /dev/null 2> /dev/null
+       -o /dev/null
   if [ $? == 0 ] 
   then 
     echo -e "${GREEN}runTest $OUTPUT_STRING Ok!${BLANK}"
@@ -46,14 +46,16 @@ function runTest {
 
 # List all test cases.
 
-runTest kernels/memset.cl memset1 4 0 
-runTest kernels/memset.cl memset2 4 0 
-runTest kernels/memset.cl memset2 4 1
-runTest kernels/bruno_examples.cl vectorTest 4 0
-runTest kernels/bruno_examples.cl vectorTest 4 1
-runTest kernels/bruno_examples.cl vectorTest2 4 0
-runTest kernels/bruno_examples.cl vectorTest2 4 1
-runTest kernels/mm.cl mm 4 0
-runTest kernels/mm.cl mm 4 1
-runTest kernels/mt.cl mt 4 0
-runTest kernels/mt.cl mt 4 1
+#runTest kernels/memset.cl memset1 4 0 
+#runTest kernels/memset.cl memset2 4 0 
+#runTest kernels/memset.cl memset2 4 1
+#runTest kernels/bruno_examples.cl vectorTest 4 0
+#runTest kernels/bruno_examples.cl vectorTest 4 1
+#runTest kernels/bruno_examples.cl vectorTest2 4 0
+#runTest kernels/bruno_examples.cl vectorTest2 4 1
+#runTest kernels/mm.cl mm 4 0
+#runTest kernels/mm.cl mm 4 1
+#runTest kernels/mt.cl mt 4 0
+#runTest kernels/mt.cl mt 4 1
+runTest kernels/2DConvolution.cl Convolution2D_kernel 4 0
+runTest kernels/2DConvolution.cl Convolution2D_kernel 4 1
