@@ -109,7 +109,7 @@ void DivergenceAnalysis::findRegions() {
   }
 }
 
-// This is called only when the outermost instructions are acutally requrested,
+// This is called only when the outermost instructions are acutally requested,
 // ie. during coarsening. This is done to be sure that this instructions are
 // computed after the extraction of divergent regions from the CFG.
 void DivergenceAnalysis::findOutermostInsts(InstVector &insts,
