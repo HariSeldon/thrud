@@ -139,7 +139,6 @@ void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
   }
 
   if (loopInfo->isLoopHeader(region->getHeader())) {
-//    assert(false && "Region merging is not possible, the region is a loop");
     return replicateRegionClassic(region);
   }
 
