@@ -12,6 +12,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 
 #include "llvm/Analysis/Dominators.h"
@@ -31,6 +32,12 @@
 
 #define THREAD_VECTORIZER_PASS_NAME "ThreadVectorizing"
 
+// Support functions.
+// -----------------------------------------------------------------------------
+// Get the id of the called intrinsic.
+Intrinsic::ID getIntrinsicIDForCall(CallInst *callInst);
+
+// -----------------------------------------------------------------------------
 // Command line options.
 cl::opt<unsigned int>
     VectorizingDirectionCL("vectorizing-direction", cl::init(0), cl::Hidden,
@@ -44,7 +51,7 @@ extern cl::opt<ThreadVectorizing::DivRegionOption> DivRegionOptionCL;
 ThreadVectorizing::ThreadVectorizing()
     : FunctionPass(ID), ndrSpace(1024, 1024, 1024, 1024, 1024, 1024) {}
 
-void ThreadVectorizing::getAnalysisUsage(llvm::AnalysisUsage &au) const {
+void ThreadVectorizing::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<LoopInfo>();
   au.addRequired<ScalarEvolution>();
   au.addRequired<SingleDimDivAnalysis>();
@@ -59,20 +66,20 @@ const char *ThreadVectorizing::getPassName() const {
 }
 
 // -----------------------------------------------------------------------------
-bool ThreadVectorizing::doInitialization(llvm::Module &module) {
+bool ThreadVectorizing::doInitialization(Module &module) {
   // Initialize the IR builder with the context from the current module.
-  irBuilder = new llvm::IRBuilder<>(module.getContext());
+  irBuilder = new IRBuilder<>(module.getContext());
   return false;
 }
 
 // -----------------------------------------------------------------------------
-bool ThreadVectorizing::doFinalization(llvm::Module &function) {
+bool ThreadVectorizing::doFinalization(Module &function) {
   delete irBuilder;
   return false;
 }
 
 //------------------------------------------------------------------------------
-bool ThreadVectorizing::runOnFunction(llvm::Function &function) {
+bool ThreadVectorizing::runOnFunction(Function &function) {
   // Apply the pass to kernels only.
   if (!isKernel((const Function *)&function))
     return false;
@@ -114,64 +121,66 @@ void ThreadVectorizing::init() {
 }
 
 //------------------------------------------------------------------------------
-bool ThreadVectorizing::performVectorization(llvm::Function &function) {
-  kernelFunction = static_cast<llvm::Function *>(&function);
+bool ThreadVectorizing::performVectorization(Function &function) {
+  kernelFunction = static_cast<Function *>(&function);
+
+  function.dump();
 
   widenTids();
   vectorizeFunction();
   removeVectorPlaceholders();
   removeScalarInsts();
 
+  function.dump();
+
   return true;
 }
 
 //------------------------------------------------------------------------------
-void ThreadVectorizing::setInsertPoint(llvm::Instruction *inst) {
-  llvm::BasicBlock *block = inst->getParent();
+void ThreadVectorizing::setInsertPoint(Instruction *inst) {
+  BasicBlock *block = inst->getParent();
   irBuilder->SetInsertPoint(block, inst);
-  llvm::BasicBlock::iterator current_insert_point = irBuilder->GetInsertPoint();
+  BasicBlock::iterator current_insert_point = irBuilder->GetInsertPoint();
   ++current_insert_point;
   irBuilder->SetInsertPoint(block, current_insert_point);
 }
 
 //------------------------------------------------------------------------------
-llvm::Value *ThreadVectorizing::widenValue(llvm::Value *value) {
+Value *ThreadVectorizing::widenValue(Value *value) {
   // Support types.
-  llvm::LLVMContext &context = value->getContext();
-  llvm::Type *vector_type = llvm::VectorType::get(value->getType(), width);
-  llvm::Type *integer_32 = llvm::IntegerType::getInt32Ty(context);
+  LLVMContext &context = value->getContext();
+  Type *vector_type = VectorType::get(value->getType(), width);
+  Type *integer_32 = IntegerType::getInt32Ty(context);
 
   // Support values.
-  llvm::Constant *zero = llvm::ConstantInt::get(integer_32, 0);
-  llvm::Value *zero_vector = llvm::ConstantAggregateZero::get(
-      llvm::VectorType::get(integer_32, width));
-  llvm::Value *undefined_value = llvm::UndefValue::get(vector_type);
+  Constant *zero = ConstantInt::get(integer_32, 0);
+  Value *zero_vector =
+      ConstantAggregateZero::get(VectorType::get(integer_32, width));
+  Value *undefined_value = UndefValue::get(vector_type);
 
   // The widening of the value will be placed in the block that
   // immediatelly dominates all the used of the value.
   // Only if the value is not an instruction.
-  llvm::IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
-  llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
+  IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
+  Instruction *inst = dyn_cast<Instruction>(value);
   if (NULL == inst) {
     // The widening of the value will be placed in the block that
     // immediatelly dominates all the uses of the value.
 
     // If we got here there must be at least one use.
-    llvm::User *first_user = value->use_back();
-    llvm::BasicBlock *dominator =
-        llvm::cast<llvm::Instruction>(first_user)->getParent();
+    User *first_user = value->use_back();
+    BasicBlock *dominator = cast<Instruction>(first_user)->getParent();
 
-    for (llvm::Value::use_iterator iter = value->use_begin(),
-                                   iterEnd = value->use_end();
+    for (Value::use_iterator iter = value->use_begin(),
+                             iterEnd = value->use_end();
          iter != iterEnd; ++iter) {
-      llvm::User *user = *iter;
+      User *user = *iter;
 
-      if (!isa<llvm::Instruction>(user)) {
+      if (!isa<Instruction>(user)) {
         continue;
       }
 
-      llvm::BasicBlock *block =
-          llvm::cast<llvm::Instruction>(user)->getParent();
+      BasicBlock *block = cast<Instruction>(user)->getParent();
 
       // If the user is not in the current kernel skip it.
       if (block == NULL || block->getParent() != kernelFunction ||
@@ -184,17 +193,17 @@ llvm::Value *ThreadVectorizing::widenValue(llvm::Value *value) {
       dominator = dt->findNearestCommonDominator(dominator, block);
     }
 
-    //    llvm::IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
+    //    IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
     irBuilder->SetInsertPoint(dominator->getFirstNonPHI());
   }
 
   // Create an undefined vector contaning in the first position the
   // original value.
-  llvm::Value *single_element_array =
+  Value *single_element_array =
       irBuilder->CreateInsertElement(undefined_value, value, zero, "inserted");
 
   // Replicate the original value to all the positions of the vector.
-  llvm::Value *widenedVector = irBuilder->CreateShuffleVector(
+  Value *widenedVector = irBuilder->CreateShuffleVector(
       single_element_array, undefined_value, zero_vector, "widened");
 
   if (NULL == inst) {
@@ -213,9 +222,9 @@ void ThreadVectorizing::vectorizeFunction() {
   // Replicate insts.
   for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end();
        iter != iterEnd; ++iter) {
-    llvm::Instruction *inst = *iter;
+    Instruction *inst = *iter;
     setInsertPoint(inst);
-    llvm::Value *vectorResult = vectorizeInst(inst);
+    Value *vectorResult = vectorizeInst(inst);
     if (NULL != vectorResult) {
       vectorMap[inst] = vectorResult;
       toRemoveInsts.insert(inst);
@@ -231,77 +240,83 @@ void ThreadVectorizing::vectorizeFunction() {
 }
 
 //------------------------------------------------------------------------------
-llvm::Value *ThreadVectorizing::vectorizeInst(llvm::Instruction *inst) {
+Value *ThreadVectorizing::vectorizeInst(Instruction *inst) {
   unsigned int inst_opcode = inst->getOpcode();
   switch (inst_opcode) {
-  case llvm::Instruction::Br: {
+  case Instruction::Br: {
     assert(false && "Branches should never be vectorized");
     return NULL;
   }
 
-  case llvm::Instruction::PHI: {
-    llvm::PHINode *phi_node_inst = llvm::dyn_cast<llvm::PHINode>(inst);
+  case Instruction::PHI: {
+    PHINode *phi_node_inst = dyn_cast<PHINode>(inst);
     return vectorizePhiNode(phi_node_inst);
   }
 
-  case llvm::Instruction::Add:
-  case llvm::Instruction::FAdd:
-  case llvm::Instruction::Sub:
-  case llvm::Instruction::FSub:
-  case llvm::Instruction::Mul:
-  case llvm::Instruction::FMul:
-  case llvm::Instruction::UDiv:
-  case llvm::Instruction::SDiv:
-  case llvm::Instruction::FDiv:
-  case llvm::Instruction::URem:
-  case llvm::Instruction::SRem:
-  case llvm::Instruction::FRem:
-  case llvm::Instruction::Shl:
-  case llvm::Instruction::LShr:
-  case llvm::Instruction::AShr:
-  case llvm::Instruction::And:
-  case llvm::Instruction::Or:
-  case llvm::Instruction::Xor: {
-    llvm::BinaryOperator *binary_operator =
-        llvm::dyn_cast<llvm::BinaryOperator>(inst);
+  case Instruction::Add:
+  case Instruction::FAdd:
+  case Instruction::Sub:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul:
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::FDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::FRem:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor: {
+    BinaryOperator *binary_operator = dyn_cast<BinaryOperator>(inst);
     return vectorizeBinaryOperator(binary_operator);
   }
 
-  case llvm::Instruction::Select: {
-    llvm::SelectInst *select_inst = llvm::dyn_cast<llvm::SelectInst>(inst);
+  case Instruction::Select: {
+    SelectInst *select_inst = dyn_cast<SelectInst>(inst);
     return vectorizeSelect(select_inst);
   }
 
-  case llvm::Instruction::ICmp:
-  case llvm::Instruction::FCmp: {
-    llvm::CmpInst *cmp_inst = llvm::dyn_cast<llvm::CmpInst>(inst);
+  case Instruction::ICmp:
+  case Instruction::FCmp: {
+    CmpInst *cmp_inst = dyn_cast<CmpInst>(inst);
     return vectorizeCmp(cmp_inst);
   }
 
-  case llvm::Instruction::Store: {
-    llvm::StoreInst *storeInst = llvm::dyn_cast<llvm::StoreInst>(inst);
+  case Instruction::Store: {
+    StoreInst *storeInst = dyn_cast<StoreInst>(inst);
     return vectorizeStore(storeInst);
   }
 
-  case llvm::Instruction::Load: {
-    llvm::LoadInst *loadInst = llvm::dyn_cast<llvm::LoadInst>(inst);
+  case Instruction::Load: {
+    LoadInst *loadInst = dyn_cast<LoadInst>(inst);
     return vectorizeLoad(loadInst);
   }
 
-  case llvm::Instruction::ZExt:
-  case llvm::Instruction::SExt:
-  case llvm::Instruction::FPToUI:
-  case llvm::Instruction::FPToSI:
-  case llvm::Instruction::FPExt:
-  case llvm::Instruction::PtrToInt:
-  case llvm::Instruction::IntToPtr:
-  case llvm::Instruction::SIToFP:
-  case llvm::Instruction::UIToFP:
-  case llvm::Instruction::Trunc:
-  case llvm::Instruction::FPTrunc:
-  case llvm::Instruction::BitCast: {
-    llvm::CastInst *cast_inst = llvm::dyn_cast<llvm::CastInst>(inst);
-    return vectorizeCast(cast_inst);
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+  case Instruction::BitCast: {
+    CastInst *castInst = dyn_cast<CastInst>(inst);
+    return vectorizeCast(castInst);
+  }
+
+  case Instruction::Call: {
+    assert(!isa<DbgInfoIntrinsic>(inst) && "dbg intrisics are not supported");
+
+    CallInst *callInst = dyn_cast<CallInst>(inst);
+    return vectorizeCall(callInst);
   }
 
   // E.g. GetElementPtr should always be scalarized.
@@ -309,7 +324,7 @@ llvm::Value *ThreadVectorizing::vectorizeInst(llvm::Instruction *inst) {
   }
 }
 
-llvm::Value *ThreadVectorizing::getVectorValue(llvm::Value *scalar) {
+Value *ThreadVectorizing::getVectorValue(Value *scalar) {
   assert(!scalar->getType()->isVectorTy() && "Can't widen a vector");
 
   // If the value is contained in the vector map then return it.
@@ -320,14 +335,14 @@ llvm::Value *ThreadVectorizing::getVectorValue(llvm::Value *scalar) {
     // map then it is going to be widended in the future.
     // To prevent dependency cycles create a placeholder and place it
     // in a map.
-    if (llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(scalar)) {
+    if (Instruction *inst = dyn_cast<Instruction>(scalar)) {
       if (true == sdda->isDivergent(inst)) {
         if (true == phMap.count(scalar)) {
           return phMap[scalar];
         }
 
         // Widen the scalar value generating the place holder.
-        llvm::Value *widenedValue = widenValue(scalar);
+        Value *widenedValue = widenValue(scalar);
         phMap[scalar] = widenedValue;
 
         return widenedValue;
@@ -336,21 +351,21 @@ llvm::Value *ThreadVectorizing::getVectorValue(llvm::Value *scalar) {
   }
 
   // Widen the scalar value.
-  llvm::Value *widenedValue = widenValue(scalar);
+  Value *widenedValue = widenValue(scalar);
   vectorMap[scalar] = widenedValue;
   return widenedValue;
 }
 
-llvm::PHINode *ThreadVectorizing::vectorizePhiNode(llvm::PHINode *phiNode) {
+PHINode *ThreadVectorizing::vectorizePhiNode(PHINode *phiNode) {
   // Create the type for the new phi node.
-  llvm::Type *phiType = phiNode->getType();
-  llvm::Type *vectorPhiType = llvm::VectorType::get(phiType, width);
+  Type *phiType = phiNode->getType();
+  Type *vectorPhiType = VectorType::get(phiType, width);
 
   // Insert a temporary phi node.
-  llvm::PHINode *vectorPhi =
-      llvm::PHINode::Create(vectorPhiType, phiNode->getNumIncomingValues());
+  PHINode *vectorPhi =
+      PHINode::Create(vectorPhiType, phiNode->getNumIncomingValues());
   irBuilder->Insert(vectorPhi);
-  vectorPhi->setName(phiNode->getName() + llvm::Twine(".vector"));
+  vectorPhi->setName(phiNode->getName() + Twine(".vector"));
 
   vectorPhis.push_back(phiNode);
 
@@ -361,37 +376,36 @@ void ThreadVectorizing::fixPhiNodes() {
   for (PhiVector::iterator iter = vectorPhis.begin(),
                            iterEnd = vectorPhis.end();
        iter != iterEnd; ++iter) {
-    llvm::PHINode *scalar_phi = *iter;
-    llvm::PHINode *vector_phi =
-        llvm::dyn_cast<llvm::PHINode>(vectorMap[scalar_phi]);
+    PHINode *scalar_phi = *iter;
+    PHINode *vector_phi = dyn_cast<PHINode>(vectorMap[scalar_phi]);
     assert(NULL != vector_phi && "Phi node mapped to a non-phi");
 
     unsigned int operands_number = scalar_phi->getNumIncomingValues();
     for (unsigned int operand_index = 0; operand_index < operands_number;
          ++operand_index) {
-      llvm::Value *scalar_value = scalar_phi->getIncomingValue(operand_index);
+      Value *scalar_value = scalar_phi->getIncomingValue(operand_index);
       vector_phi->addIncoming(getVectorValue(scalar_value),
                               scalar_phi->getIncomingBlock(operand_index));
     }
   }
 }
 
-llvm::BinaryOperator *ThreadVectorizing::vectorizeBinaryOperator(
-    llvm::BinaryOperator *binary_operator) {
+BinaryOperator *
+ThreadVectorizing::vectorizeBinaryOperator(BinaryOperator *binary_operator) {
   // Get the operands of binary operator.
-  llvm::Value *first_operand = binary_operator->getOperand(0);
-  llvm::Value *second_operand = binary_operator->getOperand(1);
+  Value *first_operand = binary_operator->getOperand(0);
+  Value *second_operand = binary_operator->getOperand(1);
 
   // Get the operator of the binary operator.
-  llvm::Instruction::BinaryOps op_code = binary_operator->getOpcode();
+  Instruction::BinaryOps op_code = binary_operator->getOpcode();
 
   // Get the vector version of the operands.
   first_operand = getVectorValue(first_operand);
   second_operand = getVectorValue(second_operand);
 
   // Create the vector instruction.
-  llvm::BinaryOperator *vector_operator =
-      llvm::BinaryOperator::Create(op_code, first_operand, second_operand);
+  BinaryOperator *vector_operator =
+      BinaryOperator::Create(op_code, first_operand, second_operand);
 
   irBuilder->Insert(vector_operator)->setName(binary_operator->getName());
 
@@ -399,12 +413,11 @@ llvm::BinaryOperator *ThreadVectorizing::vectorizeBinaryOperator(
 }
 
 // -----------------------------------------------------------------------------
-llvm::Value *ThreadVectorizing::vectorizeLoad(llvm::LoadInst *loadInst) {
+Value *ThreadVectorizing::vectorizeLoad(LoadInst *loadInst) {
   // Get the load pointer.
-  llvm::Value *load_pointer = loadInst->getPointerOperand();
+  Value *load_pointer = loadInst->getPointerOperand();
 
-  llvm::GetElementPtrInst *gep =
-      llvm::dyn_cast<llvm::GetElementPtrInst>(load_pointer);
+  GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(load_pointer);
 
   // If the store is not consecutive along the vectorizing dimension then
   // it has to be replicated.
@@ -414,29 +427,28 @@ llvm::Value *ThreadVectorizing::vectorizeLoad(llvm::LoadInst *loadInst) {
   }
 
   unsigned int operands_number = gep->getNumOperands();
-  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
+  Value *last_operand = gep->getOperand(operands_number - 1);
   last_operand = getVectorValue(last_operand);
 
   last_operand = irBuilder->CreateExtractElement(
       last_operand, irBuilder->getInt32(0), "extracted");
 
   // Create the new gep.
-  llvm::GetElementPtrInst *new_gep =
-      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
+  GetElementPtrInst *new_gep = cast<GetElementPtrInst>(gep->clone());
   new_gep->setOperand(operands_number - 1, last_operand);
   load_pointer = irBuilder->Insert(new_gep);
   load_pointer->setName("load_ptr");
-  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
+  //insert_sorted<Instruction>(toRemoveInsts, gep);
   toRemoveInsts.insert(gep);
 
-  llvm::Type *vector_load_type =
+  Type *vector_load_type =
       getVectorPointerType(loadInst->getPointerOperand()->getType());
 
   load_pointer =
       irBuilder->CreateBitCast(load_pointer, vector_load_type, "bitcast");
 
   // Insert the vector load instruction into the function.
-  llvm::LoadInst *vector_load = new llvm::LoadInst(load_pointer);
+  LoadInst *vector_load = new LoadInst(load_pointer);
   vector_load->setAlignment(loadInst->getAlignment());
   irBuilder->Insert(vector_load)->setName("vector_load");
 
@@ -444,11 +456,10 @@ llvm::Value *ThreadVectorizing::vectorizeLoad(llvm::LoadInst *loadInst) {
 }
 
 // -----------------------------------------------------------------------------
-llvm::Value *ThreadVectorizing::vectorizeStore(llvm::StoreInst *storeInst) {
+Value *ThreadVectorizing::vectorizeStore(StoreInst *storeInst) {
   // Get the store pointer.
-  llvm::Value *store_pointer = storeInst->getPointerOperand();
-  llvm::GetElementPtrInst *gep =
-      llvm::dyn_cast<llvm::GetElementPtrInst>(store_pointer);
+  Value *store_pointer = storeInst->getPointerOperand();
+  GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(store_pointer);
 
   // If the store is not consecutive along the vectorizing dimension then
   // it has to be replicated.
@@ -458,36 +469,35 @@ llvm::Value *ThreadVectorizing::vectorizeStore(llvm::StoreInst *storeInst) {
   }
 
   unsigned int operands_number = gep->getNumOperands();
-  llvm::Value *last_operand = gep->getOperand(operands_number - 1);
+  Value *last_operand = gep->getOperand(operands_number - 1);
   last_operand = getVectorValue(last_operand);
 
   last_operand = irBuilder->CreateExtractElement(
       last_operand, irBuilder->getInt32(0), "extracted");
 
   // Create the new gep.
-  llvm::GetElementPtrInst *new_gep =
-      llvm::cast<llvm::GetElementPtrInst>(gep->clone());
+  GetElementPtrInst *new_gep = cast<GetElementPtrInst>(gep->clone());
   new_gep->setOperand(operands_number - 1, last_operand);
   new_gep = irBuilder->Insert(new_gep);
   new_gep->setName("store_ptr");
   store_pointer = new_gep;
-  //insert_sorted<llvm::Instruction>(toRemoveInsts, gep);
+  //insert_sorted<Instruction>(toRemoveInsts, gep);
   toRemoveInsts.insert(gep);
 
   // Get the store type.
-  llvm::Type *scalar_store_type = new_gep->getPointerOperandType();
+  Type *scalar_store_type = new_gep->getPointerOperandType();
 
   // Create the vector store pointer type.
-  llvm::Type *vector_store_type = getVectorPointerType(scalar_store_type);
+  Type *vector_store_type = getVectorPointerType(scalar_store_type);
 
   store_pointer =
       irBuilder->CreateBitCast(store_pointer, vector_store_type, "bitcast");
 
   // Get the value to store to memory.
-  llvm::Value *to_store_value = getVectorValue(storeInst->getValueOperand());
+  Value *to_store_value = getVectorValue(storeInst->getValueOperand());
 
   // Insert the vector store instruction into the function.
-  llvm::StoreInst *vector_store =
+  StoreInst *vector_store =
       irBuilder->CreateStore(to_store_value, store_pointer, "vector_store");
   vector_store->setAlignment(storeInst->getAlignment());
   vector_store->setVolatile(storeInst->isVolatile());
@@ -496,13 +506,11 @@ llvm::Value *ThreadVectorizing::vectorizeStore(llvm::StoreInst *storeInst) {
 }
 
 // -----------------------------------------------------------------------------
-llvm::SelectInst *
-ThreadVectorizing::vectorizeSelect(llvm::SelectInst *select_inst) {
-  llvm::Value *condition = select_inst->getOperand(0);
+SelectInst *ThreadVectorizing::vectorizeSelect(SelectInst *select_inst) {
+  Value *condition = select_inst->getOperand(0);
 
   bool varying_condition = false;
-  if (llvm::Instruction *condition_inst =
-          llvm::dyn_cast<llvm::Instruction>(condition)) {
+  if (Instruction *condition_inst = dyn_cast<Instruction>(condition)) {
     varying_condition = sdda->isDivergent(condition_inst);
   }
 
@@ -510,13 +518,13 @@ ThreadVectorizing::vectorizeSelect(llvm::SelectInst *select_inst) {
     condition = getVectorValue(condition);
   }
 
-  llvm::Value *first_operand = select_inst->getOperand(1);
-  llvm::Value *second_operand = select_inst->getOperand(2);
+  Value *first_operand = select_inst->getOperand(1);
+  Value *second_operand = select_inst->getOperand(2);
 
   first_operand = getVectorValue(first_operand);
   second_operand = getVectorValue(second_operand);
 
-  llvm::SelectInst *result = llvm::SelectInst::Create(
+  SelectInst *result = SelectInst::Create(
       condition, first_operand, second_operand, select_inst->getName());
 
   irBuilder->Insert(result)->setName(select_inst->getName());
@@ -525,24 +533,24 @@ ThreadVectorizing::vectorizeSelect(llvm::SelectInst *select_inst) {
 }
 
 // -----------------------------------------------------------------------------
-llvm::CmpInst *ThreadVectorizing::vectorizeCmp(llvm::CmpInst *cmp_inst) {
+CmpInst *ThreadVectorizing::vectorizeCmp(CmpInst *cmp_inst) {
   // Get the compare operands.
-  llvm::Value *first_operand = cmp_inst->getOperand(0);
-  llvm::Value *second_operand = cmp_inst->getOperand(1);
+  Value *first_operand = cmp_inst->getOperand(0);
+  Value *second_operand = cmp_inst->getOperand(1);
 
   // Get the vector version of the operands.
   first_operand = getVectorValue(first_operand);
   second_operand = getVectorValue(second_operand);
 
-  llvm::CmpInst *result = NULL;
+  CmpInst *result = NULL;
 
   // Generate the vector version of the instruction.
-  if (llvm::Instruction::FCmp == cmp_inst->getOpcode()) {
-    result = new llvm::FCmpInst(cmp_inst->getPredicate(), first_operand,
-                                second_operand);
+  if (Instruction::FCmp == cmp_inst->getOpcode()) {
+    result =
+        new FCmpInst(cmp_inst->getPredicate(), first_operand, second_operand);
   } else {
-    result = new llvm::ICmpInst(cmp_inst->getPredicate(), first_operand,
-                                second_operand);
+    result =
+        new ICmpInst(cmp_inst->getPredicate(), first_operand, second_operand);
   }
 
   irBuilder->Insert(result)->setName(cmp_inst->getName());
@@ -550,47 +558,63 @@ llvm::CmpInst *ThreadVectorizing::vectorizeCmp(llvm::CmpInst *cmp_inst) {
 }
 
 // -----------------------------------------------------------------------------
-llvm::CastInst *ThreadVectorizing::vectorizeCast(llvm::CastInst *cast_inst) {
+CastInst *ThreadVectorizing::vectorizeCast(CastInst *cast_inst) {
   // Get the cast operand.
-  llvm::Value *operand = cast_inst->getOperand(0);
+  Value *operand = cast_inst->getOperand(0);
 
   // Get the vector version of the operand.
   operand = getVectorValue(operand);
 
-  llvm::Type *dest_type =
-      llvm::VectorType::get(cast_inst->getType()->getScalarType(), width);
+  Type *dest_type =
+      VectorType::get(cast_inst->getType()->getScalarType(), width);
 
   // Generate the vector version of the instruction.
-  llvm::CastInst *result =
-      llvm::CastInst::Create(cast_inst->getOpcode(), operand, dest_type);
+  CastInst *result =
+      CastInst::Create(cast_inst->getOpcode(), operand, dest_type);
   irBuilder->Insert(result)->setName(cast_inst->getName());
 
   return result;
 }
 
 // -----------------------------------------------------------------------------
-llvm::Value *ThreadVectorizing::replicateInst(llvm::Instruction *inst) {
+// Only supports builtin function calls.
+CallInst *ThreadVectorizing::vectorizeCall(CallInst *callInst) {
+  Module *module = callInst->getParent()->getParent()->getParent();
+  Intrinsic::ID intId = getIntrinsicIDForCall(callInst);
+  assert(intId && "Not an intrinsic call!");
+  
+  ValueVector vectorOperands = getWidenedCallOperands(callInst);
+  
+  Type *types[] = { VectorType::get(callInst->getType()->getScalarType(),
+                                    width) };
+  Function *function = Intrinsic::getDeclaration(module, intId, types);
+  ArrayRef<Value *> args(vectorOperands.data(), vectorOperands.size());
+  CallInst *result = irBuilder->CreateCall(function, args);
+  return result;
+}
+
+// -----------------------------------------------------------------------------
+Value *ThreadVectorizing::replicateInst(Instruction *inst) {
   assert(false == inst->getType()->isVectorTy() &&
          "Cannot replicate instructions of vector type");
 
-  //  llvm::LLVMContext &context = inst->getContext();
+  //  LLVMContext &context = inst->getContext();
   ValueVector operands = getWidenedOperands(inst);
 
   bool is_inst_void = inst->getType()->isVoidTy();
-  llvm::Value *result = NULL;
+  Value *result = NULL;
 
   if (false == is_inst_void) {
-    result =
-        llvm::UndefValue::get(llvm::VectorType::get(inst->getType(), width));
+    result = UndefValue::get(VectorType::get(inst->getType(), width));
   }
 
   for (unsigned int vector_index = 0; vector_index < width; ++vector_index) {
-    llvm::Instruction *cloned = inst->clone();
+    Instruction *cloned = inst->clone();
 
     // For each operand extract the scalar from the vector.
     for (unsigned int operand_index = 0, operand_end = inst->getNumOperands();
          operand_index != operand_end; ++operand_index) {
-      llvm::Value *operand = operands[operand_index];
+      Value *operand = operands[operand_index];
 
       // Param is a vector. Need to extract the first value.
       if (true == operand->getType()->isVectorTy()) {
@@ -602,10 +626,10 @@ llvm::Value *ThreadVectorizing::replicateInst(llvm::Instruction *inst) {
       cloned->setOperand(operand_index, operand);
     }
 
-    llvm::Twine cloned_name = "";
+    Twine cloned_name = "";
 
     if (true == inst->hasName()) {
-      cloned_name = inst->getName() + ".replicated" + llvm::Twine(vector_index);
+      cloned_name = inst->getName() + ".replicated" + Twine(vector_index);
     }
 
     irBuilder->Insert(cloned)->setName(cloned_name);
@@ -620,7 +644,7 @@ llvm::Value *ThreadVectorizing::replicateInst(llvm::Instruction *inst) {
 }
 
 // -----------------------------------------------------------------------------
-ValueVector ThreadVectorizing::getWidenedOperands(llvm::Instruction *inst) {
+ValueVector ThreadVectorizing::getWidenedOperands(Instruction *inst) {
   // Generate the list of operands for the replicated instructions.
   ValueVector operands;
   operands.reserve(inst->getNumOperands());
@@ -629,8 +653,8 @@ ValueVector ThreadVectorizing::getWidenedOperands(llvm::Instruction *inst) {
   for (unsigned int operand_index = 0, operand_end = inst->getNumOperands();
        operand_index != operand_end; ++operand_index) {
 
-    llvm::Value *operand = inst->getOperand(operand_index);
-    llvm::Value *vectorOperand = getVectorValue(operand);
+    Value *operand = inst->getOperand(operand_index);
+    Value *vectorOperand = getVectorValue(operand);
 
     operands.push_back(vectorOperand);
   }
@@ -638,26 +662,46 @@ ValueVector ThreadVectorizing::getWidenedOperands(llvm::Instruction *inst) {
   return operands;
 }
 
+//------------------------------------------------------------------------------
+ValueVector ThreadVectorizing::getWidenedCallOperands(CallInst *inst) {
+  // Generate the list of operands for the replicated instructions.
+  ValueVector operands;
+  operands.reserve(inst->getNumOperands());
+
+  // Find all of the vector operands.
+  for (unsigned int operand_index = 0, operand_end = inst->getNumOperands();
+       operand_index != operand_end - 1; ++operand_index) {
+
+    Value *operand = inst->getOperand(operand_index);
+
+    Value *vectorOperand = getVectorValue(operand);
+
+    operands.push_back(vectorOperand);
+  }
+
+  return operands;
+
+}
+
+
 // -----------------------------------------------------------------------------
-llvm::Type *
-ThreadVectorizing::getVectorPointerType(llvm::Type *scalar_pointer_type) {
+Type *ThreadVectorizing::getVectorPointerType(Type *scalar_pointer_type) {
   // The input type must be a pointer type.
-  llvm::PointerType *pointer_type =
-      llvm::dyn_cast<llvm::PointerType>(scalar_pointer_type);
+  PointerType *pointer_type = dyn_cast<PointerType>(scalar_pointer_type);
   assert(NULL != pointer_type &&
          "Cannot create a vector pointer without a pointer type");
 
   // Get the address space.
   unsigned int address_space = pointer_type->getAddressSpace();
   // Get the pointee type.
-  llvm::Type *scalar_type = pointer_type->getElementType();
+  Type *scalar_type = pointer_type->getElementType();
 
   // Create the type of the new vector store.
-  llvm::Type *vector_store_type = llvm::VectorType::get(scalar_type, width);
+  Type *vector_store_type = VectorType::get(scalar_type, width);
 
   // Create the pointer type.
-  llvm::PointerType *vector_pointer_type =
-      llvm::PointerType::get(vector_store_type, address_space);
+  PointerType *vector_pointer_type =
+      PointerType::get(vector_store_type, address_space);
 
   return vector_pointer_type;
 }
@@ -675,9 +719,9 @@ void ThreadVectorizing::removeScalarInsts() {
     newToRemove.clear();
     for (InstSet::iterator iter = tmp.begin(), iterEnd = tmp.end();
          iter != iterEnd; ++iter) {
-      llvm::Instruction *inst = *iter;
-      for (llvm::Value::use_iterator useIter = inst->use_begin(),
-                                     useIterEnd = inst->use_end();
+      Instruction *inst = *iter;
+      for (Value::use_iterator useIter = inst->use_begin(),
+                               useIterEnd = inst->use_end();
            useIter != useIterEnd; ++useIter) {
         User *user = *useIter;
         if (Instruction *userInst = dyn_cast<Instruction>(user)) {
@@ -694,11 +738,11 @@ void ThreadVectorizing::removeScalarInsts() {
   for (InstSet::iterator iter = toRemoveInsts.begin(),
                          iterEnd = toRemoveInsts.end();
        iter != iterEnd; ++iter) {
-    llvm::Instruction *inst = *iter;
+    Instruction *inst = *iter;
 
     // Remove the current instruction from the function.
     if (false == inst->getType()->isVoidTy()) {
-      inst->replaceAllUsesWith(llvm::Constant::getNullValue(inst->getType()));
+      inst->replaceAllUsesWith(Constant::getNullValue(inst->getType()));
     }
     inst->eraseFromParent();
   }
@@ -710,11 +754,11 @@ void ThreadVectorizing::removeVectorPlaceholders() {
   for (V2VMap::iterator iter = phMap.begin(), iterEnd = phMap.end();
        iter != iterEnd; ++iter) {
     // Get the original scalar value.
-    llvm::Value *scalar_value = iter->first;
+    Value *scalar_value = iter->first;
     // Get the vector placeholder.
-    llvm::Value *placeholder_value = iter->second;
+    Value *placeholder_value = iter->second;
     // Get the vector value corresponding to the scalar value.
-    llvm::Value *vector_value = vectorMap[scalar_value];
+    Value *vector_value = vectorMap[scalar_value];
     // Replace the placeholder with the vector value.
     placeholder_value->replaceAllUsesWith(vector_value);
   }
@@ -764,8 +808,8 @@ void ThreadVectorizing::replicateRegionImpl(DivergentRegion *region) {
   for (InstVector::iterator iter = aliveInsts.begin(),
                             iterEnd = aliveInsts.end();
        iter != iterEnd; ++iter) {
-    result.push_back(llvm::UndefValue::get(
-        llvm::VectorType::get((*iter)->getType(), width)));
+    result.push_back(
+        UndefValue::get(VectorType::get((*iter)->getType(), width)));
   }
 
   // Replicate the region.
@@ -821,3 +865,37 @@ void ThreadVectorizing::replicateRegionMerging(DivergentRegion *region,
 char ThreadVectorizing::ID = 0;
 static RegisterPass<ThreadVectorizing>
     X("tv", "OpenCL Thread Vectorizing Transformation Pass");
+
+//##############################################################################
+// Support functions.
+
+//------------------------------------------------------------------------------
+Intrinsic::ID getIntrinsicIDForCall(CallInst *callInst) {
+  // If we have an intrinsic call, check if it is trivially vectorizable.
+  if (IntrinsicInst *intrinsic = dyn_cast<IntrinsicInst>(callInst)) {
+    switch (intrinsic->getIntrinsicID()) {
+    case Intrinsic::sqrt:
+    case Intrinsic::sin:
+    case Intrinsic::cos:
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+    case Intrinsic::log:
+    case Intrinsic::log10:
+    case Intrinsic::log2:
+    case Intrinsic::fabs:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::trunc:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::pow:
+    case Intrinsic::fma:
+    case Intrinsic::fmuladd:
+      return intrinsic->getIntrinsicID();
+    default:
+      return Intrinsic::not_intrinsic;
+    }
+  }
+
+  return Intrinsic::not_intrinsic;
+}

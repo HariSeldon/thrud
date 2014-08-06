@@ -22,7 +22,7 @@ class DivergenceAnalysis;
 class OCLEnv;
 class SubscriptAnalysis;
 
-class ThreadVectorizing : public llvm::FunctionPass {
+class ThreadVectorizing : public FunctionPass {
 public:
   enum DivRegionOption { 
     FullReplication, 
@@ -37,14 +37,14 @@ public:
   ThreadVectorizing();
 
   virtual const char *getPassName() const;
-  virtual bool doInitialization(llvm::Module &module);
-  virtual bool runOnFunction(llvm::Function &function);
-  virtual bool doFinalization(llvm::Module &module);
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &analysis_usage) const;
+  virtual bool doInitialization(Module &module);
+  virtual bool runOnFunction(Function &function);
+  virtual bool doFinalization(Module &module);
+  virtual void getAnalysisUsage(AnalysisUsage &analysis_usage) const;
 
   // Perform the vectorization transformation.
   // @param function The function to vectorize.
-  bool performVectorization(llvm::Function &function);
+  bool performVectorization(Function &function);
 
 private:
   void init();
@@ -56,27 +56,27 @@ private:
   // so to obtain:
   // (VW * tid, VW * tid + 1, VW * tid + 2, VW * tid + 3)
   // @param getTid_inst The get_tid value to be widened.
-  void widenTid(llvm::Instruction *get_tid_inst);
+  void widenTid(Instruction *get_tid_inst);
 
   // Set the insertion point of the IR builder to be
   // right after the given instruction.
-  void setInsertPoint(llvm::Instruction *inst);
+  void setInsertPoint(Instruction *inst);
 
   // Multiply the given tid by the vectorization width.
-  llvm::Instruction *multiplyTid(llvm::Instruction *tid_inst);
+  Instruction *multiplyTid(Instruction *tid_inst);
 
   // Add a vector of consetive elements (1, 2, 3, ..., width_of_inst)
   // to the given instruction value.
-  llvm::Instruction *createConsecutiveVector(llvm::Instruction *inst);
+  Instruction *createConsecutiveVector(Instruction *inst);
 
   // Widen the given value into a vector.
-  llvm::Value *widenValue(llvm::Value *value);
+  Value *widenValue(Value *value);
 
   // Vectorize all the varying instructions in the function.
   void vectorizeFunction();
 
   // Transform the given instruction into the vectorized version.
-  llvm::Value *vectorizeInst(llvm::Instruction *inst);
+  Value *vectorizeInst(Instruction *inst);
 
   void replicateRegion(DivergentRegion *region);
 
@@ -92,58 +92,59 @@ private:
   void replicateRegionFullMerging(DivergentRegion *region);
 
   // Return the vector value corresponding to the given vector value.
-  llvm::Value *getVectorValue(llvm::Value *scalar_value);
+  Value *getVectorValue(Value *scalar_value);
 
   // Vectorize the branch controlling a divergent loop.
-  llvm::BranchInst *vectorizeLoopBranch(llvm::BranchInst *inst);
+  BranchInst *vectorizeLoopBranch(BranchInst *inst);
 
   // Vectorize the instructions guarded by the given branch
   // instruction.
-  void vectorizeShieldBranch(llvm::BranchInst *inst);
+  void vectorizeShieldBranch(BranchInst *inst);
 
   // Create a temporary vector phi node of the vector type based
   // on the input phi. Add the created phi to a list. The list is going to be
   // updated at the end of vectorization setting the right vector operands.
-  llvm::PHINode *vectorizePhiNode(llvm::PHINode *phiNode);
+  PHINode *vectorizePhiNode(PHINode *phiNode);
 
   // Set the operands of the vector phi-nodes with vector
   // values.
   void fixPhiNodes();
 
   // Create a vector version of the given binary operation.
-  llvm::BinaryOperator *vectorizeBinaryOperator(llvm::BinaryOperator *binOp);
+  BinaryOperator *vectorizeBinaryOperator(BinaryOperator *binOp);
 
   // Create a vector version of the given select instruction.
-  llvm::SelectInst *vectorizeSelect(llvm::SelectInst *selectInst);
+  SelectInst *vectorizeSelect(SelectInst *selectInst);
 
   // Create a vector version of the given cmp instruction.
-  llvm::CmpInst *vectorizeCmp(llvm::CmpInst *cmpInst);
+  CmpInst *vectorizeCmp(CmpInst *cmpInst);
 
   // If possibile create a vector version of the given store.
   // If the store is not consecutive for consecutive tid in the vectorizing
   // dimension then generate scalar stores.
-  llvm::Value *vectorizeStore(llvm::StoreInst *storeInst);
+  Value *vectorizeStore(StoreInst *storeInst);
 
   // If possibile create a vector version of the given load.
   // If the store is not consecutive for consecutive tid in the vectorizing
   // dimension then generate scalar loads.
-  llvm::Value *vectorizeLoad(llvm::LoadInst *loadInst);
+  Value *vectorizeLoad(LoadInst *loadInst);
 
   // Create a vector version of the given cast instruction.
-  llvm::CastInst *vectorizeCast(llvm::CastInst *castInst);
+  CastInst *vectorizeCast(CastInst *castInst);
+
+  // Create a vector version of the given function call.
+  // Works only for intrincs functions!
+  CallInst *vectorizeCall(CallInst *callInst);
 
   // Creat multiple scalar replicas of the given instruction. If
   // the instruction type is not void create a vector that contains the
   // the values of the single scalar instructions.
-  llvm::Value *replicateInst(llvm::Instruction *inst);
-
-  // Get the vector version of each operand of the given instruction.
-  ValueVector getWidenedOperands(llvm::Instruction *inst);
+  Value *replicateInst(Instruction *inst);
 
   // Given a pointer to a scalar data type make the pointer
   // point to a vector data type. In particular pay attention to the
   // address space.
-  llvm::Type *getVectorPointerType(llvm::Type *scalarPointer);
+  Type *getVectorPointerType(Type *scalarPointer);
 
   // Remove from the current function all the scalar instructions
   // which have been vectorized.
@@ -152,6 +153,12 @@ private:
   // Remove the vector place holders inserted during the first
   // vectorization sweep.
   void removeVectorPlaceholders();
+
+  // Get the vector version of each operand of the given instruction.
+  ValueVector getWidenedOperands(Instruction *inst);
+
+  // Get the vector version of each operand of the function call.
+  ValueVector getWidenedCallOperands(CallInst *callInst);
 
 private:
   unsigned int direction;
@@ -169,12 +176,12 @@ private:
   SubscriptAnalysis *subscriptAnalysis;
 
   // The kernel to be vectorize.
-  llvm::Function *kernelFunction;
+  Function *kernelFunction;
 
   // Mapping between the old scalar values and the new vector values.
   V2VMap vectorMap;
   // IR builder.
-  llvm::IRBuilder<> *irBuilder;
+  IRBuilder<> *irBuilder;
   // Vectorized instructions.
   InstSet toRemoveInsts;
   // Phi nodes to fix.
