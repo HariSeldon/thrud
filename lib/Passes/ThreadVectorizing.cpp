@@ -124,12 +124,15 @@ void ThreadVectorizing::init() {
 bool ThreadVectorizing::performVectorization(Function &function) {
   kernelFunction = static_cast<Function *>(&function);
 
-  function.getParent()->dump();
-
   widenTids();
   vectorizeFunction();
+
+  function.getParent()->dump();
+
   removeVectorPlaceholders();
   removeScalarInsts();
+
+  function.getParent()->dump();
 
   return true;
 }
@@ -139,7 +142,10 @@ void ThreadVectorizing::setInsertPoint(Instruction *inst) {
   BasicBlock *block = inst->getParent();
   irBuilder->SetInsertPoint(block, inst);
   BasicBlock::iterator current_insert_point = irBuilder->GetInsertPoint();
-  ++current_insert_point;
+  do {
+    ++current_insert_point;
+  } while (isa<PHINode>(current_insert_point));
+
   irBuilder->SetInsertPoint(block, current_insert_point);
 }
 
@@ -206,10 +212,7 @@ Value *ThreadVectorizing::widenValue(Value *value) {
   Value *widenedVector = irBuilder->CreateShuffleVector(
       single_element_array, undefined_value, zero_vector, "widened");
 
-  if (NULL == inst) {
-    // Restore the previous insertion point.
-    irBuilder->restoreIP(originalIp);
-  }
+  irBuilder->restoreIP(originalIp);
 
   return widenedVector;
 }
@@ -235,6 +238,8 @@ void ThreadVectorizing::vectorizeFunction() {
   std::for_each(
       regions.begin(), regions.end(),
       std::bind1st(std::mem_fun(&ThreadVectorizing::replicateRegion), this));
+
+  kernelFunction->getParent()->dump(); 
 
   fixPhiNodes();
 }
@@ -373,6 +378,7 @@ PHINode *ThreadVectorizing::vectorizePhiNode(PHINode *phiNode) {
   return vectorPhi;
 }
 
+// -----------------------------------------------------------------------------
 void ThreadVectorizing::fixPhiNodes() {
   for (PhiVector::iterator iter = vectorPhis.begin(),
                            iterEnd = vectorPhis.end();
@@ -381,10 +387,13 @@ void ThreadVectorizing::fixPhiNodes() {
     PHINode *vectorPhi = dyn_cast<PHINode>(vectorMap[scalarPhi]);
     assert(vectorPhi != NULL && "Phi node mapped to a non-phi");
 
+    scalarPhi->dump();
+
     unsigned int operands_number = scalarPhi->getNumIncomingValues();
     for (unsigned int operand_index = 0; operand_index < operands_number;
          ++operand_index) {
       Value *scalar_value = scalarPhi->getIncomingValue(operand_index);
+      // FIXME BE AWARE OF UNDEF VALUES!!!!
       vectorPhi->addIncoming(getVectorValue(scalar_value),
                               scalarPhi->getIncomingBlock(operand_index));
     }
