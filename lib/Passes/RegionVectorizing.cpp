@@ -1,5 +1,7 @@
 #include "thrud/ThreadVectorizing/ThreadVectorizing.h"
 
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
 // -----------------------------------------------------------------------------
 void ThreadVectorizing::replicateRegion(DivergentRegion *region) {
   assert(dt->dominates(region->getHeader(), region->getExiting()) &&
@@ -29,37 +31,59 @@ void ThreadVectorizing::replicateRegion(DivergentRegion *region) {
 
 //------------------------------------------------------------------------------
 void ThreadVectorizing::replicateRegionClassic(DivergentRegion *region) {
-//  V2VMap aliveMap;
-//  initAliveMap(region, aliveMap);
-  replicateRegionImpl(region);
+  CoarseningMap aliveMap;
+  initAliveMap(region, aliveMap);
+  replicateRegionImpl(region, aliveMap);
 //  updatePlaceholdersWithAlive(aliveMap);
 }
 
 //------------------------------------------------------------------------------
-void ThreadVectorizing::replicateRegionImpl(DivergentRegion *region) {
+void ThreadVectorizing::initAliveMap(DivergentRegion *region,
+                                    CoarseningMap &aliveMap) {
+  InstVector &aliveInsts = region->getAlive();
+  for (InstVector::iterator iter = aliveInsts.begin(),
+                            iterEnd = aliveInsts.end();
+       iter != iterEnd; ++iter) {
+    aliveMap.insert(std::pair<Instruction *, InstVector>(*iter, InstVector()));
+  }
+}
+
+//------------------------------------------------------------------------------
+void ThreadVectorizing::replicateRegionImpl(DivergentRegion *region,
+                                            CoarseningMap &aliveMap) {
   BasicBlock *pred = getPredecessor(region, loopInfo);
   BasicBlock *topInsertionPoint = region->getExiting();
   BasicBlock *bottomInsertionPoint = getExit(*region);
 
-  ValueVector result;
-  InstVector &aliveInsts = region->getAlive();
-  result.reserve(aliveInsts.size());
-  for (InstVector::iterator iter = aliveInsts.begin(),
-                            iterEnd = aliveInsts.end();
-       iter != iterEnd; ++iter) {
-    result.push_back(
-        UndefValue::get(VectorType::get((*iter)->getType(), width)));
-  }
+//  ValueVector result;
+//  InstVector &aliveInsts = region->getAlive();
+//  result.reserve(aliveInsts.size());
+//  for (InstVector::iterator iter = aliveInsts.begin(),
+//                            iterEnd = aliveInsts.end();
+//       iter != iterEnd; ++iter) {
+//    result.push_back(
+//        UndefValue::get(VectorType::get((*iter)->getType(), width)));
+//  }
 
-  region->dump();
-  applyVectorMapToRegion(*region, 0);
+  region->findIncomingValues();
+  InstVector &incomingInst = region->getIncoming();
+
+  BasicBlock *firstRegionHeader = NULL;
+  BasicBlock *lastRegionExiting = NULL;
 
   // Replicate the region.
-  for (unsigned int index = 0; index < width - 1; ++index) {
+  for (unsigned int index = 0; index < width; ++index) {
     Map valueMap;
     DivergentRegion *newRegion =
-        region->clone(".cf" + Twine(index + 2), dt, pdt, valueMap);
-    applyVectorMapToRegion(*newRegion, index + 1);
+        region->clone(".cf" + Twine(index + 1), dt, pdt, valueMap);
+    applyVectorMapToRegion(*newRegion, incomingInst, index);
+
+    if(index == 0) {
+      firstRegionHeader = newRegion->getHeader();
+    }
+    if(index == width - 1) {
+      lastRegionExiting = newRegion->getExiting();
+    }
 
     // Connect the region to the CFG.
     changeBlockTarget(topInsertionPoint, newRegion->getHeader());
@@ -74,64 +98,119 @@ void ThreadVectorizing::replicateRegionImpl(DivergentRegion *region) {
     topInsertionPoint = newRegion->getExiting();
     bottomInsertionPoint = getExit(*newRegion);
 
-    // Set the ir just before the branch out of the region
-    irBuilder->SetInsertPoint(newRegion->getExiting()->getTerminator());
-
-    for (unsigned int aliveIndex = 0; aliveIndex < aliveInsts.size();
-         ++aliveIndex) {
-      Value *newValue = valueMap[aliveInsts[aliveIndex]];
-      result[aliveIndex] = irBuilder->CreateInsertElement(
-          result[aliveIndex], newValue, irBuilder->getInt32(index), "inserted");
-    }
+//    // Set the ir just before the branch out of the region
+//    irBuilder->SetInsertPoint(newRegion->getExiting()->getTerminator());
+//
+//    for (unsigned int aliveIndex = 0; aliveIndex < aliveInsts.size();
+//         ++aliveIndex) {
+//      Value *newValue = valueMap[aliveInsts[aliveIndex]];
+//      result[aliveIndex] = irBuilder->CreateInsertElement(
+//          result[aliveIndex], newValue, irBuilder->getInt32(index), "inserted");
+//    }
 
     delete newRegion;
+    updateAliveMap(aliveMap, valueMap);
   }
 
-  for (unsigned int aliveIndex = 0; aliveIndex < aliveInsts.size();
-       ++aliveIndex) {
-    vectorMap[aliveInsts[aliveIndex]] = result[aliveIndex];
+  createAliveVectors(lastRegionExiting, aliveMap);
+
+  // Remove the original region from the function.
+  changeBlockTarget(pred, firstRegionHeader);
+  removeOldRegion(region);
+
+  lastRegionExiting->getParent()->dump();
+
+//  for (unsigned int aliveIndex = 0; aliveIndex < aliveInsts.size();
+//       ++aliveIndex) {
+//    vectorMap[aliveInsts[aliveIndex]] = result[aliveIndex];
+//  }
+}
+
+//------------------------------------------------------------------------------
+void ThreadVectorizing::createAliveVectors(BasicBlock *block,
+                                           CoarseningMap &aliveMap) {
+  irBuilder->SetInsertPoint(block->getTerminator());
+
+  for (CoarseningMap::iterator mapIter = aliveMap.begin(),
+                               mapEnd = aliveMap.end();
+       mapIter != mapEnd; ++mapIter) {
+    Instruction *alive = mapIter->first;
+    InstVector &aliveInsts = mapIter->second; 
+
+//    errs() << "Alive: ";
+//    alive->dump();
+//    errs() << "Coarsened insts: ";
+//    dumpVector(aliveInsts);
+
+    Value *result = UndefValue::get(VectorType::get(alive->getType(), width));
+    for(unsigned int index = 0; index < aliveInsts.size(); ++index) {
+      Instruction *alive = aliveInsts[index]; 
+      result = irBuilder->CreateInsertElement(
+          result, alive, irBuilder->getInt32(index), "region.alive");
+    }
+    vectorMap[alive] = result;
+  }
+}
+
+//------------------------------------------------------------------------------
+void ThreadVectorizing::updateAliveMap(CoarseningMap &aliveMap, Map &regionMap) {
+  for (CoarseningMap::iterator mapIter = aliveMap.begin(),
+                               mapEnd = aliveMap.end();
+       mapIter != mapEnd; ++mapIter) {
+    InstVector &aliveInsts = mapIter->second;
+    Value *value = regionMap[mapIter->first];
+    assert(value != NULL && "Missing alive value in region map");
+    aliveInsts.push_back(dyn_cast<Instruction>(value));
+  }
+}
+
+//------------------------------------------------------------------------------
+void ThreadVectorizing::removeOldRegion(DivergentRegion *region) {
+  for (DivergentRegion::iterator blockIter = region->begin(),
+                                 blockIterEnd = region->end();
+       blockIter != blockIterEnd; ++blockIter) {
+    BasicBlock *block = *blockIter;
+    DeleteDeadBlock(block);
   }
 }
 
 //------------------------------------------------------------------------------
 void ThreadVectorizing::applyVectorMapToRegion(DivergentRegion &region,
-                                                  unsigned int index) {
-  for (DivergentRegion::iterator iter = region.begin(), iterEnd = region.end();
-       iter != iterEnd; ++iter) {
-    BasicBlock *block = *iter;
-    applyVectorMapToBlock(block, index);
+                                               InstVector &incoming,
+                                               unsigned int index) {
+
+  // Perform the remapping on the incoming values only.
+
+  for (DivergentRegion::iterator blockIter = region.begin(),
+                                 blockIterEnd = region.end();
+       blockIter != blockIterEnd; ++blockIter) {
+    BasicBlock *block = *blockIter;
+    for (BasicBlock::iterator instIter = block->begin(),
+                              instIterEnd = block->end();
+         instIter != instIterEnd; ++instIter) {
+      Instruction *inst = instIter;
+      irBuilder->SetInsertPoint(inst);
+
+      for (unsigned int opIndex = 0, opEnd = inst->getNumOperands();
+           opIndex != opEnd; ++opIndex) {
+        Instruction *operand = dyn_cast<Instruction>(inst->getOperand(opIndex));
+        if (operand == NULL)
+          continue;
+
+        if (!isPresent(operand, incoming)) {
+          continue;
+        }
+
+        Value *vectorValue = getVectorValue(operand);
+        Value *newOperand = irBuilder->CreateExtractElement(
+            vectorValue, irBuilder->getInt32(index), "extracted");
+
+        inst->setOperand(opIndex, newOperand);
+      }
+    }
   }
 }
 
-//------------------------------------------------------------------------------
-void ThreadVectorizing::applyVectorMapToBlock(BasicBlock *block, unsigned int index) {
-  for (BasicBlock::iterator iter = block->begin(), iterEnd = block->end();
-       iter != iterEnd; ++iter) {
-    applyVectorMapToInst(iter, index);
-  }
-}
-
-//------------------------------------------------------------------------------
-void ThreadVectorizing::applyVectorMapToInst(Instruction *inst,
-                                             unsigned int index) {
-
-  errs() << "applyVectorMapToInst: ";
-  inst->dump();
-  irBuilder->SetInsertPoint(inst);
-  for (unsigned int opIndex = 0, opEnd = inst->getNumOperands();
-       opIndex != opEnd; ++opIndex) {
-    Instruction *operand = dyn_cast<Instruction>(inst->getOperand(opIndex));
-    if (operand == NULL)
-      continue;
-    Value *vectorValue = getVectorValue(operand);
-    Value *newOperand = irBuilder->CreateExtractElement(
-        vectorValue, irBuilder->getInt32(index), "extracted");
-
-    inst->setOperand(opIndex, newOperand);
-  }
-}
-
-//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 void ThreadVectorizing::replicateRegionFullMerging(DivergentRegion *region) {}
 void ThreadVectorizing::replicateRegionFalseMerging(DivergentRegion *region) {

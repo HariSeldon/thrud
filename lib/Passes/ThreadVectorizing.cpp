@@ -131,8 +131,6 @@ bool ThreadVectorizing::performVectorization(Function &function) {
   removeVectorPlaceholders();
   removeScalarInsts();
 
-  function.dump();
-
   return true;
 }
 
@@ -158,12 +156,10 @@ Value *ThreadVectorizing::widenValue(Value *value) {
       ConstantAggregateZero::get(VectorType::get(integer_32, width));
   Value *undefined_value = UndefValue::get(vector_type);
 
-  // The widening of the value will be placed in the block that
-  // immediatelly dominates all the used of the value.
-  // Only if the value is not an instruction.
   IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
   Instruction *inst = dyn_cast<Instruction>(value);
-  if (NULL == inst) {
+  // The value is not an instruction.
+  if (inst == NULL) {
     // The widening of the value will be placed in the block that
     // immediatelly dominates all the uses of the value.
 
@@ -195,9 +191,13 @@ Value *ThreadVectorizing::widenValue(Value *value) {
 
     //    IRBuilderBase::InsertPoint originalIp = irBuilder->saveIP();
     irBuilder->SetInsertPoint(dominator->getFirstNonPHI());
+  } 
+  // The value is an instruction.
+  else {
+    setInsertPoint(inst);
   }
 
-  // Create an undefined vector contaning in the first position the
+  // Create an undefined vector contaning the first position the
   // original value.
   Value *single_element_array =
       irBuilder->CreateInsertElement(undefined_value, value, zero, "inserted");
@@ -219,9 +219,6 @@ void ThreadVectorizing::vectorizeFunction() {
   InstVector &insts = sdda->getOutermostDivInsts();
   RegionVector &regions = sdda->getOutermostDivRegions();
 
-  errs() << "To vectorize:\n";
-  dumpVector(insts);
-
   // Replicate insts.
   for (InstVector::iterator iter = insts.begin(), iterEnd = insts.end();
        iter != iterEnd; ++iter) {
@@ -232,11 +229,6 @@ void ThreadVectorizing::vectorizeFunction() {
       vectorMap[inst] = vectorResult;
       toRemoveInsts.insert(inst);
     }
-  }
-
-  for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end(); 
-       iter != iterEnd; ++iter) {
-    (*iter)->dump();
   }
 
   // Replicate regions.
@@ -351,6 +343,7 @@ Value *ThreadVectorizing::getVectorValue(Value *scalar) {
 
         // Widen the scalar value generating the place holder.
         Value *widenedValue = widenValue(scalar);
+        widenedValue->setName(widenedValue->getName() + ".place_holder");
         phMap[scalar] = widenedValue;
 
         return widenedValue;
@@ -384,16 +377,16 @@ void ThreadVectorizing::fixPhiNodes() {
   for (PhiVector::iterator iter = vectorPhis.begin(),
                            iterEnd = vectorPhis.end();
        iter != iterEnd; ++iter) {
-    PHINode *scalar_phi = *iter;
-    PHINode *vector_phi = dyn_cast<PHINode>(vectorMap[scalar_phi]);
-    assert(NULL != vector_phi && "Phi node mapped to a non-phi");
+    PHINode *scalarPhi = *iter;
+    PHINode *vectorPhi = dyn_cast<PHINode>(vectorMap[scalarPhi]);
+    assert(vectorPhi != NULL && "Phi node mapped to a non-phi");
 
-    unsigned int operands_number = scalar_phi->getNumIncomingValues();
+    unsigned int operands_number = scalarPhi->getNumIncomingValues();
     for (unsigned int operand_index = 0; operand_index < operands_number;
          ++operand_index) {
-      Value *scalar_value = scalar_phi->getIncomingValue(operand_index);
-      vector_phi->addIncoming(getVectorValue(scalar_value),
-                              scalar_phi->getIncomingBlock(operand_index));
+      Value *scalar_value = scalarPhi->getIncomingValue(operand_index);
+      vectorPhi->addIncoming(getVectorValue(scalar_value),
+                              scalarPhi->getIncomingBlock(operand_index));
     }
   }
 }
@@ -429,8 +422,7 @@ Value *ThreadVectorizing::vectorizeLoad(LoadInst *loadInst) {
 
   // If the store is not consecutive along the vectorizing dimension then
   // it has to be replicated.
-  if (false ==
-      subscriptAnalysis->isConsecutive(gep, (int)(VectorizingDirectionCL))) {
+  if (!subscriptAnalysis->isConsecutive(gep, (int)(VectorizingDirectionCL))) {
     return replicateInst(loadInst);
   }
 
@@ -442,11 +434,10 @@ Value *ThreadVectorizing::vectorizeLoad(LoadInst *loadInst) {
       last_operand, irBuilder->getInt32(0), "extracted");
 
   // Create the new gep.
-  GetElementPtrInst *new_gep = cast<GetElementPtrInst>(gep->clone());
-  new_gep->setOperand(operands_number - 1, last_operand);
-  load_pointer = irBuilder->Insert(new_gep);
+  GetElementPtrInst *newGep = cast<GetElementPtrInst>(gep->clone());
+  newGep->setOperand(operands_number - 1, last_operand);
+  load_pointer = irBuilder->Insert(newGep);
   load_pointer->setName("load_ptr");
-  //insert_sorted<Instruction>(toRemoveInsts, gep);
   toRemoveInsts.insert(gep);
 
   Type *vector_load_type =
@@ -484,16 +475,15 @@ Value *ThreadVectorizing::vectorizeStore(StoreInst *storeInst) {
       last_operand, irBuilder->getInt32(0), "extracted");
 
   // Create the new gep.
-  GetElementPtrInst *new_gep = cast<GetElementPtrInst>(gep->clone());
-  new_gep->setOperand(operands_number - 1, last_operand);
-  new_gep = irBuilder->Insert(new_gep);
-  new_gep->setName("store_ptr");
-  store_pointer = new_gep;
-  //insert_sorted<Instruction>(toRemoveInsts, gep);
+  GetElementPtrInst *newGep = cast<GetElementPtrInst>(gep->clone());
+  newGep->setOperand(operands_number - 1, last_operand);
+  newGep = irBuilder->Insert(newGep);
+  newGep->setName("store_ptr");
+  store_pointer = newGep;
   toRemoveInsts.insert(gep);
 
   // Get the store type.
-  Type *scalar_store_type = new_gep->getPointerOperandType();
+  Type *scalar_store_type = newGep->getPointerOperandType();
 
   // Create the vector store pointer type.
   Type *vector_store_type = getVectorPointerType(scalar_store_type);
@@ -609,10 +599,10 @@ Value *ThreadVectorizing::replicateInst(Instruction *inst) {
   //  LLVMContext &context = inst->getContext();
   ValueVector operands = getWidenedOperands(inst);
 
-  bool is_inst_void = inst->getType()->isVoidTy();
+  bool isVoid = inst->getType()->isVoidTy();
   Value *result = NULL;
 
-  if (false == is_inst_void) {
+  if (false == isVoid) {
     result = UndefValue::get(VectorType::get(inst->getType(), width));
   }
 
@@ -636,13 +626,13 @@ Value *ThreadVectorizing::replicateInst(Instruction *inst) {
 
     Twine cloned_name = "";
 
-    if (true == inst->hasName()) {
+    if (inst->hasName()) {
       cloned_name = inst->getName() + ".replicated" + Twine(vector_index);
     }
 
     irBuilder->Insert(cloned)->setName(cloned_name);
 
-    if (false == is_inst_void) {
+    if (!isVoid) {
       result = irBuilder->CreateInsertElement(
           result, cloned, irBuilder->getInt32(vector_index), "inserted");
     }
@@ -767,6 +757,10 @@ void ThreadVectorizing::removeVectorPlaceholders() {
     Value *placeholder_value = iter->second;
     // Get the vector value corresponding to the scalar value.
     Value *vector_value = vectorMap[scalar_value];
+
+    if(vector_value == NULL)
+      continue;
+
     // Replace the placeholder with the vector value.
     placeholder_value->replaceAllUsesWith(vector_value);
   }

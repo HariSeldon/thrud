@@ -81,19 +81,20 @@ private:
   void replicateRegion(DivergentRegion *region);
 
   void replicateRegionClassic(DivergentRegion *region);
-//  void initAliveMap(DivergentRegion *region, CoarseningMap &aliveMap);
-  void replicateRegionImpl(DivergentRegion *region);
-//  void updateAliveMap(CoarseningMap &aliveMap, Map &regionMap);
-//  void updatePlaceholdersWithAlive(CoarseningMap &aliveMap);
+  void initAliveMap(DivergentRegion *region, CoarseningMap &aliveMap);
+  void replicateRegionImpl(DivergentRegion *region, CoarseningMap &aliveMap);
+  void updateAliveMap(CoarseningMap &aliveMap, Map &regionMap);
+  void updatePlaceholdersWithAlive(CoarseningMap &aliveMap);
+  void createAliveVectors(BasicBlock *block, CoarseningMap &aliveMap);
 
   void replicateRegionFalseMerging(DivergentRegion *region);
   void replicateRegionTrueMerging(DivergentRegion *region);
   void replicateRegionMerging(DivergentRegion *region, unsigned int branch);
   void replicateRegionFullMerging(DivergentRegion *region);
 
-  void applyVectorMapToRegion(DivergentRegion &region, unsigned int index);
-  void applyVectorMapToBlock(BasicBlock *block, unsigned int index);
-  void applyVectorMapToInst(Instruction *inst, unsigned int index);
+  void removeOldRegion(DivergentRegion *region);
+  void applyVectorMapToRegion(DivergentRegion &region, InstVector &incoming,
+                              unsigned int index);
 
   // Return the vector value corresponding to the given vector value.
   Value *getVectorValue(Value *scalar_value);

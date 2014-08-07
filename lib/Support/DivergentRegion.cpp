@@ -60,11 +60,17 @@ void DivergentRegion::setExiting(BasicBlock *Exiting) {
 
 void DivergentRegion::setAlive(const InstVector &alive) { this->alive = alive; }
 
+void DivergentRegion::setIncoming(const InstVector &incoming) {
+  this->incoming = incoming;
+}
+
 RegionBounds &DivergentRegion::getBounds() { return bounds; }
 
 BlockVector &DivergentRegion::getBlocks() { return blocks; }
 
 InstVector &DivergentRegion::getAlive() { return alive; }
+
+InstVector &DivergentRegion::getIncoming() { return incoming; }
 
 void DivergentRegion::fillRegion(DominatorTree *dt, PostDominatorTree *pdt) {
   blocks.clear();
@@ -98,6 +104,29 @@ void DivergentRegion::findAliveValues() {
           if (!contains(*this, blockUser)) {
             alive.push_back(inst);
             break;
+          }
+        }
+      }
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+void DivergentRegion::findIncomingValues() {
+  for (BlockVector::iterator iterBlock = blocks.begin(),
+                             blockEnd = blocks.end();
+       iterBlock != blockEnd; ++iterBlock) {
+    BasicBlock *block = *iterBlock;
+    for (BasicBlock::iterator iterInst = block->begin(), instEnd = block->end();
+         iterInst != instEnd; ++iterInst) {
+      Instruction *inst = iterInst;
+
+      // Iterate over the operands of the instruction.
+      for (unsigned int opIndex = 0, opEnd = inst->getNumOperands();
+           opIndex != opEnd; ++opIndex) {
+        if(Instruction *operand = dyn_cast<Instruction>(inst->getOperand(opIndex))) {
+          if(!contains(*this, operand->getParent())) {
+            incoming.push_back(operand);
           }
         }
       }

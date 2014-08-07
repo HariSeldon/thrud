@@ -41,16 +41,19 @@ public:
   RegionBounds &getBounds();
   BlockVector &getBlocks();
   InstVector &getAlive();
+  InstVector &getIncoming();
 
   void setHeader(BasicBlock *Header);
   void setExiting(BasicBlock *Exiting);
   void setAlive(const InstVector &alive);
+  void setIncoming(const InstVector &incoming);
 
   void setCondition(BoundCheck condition);
   BoundCheck getCondition() const;
 
   void fillRegion(DominatorTree *dt, PostDominatorTree *pdt);
   void findAliveValues();
+  void findIncomingValues();
 
   void analyze();
   //bool isStrict();
@@ -74,6 +77,7 @@ private:
   BlockVector blocks;
   BoundCheck condition;
   InstVector alive;
+  InstVector incoming;
 
 public:
   // Iterator class.

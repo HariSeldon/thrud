@@ -65,7 +65,7 @@ bool SubscriptAnalysis::isConsecutive(Value *value, int direction) {
     addresses.push_back(expr);
   }
 
-  assert(addresses.size() == TEST_NUMBER && "Missing addresses");
+  assert((int)addresses.size() == TEST_NUMBER && "Missing addresses");
 
   const SCEV *first = addresses[0];
   int typeWidth = getTypeWidth(first->getType());
