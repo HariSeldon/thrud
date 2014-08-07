@@ -130,9 +130,6 @@ void ThreadCoarsening::replicateRegionTrueMerging(DivergentRegion *region) {
 //------------------------------------------------------------------------------
 void ThreadCoarsening::replicateRegionMerging(DivergentRegion *region,
                                               unsigned int branchIndex) {
-  errs() << "ThreadCoarsening::replicateRegionMerging\n";
-  region->dump();
-
   if (!region->areSubregionsDisjoint()) {
     assert(false && "Region merging is not possible");
     return replicateRegionClassic(region);

@@ -126,13 +126,8 @@ bool ThreadVectorizing::performVectorization(Function &function) {
 
   widenTids();
   vectorizeFunction();
-
-  function.getParent()->dump();
-
   removeVectorPlaceholders();
   removeScalarInsts();
-
-  function.getParent()->dump();
 
   return true;
 }
@@ -238,8 +233,6 @@ void ThreadVectorizing::vectorizeFunction() {
   std::for_each(
       regions.begin(), regions.end(),
       std::bind1st(std::mem_fun(&ThreadVectorizing::replicateRegion), this));
-
-  kernelFunction->getParent()->dump(); 
 
   fixPhiNodes();
 }
@@ -387,15 +380,18 @@ void ThreadVectorizing::fixPhiNodes() {
     PHINode *vectorPhi = dyn_cast<PHINode>(vectorMap[scalarPhi]);
     assert(vectorPhi != NULL && "Phi node mapped to a non-phi");
 
-    scalarPhi->dump();
-
     unsigned int operands_number = scalarPhi->getNumIncomingValues();
     for (unsigned int operand_index = 0; operand_index < operands_number;
          ++operand_index) {
-      Value *scalar_value = scalarPhi->getIncomingValue(operand_index);
-      // FIXME BE AWARE OF UNDEF VALUES!!!!
-      vectorPhi->addIncoming(getVectorValue(scalar_value),
-                              scalarPhi->getIncomingBlock(operand_index));
+      Value *scalarValue = scalarPhi->getIncomingValue(operand_index);
+      if (isa<UndefValue>(scalarValue)) {
+        vectorPhi->addIncoming(UndefValue::get(vectorPhi->getType()),
+                               scalarPhi->getIncomingBlock(operand_index));
+
+      } else {
+        vectorPhi->addIncoming(getVectorValue(scalarValue),
+                               scalarPhi->getIncomingBlock(operand_index));
+      }
     }
   }
 }
@@ -761,11 +757,11 @@ void ThreadVectorizing::removeVectorPlaceholders() {
   for (V2VMap::iterator iter = phMap.begin(), iterEnd = phMap.end();
        iter != iterEnd; ++iter) {
     // Get the original scalar value.
-    Value *scalar_value = iter->first;
+    Value *scalarValue = iter->first;
     // Get the vector placeholder.
     Value *placeholder_value = iter->second;
     // Get the vector value corresponding to the scalar value.
-    Value *vector_value = vectorMap[scalar_value];
+    Value *vector_value = vectorMap[scalarValue];
 
     if(vector_value == NULL)
       continue;
