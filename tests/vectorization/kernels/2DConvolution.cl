@@ -31,12 +31,12 @@ __kernel void Convolution2D_kernel(__global DATA_TYPE *A, __global DATA_TYPE *B,
   c13 = +0.4;
   c23 = +0.7;
   c33 = +0.10;
-//  if ((i < (ni - 1)) && (j < (nj - 1)) && (i > 0) && (j > 0)) {
+  if ((i < (ni - 1)) && (j < (nj - 1)) && (i > 0) && (j > 0)) {
     B[i * nj + j] =
           c11 * A[(i - 1) * nj + (j - 1)] + c12 * A[(i + 0) * nj + (j - 1)] +
           c13 * A[(i + 1) * nj + (j - 1)] + c21 * A[(i - 1) * nj + (j + 0)] +
           c22 * A[(i + 0) * nj + (j + 0)] + c23 * A[(i + 1) * nj + (j + 0)] +
           c31 * A[(i - 1) * nj + (j + 1)] + c32 * A[(i + 0) * nj + (j + 1)] +
           c33 * A[(i + 1) * nj + (j + 1)];
-//  }
+  }
 }

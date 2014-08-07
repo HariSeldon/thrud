@@ -32,7 +32,6 @@ __kernel void Convolution3D_kernel(__global DATA_TYPE *A, __global DATA_TYPE *B,
   c23 = +7;
   c33 = +10;
 
-  B[i * (nk * nj) + j * nk + k] = 0;
   // Do the operation
   if ((i < (ni - 1)) && (j < (nj - 1)) && (k < (nk - 1)) && (i > 0) &&
       (j > 0) && (k > 0)) {
@@ -52,7 +51,7 @@ __kernel void Convolution3D_kernel(__global DATA_TYPE *A, __global DATA_TYPE *B,
         c23 * A[(i + 1) * (nk * nj) + (j + 0) * nk + (k + 1)] +
         c31 * A[(i - 1) * (nk * nj) + (j + 1) * nk + (k + 1)] +
         c33 * A[(i + 1) * (nk * nj) + (j + 1) * nk + (k + 1)];
-//  } else {
-//    B[i * (nk * nj) + j * nk + k] = 0;
+  } else {
+    B[i * (nk * nj) + j * nk + k] = 0;
   }
 }
