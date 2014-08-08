@@ -1,5 +1,7 @@
 #include "thrud/ThreadVectorizing/ThreadVectorizing.h"
 
+#include "llvm/Analysis/LoopInfo.h"
+
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 // -----------------------------------------------------------------------------
@@ -116,9 +118,8 @@ void ThreadVectorizing::replicateRegionImpl(DivergentRegion *region,
 
   // Remove the original region from the function.
   changeBlockTarget(pred, firstRegionHeader);
-  removeOldRegion(region);
 
-  lastRegionExiting->getParent()->dump();
+  removeOldRegion(region);
 
 //  for (unsigned int aliveIndex = 0; aliveIndex < aliveInsts.size();
 //       ++aliveIndex) {
@@ -136,11 +137,6 @@ void ThreadVectorizing::createAliveVectors(BasicBlock *block,
        mapIter != mapEnd; ++mapIter) {
     Instruction *alive = mapIter->first;
     InstVector &aliveInsts = mapIter->second; 
-
-//    errs() << "Alive: ";
-//    alive->dump();
-//    errs() << "Coarsened insts: ";
-//    dumpVector(aliveInsts);
 
     Value *result = UndefValue::get(VectorType::get(alive->getType(), width));
     for(unsigned int index = 0; index < aliveInsts.size(); ++index) {
@@ -166,11 +162,38 @@ void ThreadVectorizing::updateAliveMap(CoarseningMap &aliveMap, Map &regionMap) 
 
 //------------------------------------------------------------------------------
 void ThreadVectorizing::removeOldRegion(DivergentRegion *region) {
+
+  // This does not work. The blocks are still in used before the removal.
   for (DivergentRegion::iterator blockIter = region->begin(),
                                  blockIterEnd = region->end();
        blockIter != blockIterEnd; ++blockIter) {
     BasicBlock *block = *blockIter;
-    DeleteDeadBlock(block);
+    TerminatorInst *blockTerm = block->getTerminator();
+
+    // Loop through all of our successors and make sure they know that one
+    // of their predecessors is going away.
+    for (unsigned i = 0, e = blockTerm->getNumSuccessors(); i != e; ++i)
+      blockTerm->getSuccessor(i)->removePredecessor(block);
+
+    // Zap all the instructions in the block.
+    while (!block->empty()) {
+      Instruction &I = block->back();
+      // If this instruction is used, replace uses with an arbitrary value.
+      // Because control flow can't get here, we don't care what we replace the
+      // value with.  Note that since this block is unreachable, and all values
+      // contained within it must dominate their uses, that all uses will
+      // eventually be removed (they are themselves dead).
+      if (!I.use_empty())
+        I.replaceAllUsesWith(UndefValue::get(I.getType()));
+      block->getInstList().pop_back();
+    }
+  }
+
+  for (DivergentRegion::iterator blockIter = region->begin(),
+                                 blockIterEnd = region->end();
+       blockIter != blockIterEnd; ++blockIter) {
+    BasicBlock *block = *blockIter;
+    block->eraseFromParent();
   }
 }
 

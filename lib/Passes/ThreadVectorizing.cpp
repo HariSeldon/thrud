@@ -744,9 +744,8 @@ void ThreadVectorizing::removeScalarInsts() {
     Instruction *inst = *iter;
 
     // Remove the current instruction from the function.
-    if (false == inst->getType()->isVoidTy()) {
+    if (!inst->use_empty())
       inst->replaceAllUsesWith(Constant::getNullValue(inst->getType()));
-    }
     inst->eraseFromParent();
   }
 }
