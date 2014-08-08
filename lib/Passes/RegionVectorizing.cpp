@@ -4,6 +4,8 @@
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include "thrud/Support/Utils.h"
+
 // -----------------------------------------------------------------------------
 void ThreadVectorizing::replicateRegion(DivergentRegion *region) {
   assert(dt->dominates(region->getHeader(), region->getExiting()) &&
@@ -33,9 +35,9 @@ void ThreadVectorizing::replicateRegion(DivergentRegion *region) {
 
 //------------------------------------------------------------------------------
 void ThreadVectorizing::replicateRegionClassic(DivergentRegion *region) {
-  CoarseningMap aliveMap;
-  initAliveMap(region, aliveMap);
-  replicateRegionImpl(region, aliveMap);
+//  CoarseningMap aliveMap;
+//  initAliveMap(region, aliveMap);
+  replicateRegionImpl(region);
 //  updatePlaceholdersWithAlive(aliveMap);
 }
 
@@ -51,11 +53,18 @@ void ThreadVectorizing::initAliveMap(DivergentRegion *region,
 }
 
 //------------------------------------------------------------------------------
-void ThreadVectorizing::replicateRegionImpl(DivergentRegion *region,
-                                            CoarseningMap &aliveMap) {
+void ThreadVectorizing::replicateRegionImpl(DivergentRegion *region) {
   BasicBlock *pred = getPredecessor(region, loopInfo);
   BasicBlock *topInsertionPoint = region->getExiting();
   BasicBlock *bottomInsertionPoint = getExit(*region);
+
+  region->findAliveValues();
+  region->dump();
+  InstVector &aliveInsts = region->getAlive();
+  dumpVector(aliveInsts);
+
+  CoarseningMap aliveMap;
+  initAliveMap(region, aliveMap);
 
 //  ValueVector result;
 //  InstVector &aliveInsts = region->getAlive();
@@ -150,6 +159,9 @@ void ThreadVectorizing::createAliveVectors(BasicBlock *block,
 
 //------------------------------------------------------------------------------
 void ThreadVectorizing::updateAliveMap(CoarseningMap &aliveMap, Map &regionMap) {
+  ::dump(regionMap);
+  ::dumpCoarseningMap(aliveMap);
+
   for (CoarseningMap::iterator mapIter = aliveMap.begin(),
                                mapEnd = aliveMap.end();
        mapIter != mapEnd; ++mapIter) {

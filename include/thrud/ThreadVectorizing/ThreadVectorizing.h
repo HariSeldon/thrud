@@ -82,7 +82,7 @@ private:
 
   void replicateRegionClassic(DivergentRegion *region);
   void initAliveMap(DivergentRegion *region, CoarseningMap &aliveMap);
-  void replicateRegionImpl(DivergentRegion *region, CoarseningMap &aliveMap);
+  void replicateRegionImpl(DivergentRegion *region);
   void updateAliveMap(CoarseningMap &aliveMap, Map &regionMap);
   void updatePlaceholdersWithAlive(CoarseningMap &aliveMap);
   void createAliveVectors(BasicBlock *block, CoarseningMap &aliveMap);

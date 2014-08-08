@@ -85,6 +85,7 @@ void DivergentRegion::fillRegion(DominatorTree *dt, PostDominatorTree *pdt) {
 
 //------------------------------------------------------------------------------
 void DivergentRegion::findAliveValues() {
+  alive.clear();
   for (BlockVector::iterator iterBlock = blocks.begin(),
                              blockEnd = blocks.end();
        iterBlock != blockEnd; ++iterBlock) {
@@ -113,6 +114,7 @@ void DivergentRegion::findAliveValues() {
 
 //------------------------------------------------------------------------------
 void DivergentRegion::findIncomingValues() {
+  incoming.clear();
   for (BlockVector::iterator iterBlock = blocks.begin(),
                              blockEnd = blocks.end();
        iterBlock != blockEnd; ++iterBlock) {
@@ -146,29 +148,18 @@ void DivergentRegion::updateBounds(DominatorTree *dt, PostDominatorTree *pdt) {
   }
 }
 
-//bool DivergentRegion::isStrict() { return condition == DivergentRegion::EQ; }
-
+//------------------------------------------------------------------------------
 void DivergentRegion::setCondition(DivergentRegion::BoundCheck condition) {
   this->condition = condition;
 }
 
+//------------------------------------------------------------------------------
 DivergentRegion::BoundCheck DivergentRegion::getCondition() const {
   return condition;
 }
 
-//------------------------------------------------------------------------------
-//void DivergentRegion::analyze() {
-//  BasicBlock *header = getHeader();
-//  if (BranchInst *Branch = dyn_cast<BranchInst>(header->getTerminator())) {
-//    Value *Cond = Branch->getCondition();
-//    if (CmpInst *Cmp = dyn_cast<CmpInst>(Cond)) {
-//      setCondition(IsEquals(Cmp->getPredicate()) ? EQ : ND);
-//      return;
-//    }
-//  }
-//  setCondition(ND);
-//}
 
+//------------------------------------------------------------------------------
 bool DivergentRegion::areSubregionsDisjoint() {
   BranchInst *branch = dyn_cast<BranchInst>(getHeader()->getTerminator());
   assert(branch->getNumSuccessors() == 2 && "Wrong successor number");
@@ -195,6 +186,7 @@ bool DivergentRegion::areSubregionsDisjoint() {
   return false;
 }
 
+//------------------------------------------------------------------------------
 DivergentRegion *DivergentRegion::clone(const Twine &suffix, DominatorTree *dt,
                                         PostDominatorTree *pdt,
                                         Map &valuesMap) {

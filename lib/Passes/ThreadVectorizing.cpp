@@ -229,6 +229,10 @@ void ThreadVectorizing::vectorizeFunction() {
     }
   }
 
+  for (RegionVector::iterator iter = regions.begin(), iterEnd = regions.end(); iter != iterEnd; ++iter) {
+    (*iter)->dump();
+  }
+
   // Replicate regions.
   std::for_each(
       regions.begin(), regions.end(),

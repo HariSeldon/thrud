@@ -154,6 +154,22 @@ void dumpV2V(const V2VMap &map) {
 }
 
 //------------------------------------------------------------------------------
+void dumpCoarseningMap(const CoarseningMap &cMap) {
+  llvm::errs() << "------------------------------\n";
+  for (CoarseningMap::const_iterator iter = cMap.begin(), end = cMap.end();
+       iter != end; ++iter) {
+    const InstVector &entry = iter->second;
+    const Instruction *inst = iter->first;
+    llvm::errs() << "Key: ";
+    inst->dump();
+    llvm::errs() << " ";
+    dumpVector(entry);
+    llvm::errs() << "\n";
+  }
+  llvm::errs() << "------------------------------\n";
+}
+
+//------------------------------------------------------------------------------
 void replaceUses(Value *oldValue, Value *newValue) {
   std::vector<User *> uses;
   std::copy(oldValue->use_begin(), oldValue->use_end(),

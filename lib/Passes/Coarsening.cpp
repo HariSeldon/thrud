@@ -7,21 +7,6 @@
 
 #include "llvm/Transforms/Utils/Cloning.h"
 
-void dumpCoarseningMap(CoarseningMap &cMap) {
-  llvm::errs() << "------------------------------\n";
-  for (CoarseningMap::iterator iter = cMap.begin(), end = cMap.end();
-       iter != end; ++iter) {
-    InstVector &entry = iter->second;
-    Instruction *inst = iter->first;
-    llvm::errs() << "Key: ";
-    inst->dump();
-    llvm::errs() << " ";
-    dumpVector(entry);
-    llvm::errs() << "\n";
-  }
-  llvm::errs() << "------------------------------\n";
-}
-
 //------------------------------------------------------------------------------
 void ThreadCoarsening::coarsenFunction() {
   RegionVector &regions = sdda->getOutermostDivRegions();

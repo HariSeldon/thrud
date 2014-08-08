@@ -73,7 +73,7 @@ runTest kernels/correlation.cl std_kernel 4 0
 runTest kernels/correlation.cl reduce_kernel 4 0
 runTest kernels/correlation.cl reduce_kernel 4 1
 runTest kernels/correlation.cl corr_kernel 4 0
-runTest kernels/correlation.cl corr_kernel 4 0
+runTest kernels/correlation.cl corr_kernel 4 1
 runTest kernels/covariance.cl mean_kernel 4 0
 runTest kernels/covariance.cl reduce_kernel 4 0
 runTest kernels/covariance.cl reduce_kernel 4 1
