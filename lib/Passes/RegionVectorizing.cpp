@@ -225,10 +225,14 @@ void ThreadVectorizing::applyVectorMapToRegion(DivergentRegion &region,
         }
 
         Value *vectorValue = getVectorValue(operand);
+        if(Instruction *vectorInst = dyn_cast<Instruction>(vectorValue)) {
+          setInsertPoint(vectorInst);
+        }
         Value *newOperand = irBuilder->CreateExtractElement(
-            vectorValue, irBuilder->getInt32(index), "extracted");
+            vectorValue, irBuilder->getInt32(index), "region.extracted");
 
         inst->setOperand(opIndex, newOperand);
+        irBuilder->SetInsertPoint(inst);
       }
     }
   }
