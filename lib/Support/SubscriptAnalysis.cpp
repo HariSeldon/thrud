@@ -39,7 +39,8 @@ int SubscriptAnalysis::getBankConflictNumber(Value *value) {
 //------------------------------------------------------------------------------
 // It might not cover all the cases. For the moment is good enough.
 bool SubscriptAnalysis::isConsecutive(Value *value, int direction) {
-  assert((direction == 0 || direction == 1) && "Unsupported direction");
+  assert((direction == 0 || direction == 1 || direction == 2) &&
+         "Unsupported direction");
 
   if (!isa<GetElementPtrInst>(value)) {
     return 0;
@@ -57,9 +58,13 @@ bool SubscriptAnalysis::isConsecutive(Value *value, int direction) {
   
   NDRangeSpace ndrSpace(1024, 1024, 1024, 1024, 1024, 1024);
 
+  bool isFirst = direction == 0;
+  bool isSecond = direction == 1;
+  bool isThird = direction == 2;
+
   // Increment along direction. 
   for (int index = 0; index < TEST_NUMBER; ++index) {
-    NDRangePoint point((1 - direction) * index, direction * index, 0, 0, 0, 0, ndrSpace);
+    NDRangePoint point(isFirst * index, isSecond * index, isThird * index, 0, 0, 0, ndrSpace);
     SCEVMap processed;
     const SCEV *expr = replaceInExpr(scev, point, processed);
     addresses.push_back(expr);
